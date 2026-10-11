@@ -1,0 +1,32 @@
+# large files live in artifacts/ (see artifacts/README.md)
+/artifacts/*
+!/artifacts/README.md
+*.zip
+*.tar.gz
+__pycache__/
+*.pyc
+*.egg-info/
+*.pth.tar
+*.pt
+*.ckpt
+*.npz
+*.h5
+outputs/
+multirun/
+wandb/
+logs/
+run_logs/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+MUJOCO_LOG.TXT
+/code/lewm_explorations/results
+/code/jepa-wms/macros.py
+# Small scientific evidence is deliberately included in the GitHub repository.
+!/results/**/*.npz
+!/results/**/*.pt
