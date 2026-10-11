@@ -1,0 +1,97 @@
+{
+ "n_episodes": 3,
+ "kind": "wall",
+ "max_fast_rollout_diff": 0.0,
+ "success": {
+  "wm": {
+   "k": 3,
+   "rate": 1.0,
+   "wilson95": [
+    0.43849391955098227,
+    1.0
+   ]
+  },
+  "sim_latent": {
+   "k": 3,
+   "rate": 1.0,
+   "wilson95": [
+    0.43849391955098227,
+    1.0
+   ]
+  },
+  "sim_true": {
+   "k": 3,
+   "rate": 1.0,
+   "wilson95": [
+    0.43849391955098227,
+    1.0
+   ]
+  }
+ },
+ "attribution": {
+  "dynamics (sim_latent succeeds)": {
+   "k": 0,
+   "episodes": []
+  },
+  "cost landscape (sim_latent fails, sim_true succeeds)": {
+   "k": 0,
+   "episodes": []
+  },
+  "search (both simulator planners fail)": {
+   "k": 0,
+   "episodes": []
+  }
+ },
+ "wm_success_but_sim_latent_fails": 0,
+ "final_errors": {
+  "wm": {
+   "success": {
+    "agent_err": 1.9514026572953556
+   }
+  },
+  "sim_latent": {
+   "success": {
+    "agent_err": 0.04191110652494123
+   }
+  },
+  "sim_true": {
+   "success": {
+    "agent_err": 0.1523853829628462
+   }
+  }
+ },
+ "wall": {
+  "wm": {
+   "ends_on_goal_side": 1.0,
+   "failures_on_start_side": 0,
+   "failures_on_goal_side": 0
+  },
+  "sim_latent": {
+   "ends_on_goal_side": 1.0,
+   "failures_on_start_side": 0,
+   "failures_on_goal_side": 0
+  },
+  "sim_true": {
+   "ends_on_goal_side": 1.0,
+   "failures_on_start_side": 0,
+   "failures_on_goal_side": 0
+  },
+  "median_travel_px": 35.55041007859457
+ },
+ "pred_vs_real_visual_by_step": {
+  "wm success": [
+   0.02982245944440365,
+   0.060262106359004974,
+   0.08752559125423431,
+   0.042537152767181396,
+   0.04787850007414818,
+   0.05160490795969963
+  ]
+ },
+ "plan_cost_predicted_vs_real_median": {
+  "wm success": [
+   0.009602594189345837,
+   0.05403141304850578
+  ]
+ }
+}

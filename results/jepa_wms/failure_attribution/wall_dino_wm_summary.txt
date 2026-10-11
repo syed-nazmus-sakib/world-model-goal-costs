@@ -1,0 +1,31 @@
+wall: 96 episodes | max |fast rollout - env rollout| = 0.0
+
+== success ladder (same CEM budget, same start and goal)
+  wm           61/96 =  63.5%   [53.6, 72.5]
+  sim_latent   72/96 =  75.0%   [65.5, 82.6]
+  sim_true     89/96 =  92.7%   [85.7, 96.4]
+
+== attribution of the 35 world-model failures
+  dynamics (sim_latent succeeds)                           16  (46% of failures)
+  cost landscape (sim_latent fails, sim_true succeeds)     13  (37% of failures)
+  search (both simulator planners fail)                                   6  (17% of failures)
+
+== cross-tab (rows wm, cols sim_latent / sim_true; S = success)
+  wm=S:  latent=S,true=S  55 | latent=S,true=F   1 | latent=F,true=S   5 | latent=F,true=F   0
+  wm=F:  latent=S,true=S  16 | latent=S,true=F   0 | latent=F,true=S  13 | latent=F,true=F   6
+
+== final errors (median) of failed / successful episodes
+  wm          fail (n=35): agent_err 26.41 | success (n=61): agent_err 1.08
+  sim_latent  fail (n=24): agent_err 27.61 | success (n=72): agent_err 0.14
+  sim_true    fail (n=7): agent_err 13.90 | success (n=89): agent_err 0.12
+
+== Wall: which side of the wall the dot ends on
+  wm          ends on the goal side  70.8% | failures stuck on the start side 28, on the goal side but outside tolerance 7
+  sim_latent  ends on the goal side  75.0% | failures stuck on the start side 24, on the goal side but outside tolerance 0
+  sim_true    ends on the goal side  92.7% | failures stuck on the start side 7, on the goal side but outside tolerance 0
+
+== predicted vs realized visual latent of the executed plan, per model step (median)
+  wm success  [0.0112 0.017  0.0373 0.0337 0.0273 0.0294] | final cost of the plan: predicted 0.0086, real 0.0218
+  wm failure  [0.0119 0.0169 0.0473 0.0836 0.2356 0.3315] | final cost of the plan: predicted 0.4108, real 0.6736
+
+Saved /run/media/rmedu2025/storage_1/Monaf/jepa-wms-project/jepa-wms-work/logs/failure_attribution/wall_dino_wm/summary.json

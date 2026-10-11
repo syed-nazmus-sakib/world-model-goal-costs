@@ -1,0 +1,374 @@
+{
+ "tasks": [
+  "reach",
+  "push",
+  "drawer-open",
+  "door-open"
+ ],
+ "cost_margin": 0.01,
+ "preference_conflict_reach_vs_push": {
+  "reach_states": {
+   "n_pairs_both_labelled": 28,
+   "frac_pairs_both_labelled": 0.0009408602150537635,
+   "conflict_rate": 0.21428571428571427
+  },
+  "push_states": {
+   "n_pairs_both_labelled": 20196,
+   "frac_pairs_both_labelled": 0.6786290322580645,
+   "conflict_rate": 0.03436324024559319
+  }
+ },
+ "runs": [
+  {
+   "split": 0,
+   "n_train_pairs": {
+    "reach": 18185,
+    "push": 13575,
+    "drawer-open": 10612,
+    "door-open": 16200
+   },
+   "E0_euclidean": {
+    "reach": {
+     "pair_acc": 0.8560157790927022,
+     "spearman": 0.819758064516129
+    },
+    "push": {
+     "pair_acc": 0.927638049740059,
+     "spearman": 0.7885975483609622
+    },
+    "drawer-open": {
+     "pair_acc": 0.9560559288178682,
+     "spearman": 0.640760116946901
+    },
+    "door-open": {
+     "pair_acc": 0.8943119266055046,
+     "spearman": 0.7973092004544757
+    }
+   },
+   "grad_cosine_at_euclidean": [
+    [
+     1.0,
+     0.7950999736785889,
+     0.36390000581741333,
+     0.31459999084472656
+    ],
+    [
+     0.7950999736785889,
+     1.0,
+     0.43779999017715454,
+     0.2637999951839447
+    ],
+    [
+     0.36390000581741333,
+     0.43779999017715454,
+     1.0,
+     0.35499998927116394
+    ],
+    [
+     0.31459999084472656,
+     0.2637999951839447,
+     0.35499998927116394,
+     1.0
+    ]
+   ],
+   "chan": {
+    "E1_global": {
+     "reach": {
+      "pair_acc": 0.8722331799254877,
+      "spearman": 0.8498350439882698
+     },
+     "push": {
+      "pair_acc": 0.9267949978923704,
+      "spearman": 0.7934370309516889
+     },
+     "drawer-open": {
+      "pair_acc": 0.9805701834029417,
+      "spearman": 0.7146802012724753
+     },
+     "door-open": {
+      "pair_acc": 0.9697859327217125,
+      "spearman": 0.9266689080460917
+     }
+    },
+    "E3_per_task": {
+     "reach": {
+      "pair_acc": 0.8871356563664256,
+      "spearman": 0.8702529325513197
+     },
+     "push": {
+      "pair_acc": 0.9387382324012927,
+      "spearman": 0.8038300803458623
+     },
+     "drawer-open": {
+      "pair_acc": 0.9921917559469766,
+      "spearman": 0.7598112561999615
+     },
+     "door-open": {
+      "pair_acc": 0.9752905198776758,
+      "spearman": 0.9335806355118738
+     }
+    },
+    "transfer_trained_on_row_tested_on_col": {
+     "reach": {
+      "reach": 0.8871356563664256,
+      "push": 0.909371926373472,
+      "drawer-open": 0.9660432177228981,
+      "door-open": 0.861039755351682
+     },
+     "push": {
+      "reach": 0.8669734823580978,
+      "push": 0.9387382324012927,
+      "drawer-open": 0.9653168694388959,
+      "door-open": 0.8057492354740061
+     },
+     "drawer-open": {
+      "reach": 0.8447293447293447,
+      "push": 0.9100744695798791,
+      "drawer-open": 0.9921917559469766,
+      "door-open": 0.9049541284403669
+     },
+     "door-open": {
+      "reach": 0.8240192855577471,
+      "push": 0.9104959955037235,
+      "drawer-open": 0.9771200290539314,
+      "door-open": 0.9752905198776758
+     }
+    }
+   },
+   "patch": {
+    "E1_global": {
+     "reach": {
+      "pair_acc": 0.9124479509094894,
+      "spearman": 0.9119868035190615
+     },
+     "push": {
+      "pair_acc": 0.9408458620205142,
+      "spearman": 0.8033192320441828
+     },
+     "drawer-open": {
+      "pair_acc": 0.9856546213909569,
+      "spearman": 0.7153704825378984
+     },
+     "door-open": {
+      "pair_acc": 0.9474006116207951,
+      "spearman": 0.8943892090372442
+     }
+    },
+    "E3_per_task": {
+     "reach": {
+      "pair_acc": 0.9312952005259697,
+      "spearman": 0.9329545454545455
+     },
+     "push": {
+      "pair_acc": 0.951665027399185,
+      "spearman": 0.815766572418698
+     },
+     "drawer-open": {
+      "pair_acc": 0.9967314327219902,
+      "spearman": 0.7745110807046697
+     },
+     "door-open": {
+      "pair_acc": 0.9710091743119266,
+      "spearman": 0.9262774287110813
+     }
+    },
+    "transfer_trained_on_row_tested_on_col": {
+     "reach": {
+      "reach": 0.9312952005259697,
+      "push": 0.9429534916397359,
+      "drawer-open": 0.9607771926638823,
+      "door-open": 0.8686238532110092
+     },
+     "push": {
+      "reach": 0.8974358974358975,
+      "push": 0.951665027399185,
+      "drawer-open": 0.9700381332849101,
+      "door-open": 0.797308868501529
+     },
+     "drawer-open": {
+      "reach": 0.8625904010519395,
+      "push": 0.8531684698608965,
+      "drawer-open": 0.9967314327219902,
+      "door-open": 0.7826299694189602
+     },
+     "door-open": {
+      "reach": 0.846592154284462,
+      "push": 0.9022059856681186,
+      "drawer-open": 0.9624114763028873,
+      "door-open": 0.9710091743119266
+     }
+    }
+   },
+   "patch_x_chan": {
+    "E1_global": {
+     "reach": {
+      "pair_acc": 0.9184746877054569,
+      "spearman": 0.9204545454545455
+     },
+     "push": {
+      "pair_acc": 0.9525080792468736,
+      "spearman": 0.8207881117242778
+     },
+     "drawer-open": {
+      "pair_acc": 0.9934628654439804,
+      "spearman": 0.7322862472190126
+     },
+     "door-open": {
+      "pair_acc": 0.9866666666666667,
+      "spearman": 0.9450383088561083
+     }
+    },
+    "E3_per_task": {
+     "reach": {
+      "pair_acc": 0.935787858864782,
+      "spearman": 0.9385997067448679
+     },
+     "push": {
+      "pair_acc": 0.9478712940845861,
+      "spearman": 0.8093039634857574
+     },
+     "drawer-open": {
+      "pair_acc": 0.9963682585799891,
+      "spearman": 0.7563651945969153
+     },
+     "door-open": {
+      "pair_acc": 0.9922935779816514,
+      "spearman": 0.9539420927975458
+     }
+    },
+    "transfer_trained_on_row_tested_on_col": {
+     "reach": {
+      "reach": 0.935787858864782,
+      "push": 0.9402838274553885,
+      "drawer-open": 0.9792990739059378,
+      "door-open": 0.8746177370030581
+     },
+     "push": {
+      "reach": 0.886039886039886,
+      "push": 0.9478712940845861,
+      "drawer-open": 0.9773016161249319,
+      "door-open": 0.7493577981651376
+     },
+     "drawer-open": {
+      "reach": 0.8824238439623056,
+      "push": 0.9079668399606576,
+      "drawer-open": 0.9963682585799891,
+      "door-open": 0.9180428134556575
+     },
+     "door-open": {
+      "reach": 0.8652202498356345,
+      "push": 0.9055781930588731,
+      "drawer-open": 0.9702197203559106,
+      "door-open": 0.9922935779816514
+     }
+    },
+    "E2_task_patch_shared_chan": {
+     "reach": {
+      "pair_acc": 0.9319526627218935,
+      "spearman": 0.9352272727272727
+     },
+     "push": {
+      "pair_acc": 0.951665027399185,
+      "spearman": 0.8085163956336927
+     },
+     "drawer-open": {
+      "pair_acc": 0.9969130197929907,
+      "spearman": 0.7751978593820729
+     },
+     "door-open": {
+      "pair_acc": 0.9872782874617737,
+      "spearman": 0.9428379348530684
+     }
+    },
+    "E2_shared_patch_task_chan": {
+     "reach": {
+      "pair_acc": 0.9216524216524217,
+      "spearman": 0.9220307917888562
+     },
+     "push": {
+      "pair_acc": 0.952929605170718,
+      "spearman": 0.8175894728551029
+     },
+     "drawer-open": {
+      "pair_acc": 0.9956419102959869,
+      "spearman": 0.72861862030789
+     },
+     "door-open": {
+      "pair_acc": 0.9876452599388379,
+      "spearman": 0.9469777650143524
+     }
+    },
+    "E2_task_patch_task_chan_joint": {
+     "reach": {
+      "pair_acc": 0.9373219373219374,
+      "spearman": 0.9401942815249267
+     },
+     "push": {
+      "pair_acc": 0.9482928200084305,
+      "spearman": 0.8087080284047923
+     },
+     "drawer-open": {
+      "pair_acc": 0.9961866715089885,
+      "spearman": 0.7531691835397099
+     },
+     "door-open": {
+      "pair_acc": 0.9922935779816514,
+      "spearman": 0.9539439007905107
+     }
+    },
+    "global_leave_one_task_out_row_left_out": {
+     "reach": {
+      "reach": 0.8927240850317774,
+      "push": 0.9466067163130533,
+      "drawer-open": 0.9930996913019793,
+      "door-open": 0.9848318042813455
+     },
+     "push": {
+      "reach": 0.9202279202279202,
+      "push": 0.9387382324012927,
+      "drawer-open": 0.992010168875976,
+      "door-open": 0.9886238532110092
+     },
+     "drawer-open": {
+      "reach": 0.9212141135218058,
+      "push": 0.9499789237038078,
+      "drawer-open": 0.9791174868349374,
+      "door-open": 0.9869113149847095
+     },
+     "door-open": {
+      "reach": 0.925816348893272,
+      "push": 0.9506814669102149,
+      "drawer-open": 0.9927365171599782,
+      "door-open": 0.8525993883792049
+     }
+    },
+    "global_two_tasks": {
+     "reach+push": {
+      "reach": 0.9286653517422748,
+      "push": 0.9512435014753408
+     },
+     "reach+drawer-open": {
+      "reach": 0.9303090072320842,
+      "drawer-open": 0.9945523878699837
+     },
+     "reach+door-open": {
+      "reach": 0.9213236905544598,
+      "door-open": 0.986177370030581
+     },
+     "push+drawer-open": {
+      "push": 0.9439370521287059,
+      "drawer-open": 0.9934628654439804
+     },
+     "push+door-open": {
+      "push": 0.9461851903892089,
+      "door-open": 0.9877675840978594
+     },
+     "drawer-open+door-open": {
+      "drawer-open": 0.9929181042309787,
+      "door-open": 0.9899694189602446
+     }
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,94 @@
+[
+  {
+    "goal": 3,
+    "s1_cell": [
+      0,
+      17
+    ],
+    "s2_cell": [
+      19,
+      0
+    ],
+    "s1_pusher_err": 160.0000127548169,
+    "s2_block_kp_err": 59.09950351772768,
+    "s2_block_pos_err": 0.0,
+    "s2_block_ang_err_deg": 44.9999978371445,
+    "jepa_d_visual_s1": 0.5260754227638245,
+    "jepa_d_visual_s2": 0.523452639579773,
+    "dino_d_visual_s1": 0.6648287177085876,
+    "dino_d_visual_s2": 0.5563463568687439,
+    "official_state_dist_s1": 160.0000127548169,
+    "official_state_dist_s2": 0.7853981256484985,
+    "official_success_s1": false,
+    "official_success_s2": false
+  },
+  {
+    "goal": 17,
+    "s1_cell": [
+      0,
+      16
+    ],
+    "s2_cell": [
+      10,
+      0
+    ],
+    "s1_pusher_err": 160.000007214932,
+    "s2_block_kp_err": 40.00000529750506,
+    "s2_block_pos_err": 40.00000529750506,
+    "s2_block_ang_err_deg": 0.0,
+    "jepa_d_visual_s1": 0.43065789341926575,
+    "jepa_d_visual_s2": 0.4201735258102417,
+    "dino_d_visual_s1": 0.5163590312004089,
+    "dino_d_visual_s2": 0.5077033638954163,
+    "official_state_dist_s1": 160.000007214932,
+    "official_state_dist_s2": 40.00000529750506,
+    "official_success_s1": false,
+    "official_success_s2": false
+  },
+  {
+    "goal": 29,
+    "s1_cell": [
+      0,
+      16
+    ],
+    "s2_cell": [
+      10,
+      0
+    ],
+    "s1_pusher_err": 160.00000247869045,
+    "s2_block_kp_err": 39.99999138388282,
+    "s2_block_pos_err": 39.99999138388282,
+    "s2_block_ang_err_deg": 0.0,
+    "jepa_d_visual_s1": 0.4172390401363373,
+    "jepa_d_visual_s2": 0.406362384557724,
+    "dino_d_visual_s1": 0.5059207081794739,
+    "dino_d_visual_s2": 0.4140297472476959,
+    "official_state_dist_s1": 160.00000247869045,
+    "official_state_dist_s2": 39.99999138388282,
+    "official_success_s1": false,
+    "official_success_s2": false
+  },
+  {
+    "goal": 41,
+    "s1_cell": [
+      0,
+      18
+    ],
+    "s2_cell": [
+      19,
+      0
+    ],
+    "s1_pusher_err": 159.9999842112849,
+    "s2_block_kp_err": 59.09949501340658,
+    "s2_block_pos_err": 0.0,
+    "s2_block_ang_err_deg": 44.99999100695533,
+    "jepa_d_visual_s1": 0.5602739453315735,
+    "jepa_d_visual_s2": 0.4746864140033722,
+    "dino_d_visual_s1": 0.6451115012168884,
+    "dino_d_visual_s2": 0.5081650018692017,
+    "official_state_dist_s1": 159.9999842112849,
+    "official_state_dist_s2": 0.785398006439209,
+    "official_success_s1": false,
+    "official_success_s2": false
+  }
+]

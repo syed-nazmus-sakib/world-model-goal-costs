@@ -1,0 +1,2 @@
+total_time,episode_reward,episode_success,ep_expert_succ,ep_succ_dist,ep_end_dist,ep_end_dist_xyz,ep_end_dist_orientation,ep_end_dist_closure,ep_time,ep_total_lpips,ep_total_emb_l2
+3895.8417961597443,9.928684,0.625,1.0,0.0,89.08358,-1.0,-1.0,-1.0,162.3259988129139,-1.0,-1.0

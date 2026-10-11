@@ -1,0 +1,14 @@
+{
+ "fname": "${JEPAWM_HOME}/configs/mw_jepa-wm_push.yaml",
+ "task": "mw-push",
+ "episodes": 24,
+ "completed_episodes": 23,
+ "planners": [
+  "sim_latent"
+ ],
+ "alpha": 0.0,
+ "cost": "l2",
+ "goal_variant": 0,
+ "robot_free": true,
+ "recovery_note": "Original run_meta.json was empty. Options recovered from scripts/run_alpha0_mw.sh; completed episodes counted from saved ep_*.npz files."
+}

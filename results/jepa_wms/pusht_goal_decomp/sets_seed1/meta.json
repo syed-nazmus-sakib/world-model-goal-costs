@@ -1,0 +1,246 @@
+{
+  "seed": 1,
+  "num_goals": 32,
+  "img_size": 224,
+  "margin_px": 2.0,
+  "tol_block_pos_px": 0.001,
+  "tol_block_ang_rad": 0.0001,
+  "block_variants": [
+    {
+      "kind": "identity",
+      "magnitude": 0.0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 2.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 2.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 5.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 5.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 10.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 10.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 20.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 20.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 40.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 40.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 80.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 80.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 5.0,
+      "sign": 1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 5.0,
+      "sign": -1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 10.0,
+      "sign": 1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 10.0,
+      "sign": -1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 20.0,
+      "sign": 1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 20.0,
+      "sign": -1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 45.0,
+      "sign": 1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 45.0,
+      "sign": -1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 90.0,
+      "sign": 1
+    },
+    {
+      "kind": "rotate",
+      "magnitude": 90.0,
+      "sign": -1
+    }
+  ],
+  "pusher_variants": [
+    {
+      "kind": "identity",
+      "magnitude": 0.0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 5.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 5.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 5.0,
+      "dir_idx": 2
+    },
+    {
+      "kind": "translate",
+      "magnitude": 10.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 10.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 10.0,
+      "dir_idx": 2
+    },
+    {
+      "kind": "translate",
+      "magnitude": 20.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 20.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 20.0,
+      "dir_idx": 2
+    },
+    {
+      "kind": "translate",
+      "magnitude": 40.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 40.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 40.0,
+      "dir_idx": 2
+    },
+    {
+      "kind": "translate",
+      "magnitude": 80.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 80.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 80.0,
+      "dir_idx": 2
+    },
+    {
+      "kind": "translate",
+      "magnitude": 160.0,
+      "dir_idx": 0
+    },
+    {
+      "kind": "translate",
+      "magnitude": 160.0,
+      "dir_idx": 1
+    },
+    {
+      "kind": "translate",
+      "magnitude": 160.0,
+      "dir_idx": 2
+    }
+  ],
+  "cost_keys": [
+    "official_success",
+    "official_state_dist",
+    "official_pos_diff",
+    "block_pos_err",
+    "block_ang_err",
+    "block_kp_err",
+    "pusher_pos_err",
+    "pusher_vel_err"
+  ],
+  "n_rejected_base_goals": 21,
+  "max_reset_err": {
+    "block_pos": 1.960061125442276e-05,
+    "block_ang": 2.378877983488792e-07,
+    "pusher_pos": 2.061151790642528e-05,
+    "pusher_vel": 0.0
+  },
+  "state_layout": [
+    "agent_x",
+    "agent_y",
+    "block_x",
+    "block_y",
+    "block_angle",
+    "agent_vx",
+    "agent_vy"
+  ]
+}

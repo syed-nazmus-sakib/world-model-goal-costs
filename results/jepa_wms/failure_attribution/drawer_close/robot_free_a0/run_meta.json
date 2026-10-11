@@ -1,0 +1,1 @@
+{"fname": "/run/media/rmedu2025/storage_1/Monaf/jepa-wms-project/jepa-wms-work/configs/mw_jepa-wm_drawer-close.yaml", "task": "mw-drawer-close", "episodes": 24, "planners": ["sim_latent"], "alpha": 0.0, "cost": "l2", "goal_variant": 0, "robot_free": true}

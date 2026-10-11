@@ -1,0 +1,37 @@
+{
+ "spearman_latent_vs_true_by_puck_move (mean, n_episodes)": {
+  "moved<0.5mm": [
+   -0.061,
+   2
+  ],
+  "0.5-5mm": [
+   0.048,
+   24
+  ],
+  "5mm-2cm": [
+   0.285,
+   24
+  ],
+  ">2cm": [
+   0.201,
+   24
+  ]
+ },
+ "episodes": 24,
+ "L1_median_rel_cost_change_between_equivalent_goals": 0.5055468082427979,
+ "L2_ranking_flip_rate_between_equivalent_goals": 0.3575893355667225,
+ "L2_ranking_flip_rate_vs_eval_goal": 0.234875418760469,
+ "L2_true_cost_flip_rate": 0.0,
+ "spearman_latent_vs_true_per_variant(mean over episodes)": [
+  0.646,
+  0.641,
+  0.359,
+  0.265,
+  0.34
+ ],
+ "L3_top1_candidate_agreement_between_equivalent_goals": 0.08333333333333333,
+ "L3_top10_overlap_between_equivalent_goals": 0.23194444444444443,
+ "fraction_of_candidates_that_move_the_object": 0.9947916666666666,
+ "L3b_first_action_change_between_equivalent_goals": 7.8737030029296875,
+ "L3_first_action_noise_floor_same_goal_other_seed": 6.203984260559082
+}

@@ -1,0 +1,11 @@
+{
+  "model_name": "dino_wm_pusht",
+  "config": "/home/rmedu-07/Monaf/jepa-wms-work/configs/pt_dino-wm_repro.yaml",
+  "sets_dir": "/home/rmedu-07/Monaf/jepa-wms-work/logs/pusht_goal_decomp/sets_seed1",
+  "max_abs_gap_vs_repo_objective": 0.0,
+  "visual_emb_shape": [
+    256,
+    384
+  ],
+  "proprio_emb_dim": 20
+}

@@ -1,0 +1,34 @@
+96 episodes | max |fast rollout - env rollout| = 0.0
+
+== success ladder (same CEM budget, same start and goal)
+  wm           63/96 =  65.6%   [55.7, 74.4]
+  sim_latent   59/96 =  61.5%   [51.5, 70.6]
+  sim_true     87/96 =  90.6%   [83.1, 95.0]
+  expert       96/96 = 100.0%   (the goal is the end of the expert segment)
+
+== attribution of the 33 world-model failures
+  dynamics (sim_latent succeeds)                            6  (18% of failures)
+  cost landscape (sim_latent fails, sim_true succeeds)     18  (55% of failures)
+  search (both simulator planners fail)                                   9  (27% of failures)
+
+== cross-tab (rows wm, cols sim_latent / sim_true; S = success)
+  wm=S:  latent=S,true=S  53 | latent=S,true=F   0 | latent=F,true=S  10 | latent=F,true=F   0
+  wm=F:  latent=S,true=S   6 | latent=S,true=F   0 | latent=F,true=S  18 | latent=F,true=F   9
+
+== world-model cost of the returned plan vs of the expert plan
+  all         n= 96: model scores expert better in  33.3% | median predicted cost plan 0.0673, expert 0.0971 | real latent cost of plan 0.1411
+  wm success  n= 63: model scores expert better in   7.9% | median predicted cost plan 0.0542, expert 0.0938 | real latent cost of plan 0.1092
+  wm failure  n= 33: model scores expert better in  81.8% | median predicted cost plan 0.2309, expert 0.0996 | real latent cost of plan 0.3227
+
+== predicted vs realized visual latent of the executed plan, per model step (median)
+  wm success  [0.0535 0.0721 0.0708 0.0833 0.0862 0.1005]
+  wm failure  [0.0455 0.0538 0.067  0.0706 0.0804 0.0962]
+  real - predicted final cost (median): {'wm success': 0.044931210577487946, 'wm failure': 0.07126913964748383}
+
+== success by block rotation required between init and goal
+    0- 10 deg n= 32 (median translation  13.4 px): wm  62.5%  sim_latent  53.1%  sim_true  90.6%
+   10- 30 deg n= 26 (median translation  27.0 px): wm  61.5%  sim_latent  65.4%  sim_true  92.3%
+   30- 60 deg n= 15 (median translation  53.8 px): wm  53.3%  sim_latent  60.0%  sim_true  86.7%
+   60-181 deg n= 23 (median translation  25.8 px): wm  82.6%  sim_latent  69.6%  sim_true  91.3%
+
+Saved /home/rmedu-07/Monaf/jepa-wms-work/logs/pusht_failure_attribution/dino_wm/summary.json

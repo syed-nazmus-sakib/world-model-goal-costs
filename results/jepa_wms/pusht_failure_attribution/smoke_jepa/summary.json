@@ -1,0 +1,113 @@
+{
+ "n_episodes": 3,
+ "max_fast_rollout_diff": 0.0,
+ "success": {
+  "wm": {
+   "k": 1,
+   "rate": 0.3333333333333333,
+   "wilson95": [
+    0.0614903152761605,
+    0.7923450448735121
+   ]
+  },
+  "sim_latent": {
+   "k": 1,
+   "rate": 0.3333333333333333,
+   "wilson95": [
+    0.0614903152761605,
+    0.7923450448735121
+   ]
+  },
+  "sim_true": {
+   "k": 3,
+   "rate": 1.0,
+   "wilson95": [
+    0.43849391955098227,
+    1.0
+   ]
+  }
+ },
+ "attribution": {
+  "dynamics (sim_latent succeeds)": {
+   "k": 0,
+   "episodes": []
+  },
+  "cost landscape (sim_latent fails, sim_true succeeds)": {
+   "k": 2,
+   "episodes": [
+    0,
+    2
+   ]
+  },
+  "search (both simulator planners fail)": {
+   "k": 0,
+   "episodes": []
+  }
+ },
+ "wm_success_but_sim_latent_fails": 0,
+ "model_prefers_expert": {
+  "all": {
+   "n": 3,
+   "frac_expert_scored_better": 0.6666666666666666,
+   "median_plan_pred_cost": 0.26888713240623474,
+   "median_expert_pred_cost": 0.13234172761440277,
+   "median_plan_real_cost": 0.2717626094818115
+  },
+  "wm success": {
+   "n": 1,
+   "frac_expert_scored_better": 0.0,
+   "median_plan_pred_cost": 0.12194487452507019,
+   "median_expert_pred_cost": 0.16455082595348358,
+   "median_plan_real_cost": 0.10273052006959915
+  },
+  "wm failure": {
+   "n": 2,
+   "frac_expert_scored_better": 1.0,
+   "median_plan_pred_cost": 0.2723544090986252,
+   "median_expert_pred_cost": 0.10827019065618515,
+   "median_plan_real_cost": 0.3125112056732178
+  }
+ },
+ "pred_vs_real_visual_by_step": {
+  "wm success": [
+   0.10427531599998474,
+   0.11808571219444275,
+   0.08186252415180206,
+   0.08595526218414307,
+   0.15770237147808075,
+   0.1321074366569519
+  ],
+  "wm failure": [
+   0.09420479089021683,
+   0.07389740645885468,
+   0.19778557121753693,
+   0.24141740798950195,
+   0.14194688200950623,
+   0.1419607400894165
+  ]
+ },
+ "real_minus_pred_cost_median": {
+  "wm success": -0.01921435445547104,
+  "wm failure": 0.040156781673431396
+ },
+ "success_by_required_rotation_deg": {
+  "0-10": {
+   "n": 1,
+   "wm": 0.0,
+   "sim_latent": 0.0,
+   "sim_true": 1.0
+  },
+  "30-60": {
+   "n": 1,
+   "wm": 1.0,
+   "sim_latent": 1.0,
+   "sim_true": 1.0
+  },
+  "60-181": {
+   "n": 1,
+   "wm": 0.0,
+   "sim_latent": 0.0,
+   "sim_true": 1.0
+  }
+ }
+}

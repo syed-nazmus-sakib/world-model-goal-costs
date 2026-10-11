@@ -1,0 +1,57 @@
+{
+ "L2 (released visual)": {
+  "rank_acc_official": 0.7354288424393676,
+  "rank_acc_pusher_same_block": 0.9287356321839081,
+  "auc_success": 0.9163052279900675
+ },
+ "L2 + 0.1 proprio": {
+  "rank_acc_official": 0.7369525363494879,
+  "rank_acc_pusher_same_block": 0.9293263090676884,
+  "auc_success": 0.9167495330949601
+ },
+ "L2 + 1 proprio": {
+  "rank_acc_official": 0.7495467904920049,
+  "rank_acc_pusher_same_block": 0.9303879310344828,
+  "auc_success": 0.9200601831460263
+ },
+ "L2 + 10 proprio": {
+  "rank_acc_official": 0.8094561667237317,
+  "rank_acc_pusher_same_block": 0.9346783205619412,
+  "auc_success": 0.9347660089284169
+ },
+ "power mean p=2": {
+  "rank_acc_official": 0.7879765829527945,
+  "rank_acc_pusher_same_block": 0.924205779054917,
+  "auc_success": 0.9533777766664807
+ },
+ "power mean p=4": {
+  "rank_acc_official": 0.8139913114993804,
+  "rank_acc_pusher_same_block": 0.8947677203065134,
+  "auc_success": 0.9620922154283506
+ },
+ "power mean p=8": {
+  "rank_acc_official": 0.8148457208400873,
+  "rank_acc_pusher_same_block": 0.8646392081736909,
+  "auc_success": 0.9599279110158815
+ },
+ "top-4 patches": {
+  "rank_acc_official": 0.8195971467376746,
+  "rank_acc_pusher_same_block": 0.8660839719029374,
+  "auc_success": 0.9643488429794985
+ },
+ "top-8 patches": {
+  "rank_acc_official": 0.817786781431936,
+  "rank_acc_pusher_same_block": 0.8828144955300128,
+  "auc_success": 0.9635414963657382
+ },
+ "top-16 patches": {
+  "rank_acc_official": 0.8031963778187224,
+  "rank_acc_pusher_same_block": 0.8991339399744572,
+  "auc_success": 0.9578251553625318
+ },
+ "max patch": {
+  "rank_acc_official": 0.8022635006319464,
+  "rank_acc_pusher_same_block": 0.8245929118773946,
+  "auc_success": 0.9554949578102491
+ }
+}

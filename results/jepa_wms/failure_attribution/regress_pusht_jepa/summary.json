@@ -1,0 +1,146 @@
+{
+ "n_episodes": 2,
+ "kind": "pusht",
+ "max_fast_rollout_diff": 0.0,
+ "success": {
+  "wm": {
+   "k": 1,
+   "rate": 0.5,
+   "wilson95": [
+    0.09452865480086614,
+    0.9054713451991339
+   ]
+  },
+  "sim_latent": {
+   "k": 1,
+   "rate": 0.5,
+   "wilson95": [
+    0.09452865480086614,
+    0.9054713451991339
+   ]
+  },
+  "sim_true": {
+   "k": 2,
+   "rate": 1.0,
+   "wilson95": [
+    0.34237195288961925,
+    1.0
+   ]
+  }
+ },
+ "attribution": {
+  "dynamics (sim_latent succeeds)": {
+   "k": 0,
+   "episodes": []
+  },
+  "cost landscape (sim_latent fails, sim_true succeeds)": {
+   "k": 1,
+   "episodes": [
+    0
+   ]
+  },
+  "search (both simulator planners fail)": {
+   "k": 0,
+   "episodes": []
+  }
+ },
+ "wm_success_but_sim_latent_fails": 0,
+ "final_errors": {
+  "wm": {
+   "fail": {
+    "agent_err": 62.17874149440326,
+    "object_ang_err": 1.6078314224826258,
+    "object_err": 57.75148890523827
+   },
+   "success": {
+    "agent_err": 1.849341385438947,
+    "object_ang_err": 0.0728992223739624,
+    "object_err": 5.411973879276831
+   }
+  },
+  "sim_latent": {
+   "fail": {
+    "agent_err": 51.34557343015347,
+    "object_ang_err": 1.6522411743747156,
+    "object_err": 77.04881358205306
+   },
+   "success": {
+    "agent_err": 1.0402109827855872,
+    "object_ang_err": 0.007239222526550293,
+    "object_err": 1.672809995868593
+   }
+  },
+  "sim_true": {
+   "success": {
+    "agent_err": 0.2053101738726182,
+    "object_ang_err": 0.0026413798332214355,
+    "object_err": 0.14678354450373918
+   }
+  }
+ },
+ "pusht": {
+  "wm": {
+   "block_only_success": 0.5,
+   "pusher_within_20px": 0.5,
+   "block_ok_pusher_not": 0
+  },
+  "sim_latent": {
+   "block_only_success": 0.5,
+   "pusher_within_20px": 0.5,
+   "block_ok_pusher_not": 0
+  },
+  "sim_true": {
+   "block_only_success": 1.0,
+   "pusher_within_20px": 1.0,
+   "block_ok_pusher_not": 0
+  }
+ },
+ "model_prefers_expert": {
+  "all": {
+   "n": 2,
+   "frac_expert_scored_better": 0.5,
+   "median_plan_pred_cost": 0.19541600346565247,
+   "median_expert_pred_cost": 0.14844627678394318
+  },
+  "wm success": {
+   "n": 1,
+   "frac_expert_scored_better": 0.0,
+   "median_plan_pred_cost": 0.12194487452507019,
+   "median_expert_pred_cost": 0.16455082595348358
+  },
+  "wm failure": {
+   "n": 1,
+   "frac_expert_scored_better": 1.0,
+   "median_plan_pred_cost": 0.26888713240623474,
+   "median_expert_pred_cost": 0.13234172761440277
+  }
+ },
+ "pred_vs_real_visual_by_step": {
+  "wm success": [
+   0.10427531599998474,
+   0.11808571219444275,
+   0.08186252415180206,
+   0.08595526218414307,
+   0.15770237147808075,
+   0.1321074366569519
+  ],
+  "wm failure": [
+   0.08226466178894043,
+   0.07292013615369797,
+   0.3310709297657013,
+   0.41718968749046326,
+   0.21993255615234375,
+   0.20937848091125488
+  ]
+ },
+ "plan_cost_predicted_vs_real_median": {
+  "wm success": [
+   0.12194487452507019,
+   0.10273052006959915
+  ],
+  "wm failure": [
+   0.26888713240623474,
+   0.35325977206230164
+  ]
+ }
+}

@@ -1,0 +1,145 @@
+{
+ "n_episodes": 96,
+ "kind": "wall",
+ "max_fast_rollout_diff": 0.0,
+ "success": {
+  "wm": {
+   "k": 72,
+   "rate": 0.75,
+   "wilson95": [
+    0.6549000204355595,
+    0.8258615058220327
+   ]
+  },
+  "sim_latent": {
+   "k": 80,
+   "rate": 0.8333333333333334,
+   "wilson95": [
+    0.7462882947885028,
+    0.8947270735549533
+   ]
+  },
+  "sim_true": {
+   "k": 89,
+   "rate": 0.9270833333333334,
+   "wilson95": [
+    0.8570680669280426,
+    0.9642328737620105
+   ]
+  }
+ },
+ "attribution": {
+  "dynamics (sim_latent succeeds)": {
+   "k": 11,
+   "episodes": [
+    4,
+    12,
+    17,
+    35,
+    46,
+    50,
+    56,
+    73,
+    76,
+    91,
+    93
+   ]
+  },
+  "cost landscape (sim_latent fails, sim_true succeeds)": {
+   "k": 10,
+   "episodes": [
+    3,
+    13,
+    16,
+    20,
+    37,
+    38,
+    77,
+    86,
+    89,
+    95
+   ]
+  },
+  "search (both simulator planners fail)": {
+   "k": 3,
+   "episodes": [
+    30,
+    48,
+    80
+   ]
+  }
+ },
+ "wm_success_but_sim_latent_fails": 3,
+ "final_errors": {
+  "wm": {
+   "fail": {
+    "agent_err": 24.86521938522231
+   },
+   "success": {
+    "agent_err": 1.8438771159373144
+   }
+  },
+  "sim_latent": {
+   "fail": {
+    "agent_err": 29.15869698842148
+   },
+   "success": {
+    "agent_err": 0.10468807541582925
+   }
+  },
+  "sim_true": {
+   "fail": {
+    "agent_err": 13.89896901651012
+   },
+   "success": {
+    "agent_err": 0.12334292000946286
+   }
+  }
+ },
+ "wall": {
+  "wm": {
+   "ends_on_goal_side": 0.8020833333333334,
+   "failures_on_start_side": 19,
+   "failures_on_goal_side": 5
+  },
+  "sim_latent": {
+   "ends_on_goal_side": 0.84375,
+   "failures_on_start_side": 15,
+   "failures_on_goal_side": 1
+  },
+  "sim_true": {
+   "ends_on_goal_side": 0.9270833333333334,
+   "failures_on_start_side": 7,
+   "failures_on_goal_side": 0
+  },
+  "median_travel_px": 36.77201397522143
+ },
+ "pred_vs_real_visual_by_step": {
+  "wm success": [
+   0.014051960781216621,
+   0.026910969987511635,
+   0.053870223462581635,
+   0.05714888498187065,
+   0.04805465787649155,
+   0.04257046803832054
+  ],
+  "wm failure": [
+   0.01875757798552513,
+   0.03002115711569786,
+   0.077532559633255,
+   0.28184789419174194,
+   0.5301108956336975,
+   0.6437950730323792
+  ]
+ },
+ "plan_cost_predicted_vs_real_median": {
+  "wm success": [
+   0.01088001811876893,
+   0.044367529451847076
+  ],
+  "wm failure": [
+   0.028395709581673145,
+   0.7710793018341064
+  ]
+ }
+}

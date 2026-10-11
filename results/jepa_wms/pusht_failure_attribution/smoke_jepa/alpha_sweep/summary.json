@@ -1,0 +1,18 @@
+{
+ "0.1": {
+  "n": 3,
+  "official_success": 0.3333333333333333,
+  "block_only_success": 0.6666666666666666,
+  "pusher_within_20px": 0.3333333333333333,
+  "pusher_err_median": 51.34557343015347,
+  "block_err_median": 1.672809995868593
+ },
+ "10": {
+  "n": 3,
+  "official_success": 0.3333333333333333,
+  "block_only_success": 0.6666666666666666,
+  "pusher_within_20px": 0.3333333333333333,
+  "pusher_err_median": 29.492598249230856,
+  "block_err_median": 2.1843391916171173
+ }
+}

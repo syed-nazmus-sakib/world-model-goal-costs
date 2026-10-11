@@ -1,0 +1,739 @@
+{
+ "strong_contact_min_forward_disp_m": 0.02,
+ "reach": {
+  "all": {
+   "n_cycles": 1920,
+   "n_base_states": 120,
+   "hand_mid_displacement": {
+    "median": 0.08919109955681559,
+    "p90": 0.1136492400172739,
+    "max": 0.13889906079026426
+   },
+   "hand_closure": {
+    "median": 0.03298717205026504,
+    "p90": 0.05669261825710868,
+    "max": 0.09178842667199236
+   },
+   "hand_closure_normalized": {
+    "median": 0.3739883915422437,
+    "p90": 0.8621731841579527,
+    "max": 5.661998750157028
+   },
+   "mocap_target_closure": {
+    "median": 0.0,
+    "p90": 0.007475913735106587,
+    "max": 0.14252265449613333
+   },
+   "obj_forward_displacement": {
+    "median": 3.8426965584414984e-05,
+    "p90": 0.0005952137764148647,
+    "max": 0.03341509018392957
+   },
+   "obj_residual_displacement": {
+    "median": 2.1815048999314264e-05,
+    "p90": 0.0005926718859343952,
+    "max": 0.018414973422657
+   },
+   "frac_obj_residual_over_1cm": 0.0171875,
+   "contact_steps_forward": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 9.0
+   },
+   "contact_steps_reverse": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 9.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 347.5127345432658
+   }
+  },
+  "no_contact": {
+   "n_cycles": 1812,
+   "n_base_states": 120,
+   "hand_mid_displacement": {
+    "median": 0.08835868477152312,
+    "p90": 0.11367135182508434,
+    "max": 0.13889906079026426
+   },
+   "hand_closure": {
+    "median": 0.03298717205026504,
+    "p90": 0.057871376775719845,
+    "max": 0.09178842667199236
+   },
+   "hand_closure_normalized": {
+    "median": 0.379528247998177,
+    "p90": 0.8683859727889107,
+    "max": 5.661998750157028
+   },
+   "mocap_target_closure": {
+    "median": 0.0,
+    "p90": 0.004086811584420494,
+    "max": 0.14252265449613333
+   },
+   "obj_forward_displacement": {
+    "median": 3.8426965584263284e-05,
+    "p90": 0.0005952137741455857,
+    "max": 0.004773160055976438
+   },
+   "obj_residual_displacement": {
+    "median": 2.181504899798085e-05,
+    "p90": 0.0005890307420783712,
+    "max": 0.0067734713684485534
+   },
+   "frac_obj_residual_over_1cm": 0.0,
+   "contact_steps_forward": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 0.0
+   },
+   "contact_steps_reverse": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 0.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 0.0
+   }
+  },
+  "glancing": {
+   "n_cycles": 107,
+   "n_base_states": 49,
+   "hand_mid_displacement": {
+    "median": 0.09607130204446772,
+    "p90": 0.11041646689438284,
+    "max": 0.11779084377327369
+   },
+   "hand_closure": {
+    "median": 0.03289858630861149,
+    "p90": 0.03943507013203762,
+    "max": 0.05668677643330232
+   },
+   "hand_closure_normalized": {
+    "median": 0.30978155890756554,
+    "p90": 0.6607090515527817,
+    "max": 0.899136007075961
+   },
+   "mocap_target_closure": {
+    "median": 0.0063392402604222214,
+    "p90": 0.0632170721888542,
+    "max": 0.06739781182259319
+   },
+   "obj_forward_displacement": {
+    "median": 0.0024533263977209413,
+    "p90": 0.007727310630587984,
+    "max": 0.014498556106742257
+   },
+   "obj_residual_displacement": {
+    "median": 0.003311864234943758,
+    "p90": 0.014716803300857664,
+    "max": 0.018284625794285417
+   },
+   "frac_obj_residual_over_1cm": 0.29906542056074764,
+   "contact_steps_forward": {
+    "median": 2.0,
+    "p90": 9.0,
+    "max": 9.0
+   },
+   "contact_steps_reverse": {
+    "median": 3.0,
+    "p90": 6.0,
+    "max": 9.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 94.20734766615247,
+    "p90": 310.46454207181097,
+    "max": 347.5127345432658
+   }
+  },
+  "strong": {
+   "n_cycles": 1,
+   "n_base_states": 1,
+   "hand_mid_displacement": {
+    "median": 0.11403142138857056,
+    "p90": 0.11403142138857056,
+    "max": 0.11403142138857056
+   },
+   "hand_closure": {
+    "median": 0.04820050498635663,
+    "p90": 0.04820050498635663,
+    "max": 0.04820050498635663
+   },
+   "hand_closure_normalized": {
+    "median": 0.4226949414417086,
+    "p90": 0.4226949414417086,
+    "max": 0.4226949414417086
+   },
+   "mocap_target_closure": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 0.0
+   },
+   "obj_forward_displacement": {
+    "median": 0.03341509018392957,
+    "p90": 0.03341509018392957,
+    "max": 0.03341509018392957
+   },
+   "obj_residual_displacement": {
+    "median": 0.018414973422657,
+    "p90": 0.018414973422657,
+    "max": 0.018414973422657
+   },
+   "frac_obj_residual_over_1cm": 1.0,
+   "contact_steps_forward": {
+    "median": 4.0,
+    "p90": 4.0,
+    "max": 4.0
+   },
+   "contact_steps_reverse": {
+    "median": 6.0,
+    "p90": 6.0,
+    "max": 6.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 163.52802100256355,
+    "p90": 163.52802100256355,
+    "max": 163.52802100256355
+   }
+  },
+  "hand_closure_when_target_returns": {
+   "median": 0.033062165826075234,
+   "p90": 0.05805975629136867,
+   "max": 0.08133964573440951
+  },
+  "frac_cycles_target_clipped": 0.14114583333333333,
+  "residual_vs_forward_contact_cycles": {
+   "n": 108,
+   "spearman": 0.4621880009159606,
+   "pearson": 0.38467369200379586,
+   "ols_slope": 0.4986852822981908,
+   "ols_intercept_m": 0.0050417896560790544,
+   "persistence_ratio_median": 1.4120518822635881,
+   "by_forward_disp_bin_cm": {
+    "0-0.5": {
+     "n": 79,
+     "residual_median_cm": 0.2737499125122721
+    },
+    "0.5-2": {
+     "n": 28,
+     "residual_median_cm": 1.027323856096723
+    },
+    "2-5": {
+     "n": 1,
+     "residual_median_cm": 1.8414973422657002
+    },
+    "5-10": {
+     "n": 0,
+     "residual_median_cm": null
+    },
+    "10-30": {
+     "n": 0,
+     "residual_median_cm": null
+    }
+   }
+  },
+  "frac_base_states_with_strong_cycle": 0.008333333333333333,
+  "frac_base_states_with_persistent_strong_cycle": 0.008333333333333333,
+  "matched_by_hand_travel": {
+   "hand_mid_0-5cm": {
+    "no_contact": {
+     "n": 393,
+     "hand_closure_median_cm": 2.749166693177138,
+     "obj_residual_median_cm": 0.0014669956845184
+    },
+    "glancing": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    },
+    "strong": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    }
+   },
+   "hand_mid_5-10cm": {
+    "no_contact": {
+     "n": 789,
+     "hand_closure_median_cm": 2.8515235912061283,
+     "obj_residual_median_cm": 0.0020987581737178167
+    },
+    "glancing": {
+     "n": 78,
+     "hand_closure_median_cm": 2.887262313956121,
+     "obj_residual_median_cm": 0.7298385631307273
+    },
+    "strong": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    }
+   },
+   "hand_mid_10-15cm": {
+    "no_contact": {
+     "n": 630,
+     "hand_closure_median_cm": 3.5186435463176653,
+     "obj_residual_median_cm": 0.003222932676839301
+    },
+    "glancing": {
+     "n": 29,
+     "hand_closure_median_cm": 3.4311601959717213,
+     "obj_residual_median_cm": 0.10859369199278668
+    },
+    "strong": {
+     "n": 1,
+     "hand_closure_median_cm": 4.820050498635664,
+     "obj_residual_median_cm": 1.8414973422657002
+    }
+   },
+   "hand_mid_15-30cm": {
+    "no_contact": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    },
+    "glancing": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    },
+    "strong": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    }
+   }
+  },
+  "by_program_kind": {
+   "expert": {
+    "n": 120,
+    "categories": {
+     "no_contact": 120,
+     "glancing": 0,
+     "strong": 0
+    }
+   },
+   "expert_noise": {
+    "n": 600,
+    "categories": {
+     "no_contact": 600,
+     "glancing": 0,
+     "strong": 0
+    }
+   },
+   "random_hold": {
+    "n": 720,
+    "categories": {
+     "no_contact": 709,
+     "glancing": 10,
+     "strong": 1
+    }
+   },
+   "to_object_0.0": {
+    "n": 120,
+    "categories": {
+     "no_contact": 84,
+     "glancing": 36,
+     "strong": 0
+    }
+   },
+   "to_object_0.02": {
+    "n": 120,
+    "categories": {
+     "no_contact": 90,
+     "glancing": 30,
+     "strong": 0
+    }
+   },
+   "to_object_0.04": {
+    "n": 120,
+    "categories": {
+     "no_contact": 97,
+     "glancing": 23,
+     "strong": 0
+    }
+   },
+   "to_object_0.06": {
+    "n": 120,
+    "categories": {
+     "no_contact": 112,
+     "glancing": 8,
+     "strong": 0
+    }
+   }
+  }
+ },
+ "push": {
+  "all": {
+   "n_cycles": 1920,
+   "n_base_states": 120,
+   "hand_mid_displacement": {
+    "median": 0.09499460052437488,
+    "p90": 0.1198503017265746,
+    "max": 0.1447492819450171
+   },
+   "hand_closure": {
+    "median": 0.03834674186976565,
+    "p90": 0.06955557729429676,
+    "max": 0.11198754545743873
+   },
+   "hand_closure_normalized": {
+    "median": 0.4548854664735621,
+    "p90": 1.251614197507194,
+    "max": 13.38023467207813
+   },
+   "mocap_target_closure": {
+    "median": 0.0,
+    "p90": 0.06732180164253806,
+    "max": 0.14965978916734457
+   },
+   "obj_forward_displacement": {
+    "median": 0.011747145915214932,
+    "p90": 0.11433433848747192,
+    "max": 0.1414019711622446
+   },
+   "obj_residual_displacement": {
+    "median": 0.012983868622022809,
+    "p90": 0.07045981253334868,
+    "max": 0.11317540101074194
+   },
+   "frac_obj_residual_over_1cm": 0.5109375,
+   "contact_steps_forward": {
+    "median": 10.5,
+    "p90": 15.0,
+    "max": 15.0
+   },
+   "contact_steps_reverse": {
+    "median": 13.5,
+    "p90": 15.0,
+    "max": 15.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 240.9653187948273,
+    "p90": 583.4250639144469,
+    "max": 861.1780738468093
+   }
+  },
+  "no_contact": {
+   "n_cycles": 855,
+   "n_base_states": 60,
+   "hand_mid_displacement": {
+    "median": 0.0979854571331005,
+    "p90": 0.1198503017265746,
+    "max": 0.1412871750070129
+   },
+   "hand_closure": {
+    "median": 0.03330252061392757,
+    "p90": 0.06384467573509198,
+    "max": 0.07292304694786801
+   },
+   "hand_closure_normalized": {
+    "median": 0.35228376538065115,
+    "p90": 0.6491089388720206,
+    "max": 1.361939007478815
+   },
+   "mocap_target_closure": {
+    "median": 0.0,
+    "p90": 0.012769274087622821,
+    "max": 0.07016198595520107
+   },
+   "obj_forward_displacement": {
+    "median": 1.5876272651825754e-05,
+    "p90": 3.2973938887822615e-05,
+    "max": 0.0002805066765554399
+   },
+   "obj_residual_displacement": {
+    "median": 1.4159212016474597e-05,
+    "p90": 5.318639595320089e-05,
+    "max": 0.000343632066844493
+   },
+   "frac_obj_residual_over_1cm": 0.0,
+   "contact_steps_forward": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 0.0
+   },
+   "contact_steps_reverse": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 0.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 0.0,
+    "p90": 0.0,
+    "max": 0.0
+   }
+  },
+  "glancing": {
+   "n_cycles": 122,
+   "n_base_states": 58,
+   "hand_mid_displacement": {
+    "median": 0.10689996380162989,
+    "p90": 0.11814996895350117,
+    "max": 0.1270747744769821
+   },
+   "hand_closure": {
+    "median": 0.03428164466004537,
+    "p90": 0.06447225462793434,
+    "max": 0.10775544251388354
+   },
+   "hand_closure_normalized": {
+    "median": 0.34725634718833065,
+    "p90": 1.2913350412278453,
+    "max": 13.38023467207813
+   },
+   "mocap_target_closure": {
+    "median": 0.03994027399457989,
+    "p90": 0.06482773021794855,
+    "max": 0.14518671669065952
+   },
+   "obj_forward_displacement": {
+    "median": 0.004120450903957204,
+    "p90": 0.012783255179905851,
+    "max": 0.01987613416507908
+   },
+   "obj_residual_displacement": {
+    "median": 0.007307153546283148,
+    "p90": 0.028713652438472858,
+    "max": 0.10873501653960198
+   },
+   "frac_obj_residual_over_1cm": 0.4672131147540984,
+   "contact_steps_forward": {
+    "median": 3.0,
+    "p90": 15.0,
+    "max": 15.0
+   },
+   "contact_steps_reverse": {
+    "median": 4.0,
+    "p90": 15.0,
+    "max": 15.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 127.46893863608955,
+    "p90": 357.77152429719456,
+    "max": 765.8624837335395
+   }
+  },
+  "strong": {
+   "n_cycles": 943,
+   "n_base_states": 60,
+   "hand_mid_displacement": {
+    "median": 0.08894060805210248,
+    "p90": 0.11987289605740375,
+    "max": 0.1447492819450171
+   },
+   "hand_closure": {
+    "median": 0.05021352250881428,
+    "p90": 0.07454467905678906,
+    "max": 0.11198754545743873
+   },
+   "hand_closure_normalized": {
+    "median": 0.5781442114621883,
+    "p90": 1.5044418184146762,
+    "max": 4.605962269510022
+   },
+   "mocap_target_closure": {
+    "median": 0.029767206418910064,
+    "p90": 0.07802658124128356,
+    "max": 0.14965978916734457
+   },
+   "obj_forward_displacement": {
+    "median": 0.08846499037008884,
+    "p90": 0.12040564334400108,
+    "max": 0.1414019711622446
+   },
+   "obj_residual_displacement": {
+    "median": 0.053266557010981055,
+    "p90": 0.07638294291760626,
+    "max": 0.11317540101074194
+   },
+   "frac_obj_residual_over_1cm": 0.9798515376458112,
+   "contact_steps_forward": {
+    "median": 15.0,
+    "p90": 15.0,
+    "max": 15.0
+   },
+   "contact_steps_reverse": {
+    "median": 15.0,
+    "p90": 15.0,
+    "max": 15.0
+   },
+   "peak_contact_force_forward_N": {
+    "median": 356.3895143979573,
+    "p90": 598.9368486452829,
+    "max": 861.1780738468093
+   }
+  },
+  "hand_closure_when_target_returns": {
+   "median": 0.03398831714099954,
+   "p90": 0.0608543472691627,
+   "max": 0.08161926880715258
+  },
+  "frac_cycles_target_clipped": 0.38697916666666665,
+  "residual_vs_forward_contact_cycles": {
+   "n": 1065,
+   "spearman": 0.37413882638528917,
+   "pearson": 0.411659026503042,
+   "ols_slope": 0.24913080115348604,
+   "ols_intercept_m": 0.02898115387322897,
+   "persistence_ratio_median": 0.6106922237067602,
+   "by_forward_disp_bin_cm": {
+    "0-0.5": {
+     "n": 66,
+     "residual_median_cm": 0.3422603557240082
+    },
+    "0.5-2": {
+     "n": 56,
+     "residual_median_cm": 1.5479164123123126
+    },
+    "2-5": {
+     "n": 222,
+     "residual_median_cm": 5.989032336908054
+    },
+    "5-10": {
+     "n": 340,
+     "residual_median_cm": 3.9690678167614566
+    },
+    "10-30": {
+     "n": 381,
+     "residual_median_cm": 5.579729353330816
+    }
+   }
+  },
+  "frac_base_states_with_strong_cycle": 0.5,
+  "frac_base_states_with_persistent_strong_cycle": 0.5,
+  "matched_by_hand_travel": {
+   "hand_mid_0-5cm": {
+    "no_contact": {
+     "n": 124,
+     "hand_closure_median_cm": 1.6677547121322793,
+     "obj_residual_median_cm": 0.0013312406555805773
+    },
+    "glancing": {
+     "n": 17,
+     "hand_closure_median_cm": 4.541548855451296,
+     "obj_residual_median_cm": 4.647076789344786
+    },
+    "strong": {
+     "n": 222,
+     "hand_closure_median_cm": 5.9380715036930205,
+     "obj_residual_median_cm": 6.013972934030273
+    }
+   },
+   "hand_mid_5-10cm": {
+    "no_contact": {
+     "n": 321,
+     "hand_closure_median_cm": 2.837420118004331,
+     "obj_residual_median_cm": 0.0015612991974768026
+    },
+    "glancing": {
+     "n": 28,
+     "hand_closure_median_cm": 4.88578271980691,
+     "obj_residual_median_cm": 0.5852345163753008
+    },
+    "strong": {
+     "n": 346,
+     "hand_closure_median_cm": 3.7804030507820148,
+     "obj_residual_median_cm": 3.8688933779430354
+    }
+   },
+   "hand_mid_10-15cm": {
+    "no_contact": {
+     "n": 410,
+     "hand_closure_median_cm": 3.4497378405274124,
+     "obj_residual_median_cm": 0.0015380244002633282
+    },
+    "glancing": {
+     "n": 77,
+     "hand_closure_median_cm": 3.290700716482448,
+     "obj_residual_median_cm": 1.1517004066677305
+    },
+    "strong": {
+     "n": 375,
+     "hand_closure_median_cm": 5.342617924215438,
+     "obj_residual_median_cm": 5.685018078611245
+    }
+   },
+   "hand_mid_15-30cm": {
+    "no_contact": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    },
+    "glancing": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    },
+    "strong": {
+     "n": 0,
+     "hand_closure_median_cm": null,
+     "obj_residual_median_cm": null
+    }
+   }
+  },
+  "by_program_kind": {
+   "expert": {
+    "n": 120,
+    "categories": {
+     "no_contact": 60,
+     "glancing": 0,
+     "strong": 60
+    }
+   },
+   "expert_noise": {
+    "n": 600,
+    "categories": {
+     "no_contact": 277,
+     "glancing": 23,
+     "strong": 300
+    }
+   },
+   "random_hold": {
+    "n": 720,
+    "categories": {
+     "no_contact": 345,
+     "glancing": 32,
+     "strong": 343
+    }
+   },
+   "to_object_0.0": {
+    "n": 120,
+    "categories": {
+     "no_contact": 60,
+     "glancing": 0,
+     "strong": 60
+    }
+   },
+   "to_object_0.02": {
+    "n": 120,
+    "categories": {
+     "no_contact": 40,
+     "glancing": 20,
+     "strong": 60
+    }
+   },
+   "to_object_0.04": {
+    "n": 120,
+    "categories": {
+     "no_contact": 37,
+     "glancing": 23,
+     "strong": 60
+    }
+   },
+   "to_object_0.06": {
+    "n": 120,
+    "categories": {
+     "no_contact": 36,
+     "glancing": 24,
+     "strong": 60
+    }
+   }
+  }
+ }
+}

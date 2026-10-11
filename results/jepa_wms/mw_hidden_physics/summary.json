@@ -1,0 +1,2203 @@
+{
+ "n_base_states": 120,
+ "n_candidates": 24,
+ "variants": [
+  "nominal",
+  "vel_all_zero",
+  "vel_obj_+0.1mps",
+  "vel_obj_+0.3mps",
+  "vel_obj_+1.0mps",
+  "vel_arm_+0.5radps",
+  "vel_arm_+2.0radps",
+  "friction_x0.1",
+  "friction_x0.3",
+  "friction_x3.0",
+  "friction_x10.0",
+  "obj_mass_x0.1",
+  "obj_mass_x0.3",
+  "obj_mass_x3.0",
+  "obj_mass_x10.0",
+  "obj_mass_x100.0"
+ ],
+ "max_pixel_diff_vs_nominal": 1.0,
+ "frac_base_states_with_any_pixel_diff": 0.008333333333333333,
+ "nominal": {
+  "h1": {
+   "obj_displacement_from_start": {
+    "median": 0.0015769232268519153,
+    "p90": 0.008291414961082764,
+    "max": 0.010997137843119554
+   },
+   "cost_spread_across_candidates_std": 0.00012136166645139005,
+   "best_minus_median_candidate_cost": 0.00010983712575399207
+  },
+  "h5": {
+   "obj_displacement_from_start": {
+    "median": 0.0015536164348078977,
+    "p90": 0.03992004879849342,
+    "max": 0.05718430168759463
+   },
+   "cost_spread_across_candidates_std": 0.001751767824759534,
+   "best_minus_median_candidate_cost": 0.001238828391871838
+  },
+  "h10": {
+   "obj_displacement_from_start": {
+    "median": 0.005571356240726381,
+    "p90": 0.07713537094603984,
+    "max": 0.11683063040174595
+   },
+   "cost_spread_across_candidates_std": 0.0057411614335284526,
+   "best_minus_median_candidate_cost": 0.005070255556109699
+  },
+  "h20": {
+   "obj_displacement_from_start": {
+    "median": 0.026252490187138457,
+    "p90": 0.1402436155860528,
+    "max": 0.22806791071973592
+   },
+   "cost_spread_across_candidates_std": 0.01922038944165183,
+   "best_minus_median_candidate_cost": 0.02143149722401068
+  },
+  "h30": {
+   "obj_displacement_from_start": {
+    "median": 0.05699874966407617,
+    "p90": 0.17621029636898206,
+    "max": 0.35730952061405064
+   },
+   "cost_spread_across_candidates_std": 0.049628475705108144,
+   "best_minus_median_candidate_cost": 0.03523188647488757
+  }
+ },
+ "by_variant": {
+  "vel_all_zero": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.0008217165836482329,
+     "p90": 0.004631032705622476,
+     "max": 0.007452019970196362
+    },
+    "hand_divergence": {
+     "median": 0.0027940629821721612,
+     "p90": 0.00586625327672712,
+     "max": 0.00606618445674337
+    },
+    "task_cost_divergence": {
+     "median": 0.0005650691832854056,
+     "p90": 0.004373040277188851,
+     "max": 0.00734516884650141
+    },
+    "ranking_spearman_median": 0.9956521739130434,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.2,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 3.330669073875517e-17,
+     "max": 0.00021048203258772213
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.0006012112048464,
+     "p90": 0.0056120208356795044,
+     "max": 0.024574085830134137
+    },
+    "hand_divergence": {
+     "median": 0.0054390718176941365,
+     "p90": 0.00973297353069627,
+     "max": 0.01068465694254867
+    },
+    "task_cost_divergence": {
+     "median": 2.1859362044990283e-05,
+     "p90": 0.004157803377194416,
+     "max": 0.01254652563613376
+    },
+    "ranking_spearman_median": 0.9756521739130434,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.475,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 2.632732218826926e-05,
+     "max": 0.0023569039262686664
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.0003786335637918645,
+     "p90": 0.003480322746913084,
+     "max": 0.0694731969114556
+    },
+    "hand_divergence": {
+     "median": 0.0010127806735269996,
+     "p90": 0.002438241115376335,
+     "max": 0.008941827376904656
+    },
+    "task_cost_divergence": {
+     "median": 2.864213600031751e-05,
+     "p90": 0.0016162388552621795,
+     "max": 0.0299463263027043
+    },
+    "ranking_spearman_median": 0.9921739130434782,
+    "pair_reversal_rate": 0.0020886736922054497,
+    "best_candidate_changes_rate": 0.5333333333333333,
+    "regret_of_nominal_best": {
+     "median": 5.551115123125783e-17,
+     "p90": 3.884430907457306e-05,
+     "max": 0.00738969081431054
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.001045093655486481,
+     "p90": 0.005690137096111048,
+     "max": 0.18702918954476608
+    },
+    "hand_divergence": {
+     "median": 0.0007814150018224241,
+     "p90": 0.001550291196965062,
+     "max": 0.0273753702727312
+    },
+    "task_cost_divergence": {
+     "median": 0.00026755911485055843,
+     "p90": 0.002730726316916191,
+     "max": 0.11062916232526562
+    },
+    "ranking_spearman_median": 0.9634782608695651,
+    "pair_reversal_rate": 0.007784247624885075,
+    "best_candidate_changes_rate": 0.325,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.00014821122082233284,
+     "max": 0.023984267192588227
+    },
+    "frac_regret_over_1cm": 0.03333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.008333333333333333
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.0009427141713313676,
+     "p90": 0.006359493305478459,
+     "max": 0.3103803444016621
+    },
+    "hand_divergence": {
+     "median": 0.0005378757916303404,
+     "p90": 0.001079646748291896,
+     "max": 0.023249635530125733
+    },
+    "task_cost_divergence": {
+     "median": 0.00038585499753917424,
+     "p90": 0.0031930497070672328,
+     "max": 0.21488884141175144
+    },
+    "ranking_spearman_median": 0.9513043478260867,
+    "pair_reversal_rate": 0.010786608324005291,
+    "best_candidate_changes_rate": 0.25833333333333336,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 9.124979685009819e-05,
+     "max": 0.0421955866322169
+    },
+    "frac_regret_over_1cm": 0.03333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.016666666666666666
+   }
+  },
+  "vel_obj_+0.1mps": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.00046282845084232206,
+     "p90": 0.0005364082968632991,
+     "max": 0.0009136499148915037
+    },
+    "hand_divergence": {
+     "median": 2.3622948185298898e-05,
+     "p90": 9.803781520126475e-05,
+     "max": 0.0001885941111897276
+    },
+    "task_cost_divergence": {
+     "median": 0.00023991698942519776,
+     "p90": 0.0004473679104979311,
+     "max": 0.0008257995421764586
+    },
+    "ranking_spearman_median": 0.9991304347826085,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.13333333333333333,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0,
+     "max": 8.942753885160526e-06
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.0005155222534445551,
+     "p90": 0.0005790860707781585,
+     "max": 0.0032119781225354994
+    },
+    "hand_divergence": {
+     "median": 1.5100615698409006e-05,
+     "p90": 0.00011237170603630375,
+     "max": 0.0012948026940714367
+    },
+    "task_cost_divergence": {
+     "median": 0.00014240911541980872,
+     "p90": 0.0004878154434679621,
+     "max": 0.002767947031138307
+    },
+    "ranking_spearman_median": 0.9991304347826085,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.44166666666666665,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 2.220446049250313e-16,
+     "max": 0.00023810545337657474
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.0005064987178341357,
+     "p90": 0.0005602693987703051,
+     "max": 0.008768068191806633
+    },
+    "hand_divergence": {
+     "median": 7.849889238043945e-06,
+     "p90": 0.00015576377949785632,
+     "max": 0.0036075713714129798
+    },
+    "task_cost_divergence": {
+     "median": 0.00016870744376489,
+     "p90": 0.0005098253029200444,
+     "max": 0.004354595947360318
+    },
+    "ranking_spearman_median": 0.9991304347826085,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.425,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 5.551115123125783e-16,
+     "max": 0.00024895973109023695
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.0005141692343653989,
+     "p90": 0.0008996225504127739,
+     "max": 0.048491629613492765
+    },
+    "hand_divergence": {
+     "median": 1.9147540353789455e-05,
+     "p90": 0.0003288637291452308,
+     "max": 0.026049961412561762
+    },
+    "task_cost_divergence": {
+     "median": 0.0002119575250783181,
+     "p90": 0.0005407367084969527,
+     "max": 0.01941240920871301
+    },
+    "ranking_spearman_median": 0.9991304347826085,
+    "pair_reversal_rate": 0.00018387986515476556,
+    "best_candidate_changes_rate": 0.25833333333333336,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 6.411537967210281e-16,
+     "max": 0.0012035801191607465
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.0005178425014480351,
+     "p90": 0.0013207556418101316,
+     "max": 0.07671661177458242
+    },
+    "hand_divergence": {
+     "median": 2.0494168436583658e-05,
+     "p90": 0.0004809552014827476,
+     "max": 0.019280757525926027
+    },
+    "task_cost_divergence": {
+     "median": 0.00023792569055727797,
+     "p90": 0.0007228693765864947,
+     "max": 0.048167058385389205
+    },
+    "ranking_spearman_median": 0.9969565217391303,
+    "pair_reversal_rate": 0.0004070418235473695,
+    "best_candidate_changes_rate": 0.175,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 6.772360450213464e-16,
+     "max": 0.0008598856023735862
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   }
+  },
+  "vel_obj_+0.3mps": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.002119659931827701,
+     "p90": 0.002273318308490547,
+     "max": 0.0023542362301024237
+    },
+    "hand_divergence": {
+     "median": 8.757104291897562e-05,
+     "p90": 0.0002994896086675284,
+     "max": 0.0006276917041082914
+    },
+    "task_cost_divergence": {
+     "median": 0.0007635651653500504,
+     "p90": 0.0019249036446281121,
+     "max": 0.002175121632779886
+    },
+    "ranking_spearman_median": 0.997391304347826,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.5333333333333333,
+    "regret_of_nominal_best": {
+     "median": 2.0816681711721685e-16,
+     "p90": 1.6701640070948557e-13,
+     "max": 0.0003308278608167847
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.0023467124336802947,
+     "p90": 0.003788968275920158,
+     "max": 0.004393404280125671
+    },
+    "hand_divergence": {
+     "median": 6.415193830155287e-05,
+     "p90": 0.0003353449141910349,
+     "max": 0.002455047150254809
+    },
+    "task_cost_divergence": {
+     "median": 0.0005669788655702085,
+     "p90": 0.002759304705682095,
+     "max": 0.004101396561572573
+    },
+    "ranking_spearman_median": 0.997391304347826,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.4666666666666667,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 5.309891415450352e-13,
+     "max": 0.0001724459650212784
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.0023232402696446485,
+     "p90": 0.0038420178500362767,
+     "max": 0.008684682327603263
+    },
+    "hand_divergence": {
+     "median": 2.4629847886721145e-05,
+     "p90": 0.0002537050515384487,
+     "max": 0.005810796615014882
+    },
+    "task_cost_divergence": {
+     "median": 0.0005721440579157869,
+     "p90": 0.0028034233902583918,
+     "max": 0.004078324261755528
+    },
+    "ranking_spearman_median": 0.9982608695652172,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.4,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 5.261985291937777e-13,
+     "max": 0.0008550884296025796
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.0023403232075883407,
+     "p90": 0.0038651303105692518,
+     "max": 0.04793910228008039
+    },
+    "hand_divergence": {
+     "median": 5.615597642836837e-05,
+     "p90": 0.0005926699494893587,
+     "max": 0.030632036477359324
+    },
+    "task_cost_divergence": {
+     "median": 0.0006528718259615467,
+     "p90": 0.002864603713557315,
+     "max": 0.03988006891746254
+    },
+    "ranking_spearman_median": 0.9965217391304346,
+    "pair_reversal_rate": 0.0004903463070793749,
+    "best_candidate_changes_rate": 0.275,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 5.958983306797462e-13,
+     "max": 0.006996900524195798
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.0023459459160589608,
+     "p90": 0.0041544249695254455,
+     "max": 0.08040972587528901
+    },
+    "hand_divergence": {
+     "median": 5.8562514344477416e-05,
+     "p90": 0.0008146787195126985,
+     "max": 0.02279138652006179
+    },
+    "task_cost_divergence": {
+     "median": 0.0007582414557793099,
+     "p90": 0.003075721664299802,
+     "max": 0.07408917394546434
+    },
+    "ranking_spearman_median": 0.9934782608695651,
+    "pair_reversal_rate": 0.0017808079780197415,
+    "best_candidate_changes_rate": 0.2,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 2.4346635818517394e-13,
+     "max": 0.0041927212593381065
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   }
+  },
+  "vel_obj_+1.0mps": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.00880742966639569,
+     "p90": 0.009587933950792793,
+     "max": 0.009726217815093535
+    },
+    "hand_divergence": {
+     "median": 0.0001499882452436681,
+     "p90": 0.0009831575980717038,
+     "max": 0.001228225062640866
+    },
+    "task_cost_divergence": {
+     "median": 0.002609051630900819,
+     "p90": 0.008059813610110721,
+     "max": 0.009325204003897136
+    },
+    "ranking_spearman_median": 0.9895652173913043,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.5666666666666667,
+    "regret_of_nominal_best": {
+     "median": 4.440892098500626e-16,
+     "p90": 2.9663127453893956e-05,
+     "max": 0.0015930195593697738
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.030485821629234112,
+     "p90": 0.04024505128492371,
+     "max": 0.04256162800345724
+    },
+    "hand_divergence": {
+     "median": 0.00017305036371475897,
+     "p90": 0.001041197337159673,
+     "max": 0.004600940034318023
+    },
+    "task_cost_divergence": {
+     "median": 0.0025504037170332727,
+     "p90": 0.03527473667959637,
+     "max": 0.042440359289138585
+    },
+    "ranking_spearman_median": 0.9939130434782607,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.5583333333333333,
+    "regret_of_nominal_best": {
+     "median": 8.645861804268407e-15,
+     "p90": 8.413686414243714e-13,
+     "max": 0.0013559563728899847
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.03000363050623239,
+     "p90": 0.049413597849697094,
+     "max": 0.051501888863042355
+    },
+    "hand_divergence": {
+     "median": 0.00011136024389972395,
+     "p90": 0.0008441158220994611,
+     "max": 0.01757595744554441
+    },
+    "task_cost_divergence": {
+     "median": 0.002781808148762834,
+     "p90": 0.04335593622481681,
+     "max": 0.04986227259022505
+    },
+    "ranking_spearman_median": 0.9965217391304346,
+    "pair_reversal_rate": 0.00018987942656413178,
+    "best_candidate_changes_rate": 0.49166666666666664,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0012958474904438664,
+     "max": 0.009074922708586064
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.025091062593541155,
+     "p90": 0.06409241034512815,
+     "max": 0.11860706271449654
+    },
+    "hand_divergence": {
+     "median": 0.0001877814562838161,
+     "p90": 0.004887557632297729,
+     "max": 0.04241412721554125
+    },
+    "task_cost_divergence": {
+     "median": 0.004716110175833461,
+     "p90": 0.04974989521691925,
+     "max": 0.1100926885121494
+    },
+    "ranking_spearman_median": 0.994782608695652,
+    "pair_reversal_rate": 0.0653386454183267,
+    "best_candidate_changes_rate": 0.4083333333333333,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.007730892244850105,
+     "max": 0.03678063061488546
+    },
+    "frac_regret_over_1cm": 0.08333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.019067367441778574,
+     "p90": 0.07905603843617214,
+     "max": 0.18412633021822356
+    },
+    "hand_divergence": {
+     "median": 0.00019956839800266252,
+     "p90": 0.009201310531810338,
+     "max": 0.04442271512396882
+    },
+    "task_cost_divergence": {
+     "median": 0.006400032354923944,
+     "p90": 0.06742831500139458,
+     "max": 0.16907189596359493
+    },
+    "ranking_spearman_median": 0.9860869565217389,
+    "pair_reversal_rate": 0.09738475628370816,
+    "best_candidate_changes_rate": 0.48333333333333334,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.05726106190567544,
+     "max": 0.10786658777123617
+    },
+    "frac_regret_over_1cm": 0.18333333333333332,
+    "frac_regret_over_success_radius": 0.10833333333333334,
+    "success_flip_rate": 0.0
+   }
+  },
+  "vel_arm_+0.5radps": {
+   "h1": {
+    "obj_divergence": {
+     "median": 3.94429004481566e-05,
+     "p90": 0.0014149972258838239,
+     "max": 0.0024580419724543165
+    },
+    "hand_divergence": {
+     "median": 0.0016108258803187753,
+     "p90": 0.00256306748037592,
+     "max": 0.0033554129485360447
+    },
+    "task_cost_divergence": {
+     "median": 3.2311902032483575e-08,
+     "p90": 0.0005771925313658894,
+     "max": 0.002186850595377904
+    },
+    "ranking_spearman_median": 0.997391304347826,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.15,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 2.7755575615628914e-17,
+     "max": 0.0005755928738203353
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 1.436426553935308e-05,
+     "p90": 0.0014543320702495321,
+     "max": 0.005471581506233013
+    },
+    "hand_divergence": {
+     "median": 0.0014270139601700168,
+     "p90": 0.002283909062989812,
+     "max": 0.0042025757494046296
+    },
+    "task_cost_divergence": {
+     "median": 9.36837293886994e-08,
+     "p90": 0.0009692865002726369,
+     "max": 0.00542395426196432
+    },
+    "ranking_spearman_median": 0.9965217391304346,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.48333333333333334,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 2.303712776097207e-16,
+     "max": 0.0004431309628124269
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.00016842734884273266,
+     "p90": 0.001400801431617095,
+     "max": 0.007124371911986855
+    },
+    "hand_divergence": {
+     "median": 0.00028297511510689904,
+     "p90": 0.0005384826377719041,
+     "max": 0.004284087761371724
+    },
+    "task_cost_divergence": {
+     "median": 4.849724716890144e-06,
+     "p90": 0.0006088869895324089,
+     "max": 0.004180128678440087
+    },
+    "ranking_spearman_median": 0.9982608695652172,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.45,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 7.208122987378844e-15,
+     "max": 0.0008604461922428093
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.0003645309349396336,
+     "p90": 0.001754940478182582,
+     "max": 0.04749205038944829
+    },
+    "hand_divergence": {
+     "median": 0.0001282426795572213,
+     "p90": 0.00040173753575090045,
+     "max": 0.02606296189686431
+    },
+    "task_cost_divergence": {
+     "median": 7.680168082999095e-05,
+     "p90": 0.0008450265122400955,
+     "max": 0.02892263799293776
+    },
+    "ranking_spearman_median": 0.9956521739130434,
+    "pair_reversal_rate": 0.0004903463070793749,
+    "best_candidate_changes_rate": 0.225,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 7.609873842184827e-12,
+     "max": 0.0029096931649387203
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.00042958545551500344,
+     "p90": 0.0020819616715962446,
+     "max": 0.07373498238134155
+    },
+    "hand_divergence": {
+     "median": 7.431205150795754e-05,
+     "p90": 0.0004259125083763913,
+     "max": 0.019846342136247443
+    },
+    "task_cost_divergence": {
+     "median": 0.00013315114041244878,
+     "p90": 0.001160062927922474,
+     "max": 0.03571024807931361
+    },
+    "ranking_spearman_median": 0.983478260869565,
+    "pair_reversal_rate": 0.0007632034191513178,
+    "best_candidate_changes_rate": 0.2,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 3.312187059068015e-08,
+     "max": 0.005494171278148599
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   }
+  },
+  "vel_arm_+2.0radps": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.00015865659831152838,
+     "p90": 0.005332207307966321,
+     "max": 0.008091423480595635
+    },
+    "hand_divergence": {
+     "median": 0.006386764910054826,
+     "p90": 0.01024106471239767,
+     "max": 0.013439461666976465
+    },
+    "task_cost_divergence": {
+     "median": 4.161189223403361e-08,
+     "p90": 0.0022449694018398096,
+     "max": 0.005224303180598716
+    },
+    "ranking_spearman_median": 0.9856521739130433,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.3,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 1.8328087686702444e-05,
+     "max": 0.0016900732723677536
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.00011462873919051816,
+     "p90": 0.0057217882531401705,
+     "max": 0.012579090530773827
+    },
+    "hand_divergence": {
+     "median": 0.005588108003834147,
+     "p90": 0.008886342094336426,
+     "max": 0.015175379020224072
+    },
+    "task_cost_divergence": {
+     "median": 6.058288454929839e-08,
+     "p90": 0.0038519414235887693,
+     "max": 0.011830361214075158
+    },
+    "ranking_spearman_median": 0.9891304347826086,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.5416666666666666,
+    "regret_of_nominal_best": {
+     "median": 2.7755575615628914e-17,
+     "p90": 0.0003095047914476736,
+     "max": 0.0018262586131365319
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.0005351432442418451,
+     "p90": 0.005128438115357203,
+     "max": 0.020675205005376632
+    },
+    "hand_divergence": {
+     "median": 0.0010927955338623113,
+     "p90": 0.0019066662601964913,
+     "max": 0.008056705917941907
+    },
+    "task_cost_divergence": {
+     "median": 2.5444128856105808e-05,
+     "p90": 0.0022486645248293224,
+     "max": 0.019799794440808774
+    },
+    "ranking_spearman_median": 0.9930434782608695,
+    "pair_reversal_rate": 0.000854457419538593,
+    "best_candidate_changes_rate": 0.5083333333333333,
+    "regret_of_nominal_best": {
+     "median": 1.3877787807814457e-17,
+     "p90": 1.3531398224131412e-13,
+     "max": 0.006980300330777225
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.0010206056161021298,
+     "p90": 0.006188647237604965,
+     "max": 0.08248787130599812
+    },
+    "hand_divergence": {
+     "median": 0.0004993207087859593,
+     "p90": 0.0011677252032484132,
+     "max": 0.027606242148786698
+    },
+    "task_cost_divergence": {
+     "median": 0.00024918071551349036,
+     "p90": 0.003138513798436966,
+     "max": 0.05020418751857776
+    },
+    "ranking_spearman_median": 0.9791304347826085,
+    "pair_reversal_rate": 0.0030033711308611708,
+    "best_candidate_changes_rate": 0.30833333333333335,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 3.4080782640444626e-09,
+     "max": 0.014504418043723516
+    },
+    "frac_regret_over_1cm": 0.008333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.001394562763517022,
+     "p90": 0.007201222705897343,
+     "max": 0.15132410097156254
+    },
+    "hand_divergence": {
+     "median": 0.0003038134335743163,
+     "p90": 0.0009997504882949964,
+     "max": 0.020426494090499722
+    },
+    "task_cost_divergence": {
+     "median": 0.00043597974598966194,
+     "p90": 0.0038175056333486896,
+     "max": 0.1337289182901168
+    },
+    "ranking_spearman_median": 0.9686956521739128,
+    "pair_reversal_rate": 0.005495064617889488,
+    "best_candidate_changes_rate": 0.30833333333333335,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0006946819508302931,
+     "max": 0.04034100057024509
+    },
+    "frac_regret_over_1cm": 0.008333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.008333333333333333
+   }
+  },
+  "friction_x0.1": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.0001423503664763443,
+     "p90": 0.0009164573857441931,
+     "max": 0.001620800212324981
+    },
+    "hand_divergence": {
+     "median": 3.025652573137001e-06,
+     "p90": 0.00010872577344595598,
+     "max": 0.00045336683149458133
+    },
+    "task_cost_divergence": {
+     "median": 2.858378019127139e-05,
+     "p90": 0.000389117289346487,
+     "max": 0.0008735658522886769
+    },
+    "ranking_spearman_median": 0.9852173913043477,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.6083333333333333,
+    "regret_of_nominal_best": {
+     "median": 1.7486012637846216e-15,
+     "p90": 8.553076894796974e-05,
+     "max": 0.0003016494959832347
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.00048799693854834016,
+     "p90": 0.010588802409604683,
+     "max": 0.018003680232045256
+    },
+    "hand_divergence": {
+     "median": 1.7696548379664606e-05,
+     "p90": 0.0018091320927700223,
+     "max": 0.006926382442056678
+    },
+    "task_cost_divergence": {
+     "median": 0.00046310737361427573,
+     "p90": 0.005138302199357731,
+     "max": 0.012775989939273265
+    },
+    "ranking_spearman_median": 0.9765217391304347,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.6166666666666667,
+    "regret_of_nominal_best": {
+     "median": 1.6707468741827824e-13,
+     "p90": 0.0004878110577061995,
+     "max": 0.003924283996043016
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.001051165555416081,
+     "p90": 0.016392993093392268,
+     "max": 0.054059720362306274
+    },
+    "hand_divergence": {
+     "median": 3.778774540512575e-05,
+     "p90": 0.004551408305907432,
+     "max": 0.01302587567156754
+    },
+    "task_cost_divergence": {
+     "median": 0.0005343201139503956,
+     "p90": 0.008485200871715486,
+     "max": 0.027391083372052524
+    },
+    "ranking_spearman_median": 0.9747826086956521,
+    "pair_reversal_rate": 0.005506503370359821,
+    "best_candidate_changes_rate": 0.5833333333333334,
+    "regret_of_nominal_best": {
+     "median": 1.4015733018624132e-12,
+     "p90": 0.0008018612672074124,
+     "max": 0.009510383540529209
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.0064013528480349816,
+     "p90": 0.02045951109426276,
+     "max": 0.18272519939011395
+    },
+    "hand_divergence": {
+     "median": 0.0005010682207233346,
+     "p90": 0.007016907054720396,
+     "max": 0.030560995356840606
+    },
+    "task_cost_divergence": {
+     "median": 0.0026536136128492843,
+     "p90": 0.013352669764960759,
+     "max": 0.09212969235391028
+    },
+    "ranking_spearman_median": 0.9409982624602267,
+    "pair_reversal_rate": 0.014710389212381244,
+    "best_candidate_changes_rate": 0.5666666666666667,
+    "regret_of_nominal_best": {
+     "median": 1.928017051566755e-10,
+     "p90": 0.008033823323361663,
+     "max": 0.02979226343108414
+    },
+    "frac_regret_over_1cm": 0.075,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.008533941632862804,
+     "p90": 0.03686889366738378,
+     "max": 0.310410751361031
+    },
+    "hand_divergence": {
+     "median": 0.0008422657192914308,
+     "p90": 0.008658004417290942,
+     "max": 0.03601713341527389
+    },
+    "task_cost_divergence": {
+     "median": 0.003913408301211476,
+     "p90": 0.022143583331285514,
+     "max": 0.17776619136411673
+    },
+    "ranking_spearman_median": 0.917391304347826,
+    "pair_reversal_rate": 0.03882161392083037,
+    "best_candidate_changes_rate": 0.49166666666666664,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.01296787354704126,
+     "max": 0.06148770283431075
+    },
+    "frac_regret_over_1cm": 0.125,
+    "frac_regret_over_success_radius": 0.03333333333333333,
+    "success_flip_rate": 0.008333333333333333
+   }
+  },
+  "friction_x0.3": {
+   "h1": {
+    "obj_divergence": {
+     "median": 5.631161194258942e-06,
+     "p90": 0.0004926743175626368,
+     "max": 0.0008709299910523152
+    },
+    "hand_divergence": {
+     "median": 5.495015591791383e-07,
+     "p90": 6.394093784414996e-05,
+     "max": 0.0003694758108819972
+    },
+    "task_cost_divergence": {
+     "median": 4.5310538474008233e-07,
+     "p90": 0.00024939787298422695,
+     "max": 0.0006487942945201941
+    },
+    "ranking_spearman_median": 0.9813043478260869,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.25,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 1.2209637023685798e-05,
+     "max": 0.00021384242449486168
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 7.175541637772965e-05,
+     "p90": 0.0030859934720070554,
+     "max": 0.010239792398750659
+    },
+    "hand_divergence": {
+     "median": 4.627197844820328e-06,
+     "p90": 0.0019090092044671977,
+     "max": 0.005858290002379828
+    },
+    "task_cost_divergence": {
+     "median": 2.756286322930235e-07,
+     "p90": 0.0015532485371373903,
+     "max": 0.00859254199709833
+    },
+    "ranking_spearman_median": 0.9921739130434782,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.5083333333333333,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 3.608224830031759e-16,
+     "max": 0.0007222858496169215
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.000579593599196146,
+     "p90": 0.0054015127681130756,
+     "max": 0.023370955935934253
+    },
+    "hand_divergence": {
+     "median": 6.23917772137172e-06,
+     "p90": 0.002468657628646495,
+     "max": 0.010314257373675223
+    },
+    "task_cost_divergence": {
+     "median": 1.7203046887181994e-05,
+     "p90": 0.00304416050331366,
+     "max": 0.017072471199333167
+    },
+    "ranking_spearman_median": 0.9913043478260868,
+    "pair_reversal_rate": 0.0009493971328206589,
+    "best_candidate_changes_rate": 0.49166666666666664,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 1.0901279878794418e-13,
+     "max": 0.003577893915907099
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.003156484522139762,
+     "p90": 0.010175470193769971,
+     "max": 0.07568267991271128
+    },
+    "hand_divergence": {
+     "median": 8.622344285642259e-06,
+     "p90": 0.0034442147574008986,
+     "max": 0.02416807499354514
+    },
+    "task_cost_divergence": {
+     "median": 0.0010594286649568893,
+     "p90": 0.006527121802785613,
+     "max": 0.0578651848229373
+    },
+    "ranking_spearman_median": 0.9730434782608696,
+    "pair_reversal_rate": 0.005148636224333435,
+    "best_candidate_changes_rate": 0.43333333333333335,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.006803469924437566,
+     "max": 0.014289576431761764
+    },
+    "frac_regret_over_1cm": 0.05,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.004125852841012677,
+     "p90": 0.017130490410725396,
+     "max": 0.14198733943713215
+    },
+    "hand_divergence": {
+     "median": 8.165158093072166e-06,
+     "p90": 0.004852715317941643,
+     "max": 0.0359843067741196
+    },
+    "task_cost_divergence": {
+     "median": 0.0014120707502766026,
+     "p90": 0.011017070943095137,
+     "max": 0.13555876639951792
+    },
+    "ranking_spearman_median": 0.9478260869565217,
+    "pair_reversal_rate": 0.017451918184593466,
+    "best_candidate_changes_rate": 0.35,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0024251758361852503,
+     "max": 0.030514886998127135
+    },
+    "frac_regret_over_1cm": 0.025,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   }
+  },
+  "friction_x3.0": {
+   "h1": {
+    "obj_divergence": {
+     "median": 1.3171125289682453e-08,
+     "p90": 1.6458310406557778e-05,
+     "max": 0.0015317330501783814
+    },
+    "hand_divergence": {
+     "median": 3.1417064680568605e-10,
+     "p90": 1.4007129181450763e-06,
+     "max": 0.0005160718053568443
+    },
+    "task_cost_divergence": {
+     "median": 6.162916399432561e-09,
+     "p90": 1.0261508302392135e-05,
+     "max": 0.001055013962987239
+    },
+    "ranking_spearman_median": 0.9999999999999999,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.15,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0,
+     "max": 0.0001043250569515708
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 2.6483287774073104e-06,
+     "p90": 0.002481909630245288,
+     "max": 0.017787948506054585
+    },
+    "hand_divergence": {
+     "median": 1.9218331788905874e-08,
+     "p90": 0.0022627659397276008,
+     "max": 0.014605079270220526
+    },
+    "task_cost_divergence": {
+     "median": 2.0447583845562e-07,
+     "p90": 0.0018793629236751965,
+     "max": 0.012980945871028632
+    },
+    "ranking_spearman_median": 0.9965217391304346,
+    "pair_reversal_rate": 0.000198294665873488,
+    "best_candidate_changes_rate": 0.5333333333333333,
+    "regret_of_nominal_best": {
+     "median": 2.7755575615628914e-17,
+     "p90": 2.7755575615628914e-16,
+     "max": 0.008246951124216945
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 2.6140021390160595e-05,
+     "p90": 0.005065885638795429,
+     "max": 0.04190539692762884
+    },
+    "hand_divergence": {
+     "median": 1.2038250824101122e-07,
+     "p90": 0.0031634879072582295,
+     "max": 0.03059060764392813
+    },
+    "task_cost_divergence": {
+     "median": 7.546373793229644e-06,
+     "p90": 0.003538685733852844,
+     "max": 0.017118544947106934
+    },
+    "ranking_spearman_median": 0.9956521739130434,
+    "pair_reversal_rate": 0.0009493971328206589,
+    "best_candidate_changes_rate": 0.4583333333333333,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 7.07989222803463e-14,
+     "max": 0.0017538731943743356
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 8.156702102981336e-05,
+     "p90": 0.010438244214485061,
+     "max": 0.10989539282119547
+    },
+    "hand_divergence": {
+     "median": 1.0133323488008643e-06,
+     "p90": 0.006524269963108383,
+     "max": 0.03512372941588294
+    },
+    "task_cost_divergence": {
+     "median": 3.684046444614279e-05,
+     "p90": 0.008401441588577979,
+     "max": 0.06539288950904273
+    },
+    "ranking_spearman_median": 0.9908695652173911,
+    "pair_reversal_rate": 0.005148636224333435,
+    "best_candidate_changes_rate": 0.35833333333333334,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0010989116226587173,
+     "max": 0.009936133885676574
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.00012424748116931838,
+     "p90": 0.020851923168041544,
+     "max": 0.16815879014889518
+    },
+    "hand_divergence": {
+     "median": 1.3677095077929795e-06,
+     "p90": 0.00868757198184601,
+     "max": 0.04718661550094922
+    },
+    "task_cost_divergence": {
+     "median": 6.983211705176642e-05,
+     "p90": 0.014916972711561347,
+     "max": 0.1571943782033202
+    },
+    "ranking_spearman_median": 0.967594505619253,
+    "pair_reversal_rate": 0.017044876361046096,
+    "best_candidate_changes_rate": 0.3,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0033931135530040047,
+     "max": 0.04414056458263338
+    },
+    "frac_regret_over_1cm": 0.06666666666666667,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   }
+  },
+  "friction_x10.0": {
+   "h1": {
+    "obj_divergence": {
+     "median": 1.0977887269183174e-07,
+     "p90": 3.6491314128673425e-05,
+     "max": 0.0034663825767344476
+    },
+    "hand_divergence": {
+     "median": 5.093482063981693e-09,
+     "p90": 3.4235625066463224e-06,
+     "max": 0.002088762306149151
+    },
+    "task_cost_divergence": {
+     "median": 5.813063247428474e-08,
+     "p90": 1.544313462915335e-05,
+     "max": 0.0033086425164257915
+    },
+    "ranking_spearman_median": 0.9991304347826085,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.225,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 8.326672684688674e-17,
+     "max": 0.0021765357890254633
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 2.5043162600590446e-06,
+     "p90": 0.005571787529930736,
+     "max": 0.029569078528525156
+    },
+    "hand_divergence": {
+     "median": 6.973775578261421e-08,
+     "p90": 0.005440440949017708,
+     "max": 0.02837711517701066
+    },
+    "task_cost_divergence": {
+     "median": 1.0668513489575648e-06,
+     "p90": 0.004820685297088812,
+     "max": 0.02937813438363554
+    },
+    "ranking_spearman_median": 0.994782608695652,
+    "pair_reversal_rate": 0.02399365457069205,
+    "best_candidate_changes_rate": 0.6,
+    "regret_of_nominal_best": {
+     "median": 4.163336342344337e-17,
+     "p90": 0.0015623357000475202,
+     "max": 0.02769391281986691
+    },
+    "frac_regret_over_1cm": 0.08333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 4.0362441333517784e-05,
+     "p90": 0.012706402338182493,
+     "max": 0.056631678188037445
+    },
+    "hand_divergence": {
+     "median": 1.6269039626493628e-07,
+     "p90": 0.009312830458660307,
+     "max": 0.05271085390125674
+    },
+    "task_cost_divergence": {
+     "median": 1.6232064565219195e-05,
+     "p90": 0.009015486011508419,
+     "max": 0.05235099533307443
+    },
+    "ranking_spearman_median": 0.9799999999999999,
+    "pair_reversal_rate": 0.03873540301908288,
+    "best_candidate_changes_rate": 0.5833333333333334,
+    "regret_of_nominal_best": {
+     "median": 2.0816681711721685e-16,
+     "p90": 0.0028246675818105436,
+     "max": 0.03717209678084511
+    },
+    "frac_regret_over_1cm": 0.058333333333333334,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.00010626044102866799,
+     "p90": 0.016698144760868238,
+     "max": 0.11335410075361078
+    },
+    "hand_divergence": {
+     "median": 1.5107157779828828e-06,
+     "p90": 0.010269020285065659,
+     "max": 0.07009019844361575
+    },
+    "task_cost_divergence": {
+     "median": 4.895461373418883e-05,
+     "p90": 0.013398806449693296,
+     "max": 0.07429249055310314
+    },
+    "ranking_spearman_median": 0.9621739130434782,
+    "pair_reversal_rate": 0.016794361017468586,
+    "best_candidate_changes_rate": 0.4,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0038491553392389277,
+     "max": 0.014789763574477977
+    },
+    "frac_regret_over_1cm": 0.016666666666666666,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.00015904726917238192,
+     "p90": 0.039093846917774074,
+     "max": 0.20960840264685232
+    },
+    "hand_divergence": {
+     "median": 1.8716203574130692e-06,
+     "p90": 0.01881212988425192,
+     "max": 0.10286361177499802
+    },
+    "task_cost_divergence": {
+     "median": 8.923894603702145e-05,
+     "p90": 0.03403033821918875,
+     "max": 0.14414584540038644
+    },
+    "ranking_spearman_median": 0.9382608695652173,
+    "pair_reversal_rate": 0.03271598656761982,
+    "best_candidate_changes_rate": 0.4166666666666667,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.027855955667710285,
+     "max": 0.04407252290213671
+    },
+    "frac_regret_over_1cm": 0.16666666666666666,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.008333333333333333
+   }
+  },
+  "obj_mass_x0.1": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.00012130995229141123,
+     "p90": 0.00023760666875096624,
+     "max": 0.00038071294983200424
+    },
+    "hand_divergence": {
+     "median": 2.5854477278207987e-05,
+     "p90": 7.80990493273745e-05,
+     "max": 9.663229561272284e-05
+    },
+    "task_cost_divergence": {
+     "median": 1.014283233169433e-05,
+     "p90": 0.00011351883752392073,
+     "max": 0.0002607068670679169
+    },
+    "ranking_spearman_median": 0.9999999999999999,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.16666666666666666,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0,
+     "max": 1.1102230246251565e-16
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.0005925745969047913,
+     "p90": 0.000985193467945545,
+     "max": 0.007961265657066084
+    },
+    "hand_divergence": {
+     "median": 7.273969526716037e-05,
+     "p90": 0.000631236705803926,
+     "max": 0.0050575389441236285
+    },
+    "task_cost_divergence": {
+     "median": 2.8595689046145845e-05,
+     "p90": 0.0005291524128609933,
+     "max": 0.007831113154186248
+    },
+    "ranking_spearman_median": 0.997391304347826,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.43333333333333335,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 1.4710455076283395e-16,
+     "max": 0.00033024939201570236
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.0005998916473916186,
+     "p90": 0.00215950838514344,
+     "max": 0.033933393034366044
+    },
+    "hand_divergence": {
+     "median": 0.00010301802894219686,
+     "p90": 0.0008720179781999268,
+     "max": 0.006739706393545403
+    },
+    "task_cost_divergence": {
+     "median": 4.296809828273698e-05,
+     "p90": 0.0011271558643521763,
+     "max": 0.02959054589115647
+    },
+    "ranking_spearman_median": 0.9895652173913043,
+    "pair_reversal_rate": 0.005601443083641887,
+    "best_candidate_changes_rate": 0.48333333333333334,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.00016944791647420906,
+     "max": 0.018646025759254496
+    },
+    "frac_regret_over_1cm": 0.041666666666666664,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.0010218363878770431,
+     "p90": 0.008243304933137243,
+     "max": 0.1270010797166275
+    },
+    "hand_divergence": {
+     "median": 0.0005672177274266396,
+     "p90": 0.0009752109656649862,
+     "max": 0.008035725877546956
+    },
+    "task_cost_divergence": {
+     "median": 0.00021018558954247896,
+     "p90": 0.003173650759767685,
+     "max": 0.09383141916963542
+    },
+    "ranking_spearman_median": 0.9453996953188675,
+    "pair_reversal_rate": 0.021759117376647256,
+    "best_candidate_changes_rate": 0.35833333333333334,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.006210731014971579,
+     "max": 0.08310940126200489
+    },
+    "frac_regret_over_1cm": 0.08333333333333333,
+    "frac_regret_over_success_radius": 0.008333333333333333,
+    "success_flip_rate": 0.06666666666666667
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.0012357364763379316,
+     "p90": 0.014761960292693475,
+     "max": 0.22186369348175847
+    },
+    "hand_divergence": {
+     "median": 0.0006599524102792157,
+     "p90": 0.001341388191182559,
+     "max": 0.020622023020686005
+    },
+    "task_cost_divergence": {
+     "median": 0.0003972693467857429,
+     "p90": 0.008566012520687592,
+     "max": 0.18618522278104577
+    },
+    "ranking_spearman_median": 0.9362908702369221,
+    "pair_reversal_rate": 0.02783148468505139,
+    "best_candidate_changes_rate": 0.2833333333333333,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0007297407017836481,
+     "max": 0.0842290011301052
+    },
+    "frac_regret_over_1cm": 0.058333333333333334,
+    "frac_regret_over_success_radius": 0.041666666666666664,
+    "success_flip_rate": 0.041666666666666664
+   }
+  },
+  "obj_mass_x0.3": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.00010175644545593438,
+     "p90": 0.00018477925007794543,
+     "max": 0.0003100760515594374
+    },
+    "hand_divergence": {
+     "median": 2.0225316842841962e-05,
+     "p90": 6.077017982110361e-05,
+     "max": 0.00010031168557609559
+    },
+    "task_cost_divergence": {
+     "median": 9.214884135386875e-06,
+     "p90": 8.467295808477493e-05,
+     "max": 0.00026617332397679827
+    },
+    "ranking_spearman_median": 0.9999999999999999,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.16666666666666666,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0,
+     "max": 2.7755575615628914e-17
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.0004042893435582024,
+     "p90": 0.0007917502985039592,
+     "max": 0.006745910676706827
+    },
+    "hand_divergence": {
+     "median": 8.04696292902393e-05,
+     "p90": 0.0005165145962624958,
+     "max": 0.005109155295519665
+    },
+    "task_cost_divergence": {
+     "median": 2.106929956843806e-05,
+     "p90": 0.0003725971155590646,
+     "max": 0.0065557089748901065
+    },
+    "ranking_spearman_median": 0.9982608695652172,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.4166666666666667,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 1.1102230246251565e-16,
+     "max": 0.0002495431234077472
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.0004537836075707141,
+     "p90": 0.001869028391501277,
+     "max": 0.025637414294567788
+    },
+    "hand_divergence": {
+     "median": 7.930697130639275e-05,
+     "p90": 0.0007148396467368848,
+     "max": 0.0050411627155679435
+    },
+    "task_cost_divergence": {
+     "median": 2.6832217334155084e-05,
+     "p90": 0.0009249797112486328,
+     "max": 0.022521255961006435
+    },
+    "ranking_spearman_median": 0.9930434782608695,
+    "pair_reversal_rate": 0.0028481913984619764,
+    "best_candidate_changes_rate": 0.48333333333333334,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 4.801714581503833e-16,
+     "max": 0.011990116172731238
+    },
+    "frac_regret_over_1cm": 0.016666666666666666,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.0007962141059515486,
+     "p90": 0.005138071290608778,
+     "max": 0.11075116898240009
+    },
+    "hand_divergence": {
+     "median": 0.00047262753103364424,
+     "p90": 0.0008066167657049476,
+     "max": 0.007736396265882512
+    },
+    "task_cost_divergence": {
+     "median": 0.00016539305946526583,
+     "p90": 0.00233142884851317,
+     "max": 0.06620374374917361
+    },
+    "ranking_spearman_median": 0.9644018404054922,
+    "pair_reversal_rate": 0.012136071100214526,
+    "best_candidate_changes_rate": 0.31666666666666665,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 2.442221394050245e-06,
+     "max": 0.06179714546370254
+    },
+    "frac_regret_over_1cm": 0.05,
+    "frac_regret_over_success_radius": 0.008333333333333333,
+    "success_flip_rate": 0.025
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.0009642992439033336,
+     "p90": 0.009227110459192405,
+     "max": 0.18663212786150518
+    },
+    "hand_divergence": {
+     "median": 0.0005128443270413758,
+     "p90": 0.0011008054600183408,
+     "max": 0.01945188202614222
+    },
+    "task_cost_divergence": {
+     "median": 0.0002880949271752038,
+     "p90": 0.004806159765095659,
+     "max": 0.1529747730387542
+    },
+    "ranking_spearman_median": 0.9526624271214167,
+    "pair_reversal_rate": 0.01836776228757505,
+    "best_candidate_changes_rate": 0.2833333333333333,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0003088656951526245,
+     "max": 0.04927751776612249
+    },
+    "frac_regret_over_1cm": 0.041666666666666664,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.03333333333333333
+   }
+  },
+  "obj_mass_x3.0": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.0002672488848908907,
+     "p90": 0.0004264172309498587,
+     "max": 0.000716389658178303
+    },
+    "hand_divergence": {
+     "median": 3.8698409092079305e-05,
+     "p90": 0.0001734964619110362,
+     "max": 0.00018666676474395473
+    },
+    "task_cost_divergence": {
+     "median": 2.6018894519603403e-05,
+     "p90": 9.321596731866054e-05,
+     "max": 0.0003831051614580916
+    },
+    "ranking_spearman_median": 0.9991304347826085,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.16666666666666666,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0,
+     "max": 0.00014359465307101082
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.0010997855741166108,
+     "p90": 0.0017507469914637196,
+     "max": 0.007162537337155663
+    },
+    "hand_divergence": {
+     "median": 0.00031105849816605167,
+     "p90": 0.001415951267246106,
+     "max": 0.004556905846843707
+    },
+    "task_cost_divergence": {
+     "median": 5.2246048003402185e-05,
+     "p90": 0.001233547348216962,
+     "max": 0.00418377285630081
+    },
+    "ranking_spearman_median": 0.9943478260869564,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.5416666666666666,
+    "regret_of_nominal_best": {
+     "median": 2.7755575615628914e-17,
+     "p90": 1.4988010832439637e-15,
+     "max": 0.0017837885337579906
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.0011959577338209676,
+     "p90": 0.002599275972613867,
+     "max": 0.04223974164351282
+    },
+    "hand_divergence": {
+     "median": 0.00023910790226153115,
+     "p90": 0.0017506192903850263,
+     "max": 0.00501991284761139
+    },
+    "task_cost_divergence": {
+     "median": 8.417399802958248e-05,
+     "p90": 0.001894378436135096,
+     "max": 0.029342047906778426
+    },
+    "ranking_spearman_median": 0.99,
+    "pair_reversal_rate": 0.005031804803949492,
+    "best_candidate_changes_rate": 0.5083333333333333,
+    "regret_of_nominal_best": {
+     "median": 2.7755575615628914e-17,
+     "p90": 0.00031901391856186,
+     "max": 0.013744741727982264
+    },
+    "frac_regret_over_1cm": 0.008333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.002130907286473376,
+     "p90": 0.005603362958908858,
+     "max": 0.08350271408214528
+    },
+    "hand_divergence": {
+     "median": 0.0010572954087605614,
+     "p90": 0.00203137978956219,
+     "max": 0.013803210141380027
+    },
+    "task_cost_divergence": {
+     "median": 0.00047171098625284347,
+     "p90": 0.002984948621385666,
+     "max": 0.07356041129982427
+    },
+    "ranking_spearman_median": 0.9611580071516515,
+    "pair_reversal_rate": 0.010848912044131168,
+    "best_candidate_changes_rate": 0.36666666666666664,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.0011921720685399357,
+     "max": 0.01561044026322902
+    },
+    "frac_regret_over_1cm": 0.016666666666666666,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.008333333333333333
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.0026695289603483325,
+     "p90": 0.008870784562578747,
+     "max": 0.10878693927905432
+    },
+    "hand_divergence": {
+     "median": 0.0014255958134468403,
+     "p90": 0.002666934110522662,
+     "max": 0.023613224561767728
+    },
+    "task_cost_divergence": {
+     "median": 0.000688436742901942,
+     "p90": 0.004313735680407574,
+     "max": 0.10708397786225998
+    },
+    "ranking_spearman_median": 0.9639130434782608,
+    "pair_reversal_rate": 0.01160069197110003,
+    "best_candidate_changes_rate": 0.25833333333333336,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 1.6347921134864113e-06,
+     "max": 0.01044858143961427
+    },
+    "frac_regret_over_1cm": 0.008333333333333333,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   }
+  },
+  "obj_mass_x10.0": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.0012064345216475085,
+     "p90": 0.0016438391135825214,
+     "max": 0.0032236250267151287
+    },
+    "hand_divergence": {
+     "median": 0.00016357970384740016,
+     "p90": 0.0007759439107357396,
+     "max": 0.0007919740767323424
+    },
+    "task_cost_divergence": {
+     "median": 6.555160469662313e-05,
+     "p90": 0.0005104041838262928,
+     "max": 0.0013824095324942165
+    },
+    "ranking_spearman_median": 0.997391304347826,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.24166666666666667,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 2.4165788308162725e-06,
+     "max": 0.0007290925772852341
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.004553251760640045,
+     "p90": 0.006991162328690859,
+     "max": 0.02225092247181485
+    },
+    "hand_divergence": {
+     "median": 0.00029171631811205755,
+     "p90": 0.006292338674793888,
+     "max": 0.010541650210754979
+    },
+    "task_cost_divergence": {
+     "median": 0.00012352143537205929,
+     "p90": 0.005997480532832005,
+     "max": 0.010402093913751364
+    },
+    "ranking_spearman_median": 0.9704347826086955,
+    "pair_reversal_rate": 0.0,
+    "best_candidate_changes_rate": 0.6083333333333333,
+    "regret_of_nominal_best": {
+     "median": 1.1102230246251565e-16,
+     "p90": 0.0016997675937336315,
+     "max": 0.005889044214730892
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.004880636359236139,
+     "p90": 0.010571961906278413,
+     "max": 0.06743861569589259
+    },
+    "hand_divergence": {
+     "median": 0.0010977595842439148,
+     "p90": 0.00820122404998948,
+     "max": 0.012127725679652661
+    },
+    "task_cost_divergence": {
+     "median": 0.00014698915286587289,
+     "p90": 0.008303064975888102,
+     "max": 0.03380829736133064
+    },
+    "ranking_spearman_median": 0.9617391304347825,
+    "pair_reversal_rate": 0.012437102439950632,
+    "best_candidate_changes_rate": 0.675,
+    "regret_of_nominal_best": {
+     "median": 3.3306690738754696e-16,
+     "p90": 0.005098074794554068,
+     "max": 0.026342320614732073
+    },
+    "frac_regret_over_1cm": 0.058333333333333334,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.008025724440164906,
+     "p90": 0.014516173031863632,
+     "max": 0.10356001667410314
+    },
+    "hand_divergence": {
+     "median": 0.003459471148215953,
+     "p90": 0.008666972848741074,
+     "max": 0.02750466088999035
+    },
+    "task_cost_divergence": {
+     "median": 0.0025698468969695444,
+     "p90": 0.010412174640339833,
+     "max": 0.10241761620305881
+    },
+    "ranking_spearman_median": 0.9330434782608694,
+    "pair_reversal_rate": 0.021452650934722647,
+    "best_candidate_changes_rate": 0.475,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.008481255356647788,
+     "max": 0.038997016907487296
+    },
+    "frac_regret_over_1cm": 0.09166666666666666,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.008333333333333333
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.00972997031551455,
+     "p90": 0.019903691027670194,
+     "max": 0.22734241155644838
+    },
+    "hand_divergence": {
+     "median": 0.005078693157061995,
+     "p90": 0.011200234080732436,
+     "max": 0.028191774782971905
+    },
+    "task_cost_divergence": {
+     "median": 0.002916936975872788,
+     "p90": 0.013971317001650375,
+     "max": 0.22456316528866715
+    },
+    "ranking_spearman_median": 0.9347826086956521,
+    "pair_reversal_rate": 0.026406838302635596,
+    "best_candidate_changes_rate": 0.35833333333333334,
+    "regret_of_nominal_best": {
+     "median": 0.0,
+     "p90": 0.008383677486097014,
+     "max": 0.03582807403676061
+    },
+    "frac_regret_over_1cm": 0.06666666666666667,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   }
+  },
+  "obj_mass_x100.0": {
+   "h1": {
+    "obj_divergence": {
+     "median": 0.012137968365880457,
+     "p90": 0.012241315274678973,
+     "max": 0.01595068397206146
+    },
+    "hand_divergence": {
+     "median": 0.001079825457423317,
+     "p90": 0.008498007803119552,
+     "max": 0.008671569364083993
+    },
+    "task_cost_divergence": {
+     "median": 0.0009893174272239125,
+     "p90": 0.002864297156774917,
+     "max": 0.004872140228283195
+    },
+    "ranking_spearman_median": 0.9608695652173913,
+    "pair_reversal_rate": NaN,
+    "best_candidate_changes_rate": 0.5666666666666667,
+    "regret_of_nominal_best": {
+     "median": 2.7755575615628914e-17,
+     "p90": 8.13885606738618e-05,
+     "max": 0.00117255947372219
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h5": {
+    "obj_divergence": {
+     "median": 0.048645978015856434,
+     "p90": 0.05426865639178072,
+     "max": 0.0544427520531048
+    },
+    "hand_divergence": {
+     "median": 0.0008571460909799165,
+     "p90": 0.029213157915488824,
+     "max": 0.04042948509736624
+    },
+    "task_cost_divergence": {
+     "median": 0.007160609691736999,
+     "p90": 0.027799718608000235,
+     "max": 0.03672904037116592
+    },
+    "ranking_spearman_median": 0.9226086956521737,
+    "pair_reversal_rate": 0.007138607971445568,
+    "best_candidate_changes_rate": 0.7166666666666667,
+    "regret_of_nominal_best": {
+     "median": 1.8457457784393227e-15,
+     "p90": 0.0011553141040391932,
+     "max": 0.005530035465850784
+    },
+    "frac_regret_over_1cm": 0.0,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.0
+   },
+   "h10": {
+    "obj_divergence": {
+     "median": 0.05569114712170743,
+     "p90": 0.06425033380070021,
+     "max": 0.10953285173294092
+    },
+    "hand_divergence": {
+     "median": 0.00279173125507246,
+     "p90": 0.05373024167996738,
+     "max": 0.07423231195035758
+    },
+    "task_cost_divergence": {
+     "median": 0.007530973197458463,
+     "p90": 0.053004461085096766,
+     "max": 0.07441717779932816
+    },
+    "ranking_spearman_median": 0.8056521739130433,
+    "pair_reversal_rate": 0.1299724674831482,
+    "best_candidate_changes_rate": 0.8583333333333333,
+    "regret_of_nominal_best": {
+     "median": 1.4464124342694618e-12,
+     "p90": 0.011513636164323566,
+     "max": 0.03447874691393912
+    },
+    "frac_regret_over_1cm": 0.125,
+    "frac_regret_over_success_radius": 0.0,
+    "success_flip_rate": 0.06666666666666667
+   },
+   "h20": {
+    "obj_divergence": {
+     "median": 0.057177361157606243,
+     "p90": 0.10178066368023964,
+     "max": 0.24793680206587893
+    },
+    "hand_divergence": {
+     "median": 0.005167953945394369,
+     "p90": 0.06693167274557428,
+     "max": 0.08725692761687272
+    },
+    "task_cost_divergence": {
+     "median": 0.011821678407216415,
+     "p90": 0.08303934153344796,
+     "max": 0.16764975797430406
+    },
+    "ranking_spearman_median": 0.5039130434782608,
+    "pair_reversal_rate": 0.2522831749923383,
+    "best_candidate_changes_rate": 0.8416666666666667,
+    "regret_of_nominal_best": {
+     "median": 1.4545737526960867e-07,
+     "p90": 0.03159066712420671,
+     "max": 0.05760985982048783
+    },
+    "frac_regret_over_1cm": 0.26666666666666666,
+    "frac_regret_over_success_radius": 0.016666666666666666,
+    "success_flip_rate": 0.10833333333333334
+   },
+   "h30": {
+    "obj_divergence": {
+     "median": 0.06985523167234753,
+     "p90": 0.14078460998502898,
+     "max": 0.3784952535478046
+    },
+    "hand_divergence": {
+     "median": 0.004452405414995194,
+     "p90": 0.039899652342808574,
+     "max": 0.11214280147339728
+    },
+    "task_cost_divergence": {
+     "median": 0.02562861463749836,
+     "p90": 0.11213023222404041,
+     "max": 0.28275830317054396
+    },
+    "ranking_spearman_median": 0.42869565217391303,
+    "pair_reversal_rate": 0.3124554798005495,
+    "best_candidate_changes_rate": 0.95,
+    "regret_of_nominal_best": {
+     "median": 0.0047649156237414,
+     "p90": 0.039704521752471085,
+     "max": 0.0794072805832984
+    },
+    "frac_regret_over_1cm": 0.45,
+    "frac_regret_over_success_radius": 0.025,
+    "success_flip_rate": 0.21666666666666667
+   }
+  }
+ }
+}

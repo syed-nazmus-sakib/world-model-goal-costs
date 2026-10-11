@@ -1,0 +1,153 @@
+{
+ "n_episodes": 96,
+ "max_fast_rollout_diff": 0.0,
+ "success": {
+  "wm": {
+   "k": 62,
+   "rate": 0.6458333333333334,
+   "wilson95": [
+    0.546241158747365,
+    0.734203064902897
+   ]
+  },
+  "sim_latent": {
+   "k": 62,
+   "rate": 0.6458333333333334,
+   "wilson95": [
+    0.546241158747365,
+    0.734203064902897
+   ]
+  },
+  "sim_true": {
+   "k": 87,
+   "rate": 0.90625,
+   "wilson95": [
+    0.8313450206379773,
+    0.9498924595306097
+   ]
+  }
+ },
+ "attribution": {
+  "dynamics (sim_latent succeeds)": {
+   "k": 5,
+   "episodes": [
+    22,
+    45,
+    52,
+    54,
+    75
+   ]
+  },
+  "cost landscape (sim_latent fails, sim_true succeeds)": {
+   "k": 20,
+   "episodes": [
+    0,
+    2,
+    7,
+    8,
+    23,
+    24,
+    30,
+    32,
+    34,
+    44,
+    50,
+    53,
+    63,
+    65,
+    68,
+    84,
+    85,
+    92,
+    93,
+    95
+   ]
+  },
+  "search (both simulator planners fail)": {
+   "k": 9,
+   "episodes": [
+    10,
+    33,
+    38,
+    42,
+    67,
+    73,
+    77,
+    80,
+    83
+   ]
+  }
+ },
+ "wm_success_but_sim_latent_fails": 5,
+ "model_prefers_expert": {
+  "all": {
+   "n": 96,
+   "frac_expert_scored_better": 0.4270833333333333,
+   "median_plan_pred_cost": 0.08716122806072235,
+   "median_expert_pred_cost": 0.09068267047405243,
+   "median_plan_real_cost": 0.13707998394966125
+  },
+  "wm success": {
+   "n": 62,
+   "frac_expert_scored_better": 0.1774193548387097,
+   "median_plan_pred_cost": 0.07174952328205109,
+   "median_expert_pred_cost": 0.09114903211593628,
+   "median_plan_real_cost": 0.07573768496513367
+  },
+  "wm failure": {
+   "n": 34,
+   "frac_expert_scored_better": 0.8823529411764706,
+   "median_plan_pred_cost": 0.23929352313280106,
+   "median_expert_pred_cost": 0.0883888266980648,
+   "median_plan_real_cost": 0.30130618810653687
+  }
+ },
+ "pred_vs_real_visual_by_step": {
+  "wm success": [
+   0.06156107783317566,
+   0.07328440248966217,
+   0.07743102312088013,
+   0.08142758905887604,
+   0.09315718710422516,
+   0.09377248585224152
+  ],
+  "wm failure": [
+   0.07198651880025864,
+   0.07278814911842346,
+   0.07270246744155884,
+   0.08353391289710999,
+   0.09192071855068207,
+   0.10091371834278107
+  ]
+ },
+ "real_minus_pred_cost_median": {
+  "wm success": -0.0015047825872898102,
+  "wm failure": 0.036868125200271606
+ },
+ "success_by_required_rotation_deg": {
+  "0-10": {
+   "n": 32,
+   "wm": 0.5625,
+   "sim_latent": 0.59375,
+   "sim_true": 0.90625
+  },
+  "10-30": {
+   "n": 26,
+   "wm": 0.5769230769230769,
+   "sim_latent": 0.5384615384615384,
+   "sim_true": 0.9230769230769231
+  },
+  "30-60": {
+   "n": 15,
+   "wm": 0.7333333333333333,
+   "sim_latent": 0.7333333333333333,
+   "sim_true": 0.8666666666666667
+  },
+  "60-181": {
+   "n": 23,
+   "wm": 0.782608695652174,
+   "sim_latent": 0.782608695652174,
+   "sim_true": 0.9130434782608695
+  }
+ }
+}

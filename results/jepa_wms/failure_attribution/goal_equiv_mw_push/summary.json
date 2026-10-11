@@ -1,0 +1,19 @@
+{
+ "episodes": 24,
+ "L1_median_rel_cost_change_between_equivalent_goals": 0.8210157155990601,
+ "L2_ranking_flip_rate_between_equivalent_goals": 0.42895623953098827,
+ "L2_ranking_flip_rate_vs_eval_goal": 0.47538264237855943,
+ "L2_true_cost_flip_rate": 0.0,
+ "spearman_latent_vs_true_per_variant(mean over episodes)": [
+  0.106,
+  -0.115,
+  -0.047,
+  0.003,
+  0.015
+ ],
+ "L3_top1_candidate_agreement_between_equivalent_goals": 0.0625,
+ "L3_top10_overlap_between_equivalent_goals": 0.14375000000000002,
+ "fraction_of_candidates_that_move_the_object": 0.47645833333333326,
+ "L3b_first_action_change_between_equivalent_goals": 7.965872764587402,
+ "L3_first_action_noise_floor_same_goal_other_seed": 5.378737449645996
+}

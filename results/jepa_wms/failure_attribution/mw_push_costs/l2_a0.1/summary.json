@@ -1,0 +1,7 @@
+{
+ "episodes": 24,
+ "success": {
+  "sim_latent": 2,
+  "sim_true": 20
+ }
+}

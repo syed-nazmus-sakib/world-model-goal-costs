@@ -1,0 +1,1 @@
+{"fname": "/run/media/rmedu2025/storage_1/Monaf/jepa-wms-project/jepa-wms-work/configs/mw_jepa-wm_push.yaml", "task": "mw-push", "episodes": 24, "planners": ["sim_latent"], "alpha": 10.0, "cost": "l2"}
