@@ -1,0 +1,12 @@
+{"method": "l2", "budget": 50, "seed": 0, "n_samples": 10, "H": 5, "extra": 0, "success": 50.0, "final_dist": 2.571425176609263, "time": 1.4737412929534912}
+{"method": "l2", "budget": 50, "seed": 1, "n_samples": 10, "H": 5, "extra": 0, "success": 50.0, "final_dist": 2.94712384800975, "time": 1.3614723682403564}
+{"method": "l2", "budget": 50, "seed": 2, "n_samples": 10, "H": 5, "extra": 0, "success": 54.0, "final_dist": 2.568881938368777, "time": 1.6565852165222168}
+{"method": "l2", "budget": 100, "seed": 0, "n_samples": 20, "H": 5, "extra": 0, "success": 70.0, "final_dist": 1.9062495764219884, "time": 1.9176113605499268}
+{"method": "l2", "budget": 100, "seed": 1, "n_samples": 20, "H": 5, "extra": 0, "success": 64.0, "final_dist": 1.5286125544411806, "time": 2.0089426040649414}
+{"method": "l2", "budget": 100, "seed": 2, "n_samples": 20, "H": 5, "extra": 0, "success": 66.0, "final_dist": 2.765558799482469, "time": 1.8994944095611572}
+{"method": "l2", "budget": 200, "seed": 0, "n_samples": 40, "H": 5, "extra": 0, "success": 76.0, "final_dist": 1.5062076076598845, "time": 3.271120071411133}
+{"method": "l2", "budget": 200, "seed": 1, "n_samples": 40, "H": 5, "extra": 0, "success": 78.0, "final_dist": 1.6895631520701848, "time": 3.2228198051452637}
+{"method": "l2", "budget": 200, "seed": 2, "n_samples": 40, "H": 5, "extra": 0, "success": 66.0, "final_dist": 2.316963236869997, "time": 3.158597230911255}
+{"method": "l2", "budget": 400, "seed": 0, "n_samples": 80, "H": 5, "extra": 0, "success": 84.0, "final_dist": 1.3488182086441463, "time": 5.624305963516235}
+{"method": "l2", "budget": 400, "seed": 1, "n_samples": 80, "H": 5, "extra": 0, "success": 84.0, "final_dist": 1.7573911215272477, "time": 5.826711654663086}
+{"method": "l2", "budget": 400, "seed": 2, "n_samples": 80, "H": 5, "extra": 0, "success": 72.0, "final_dist": 2.1039500523015495, "time": 5.783632040023804}

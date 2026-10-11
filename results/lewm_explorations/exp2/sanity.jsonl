@@ -1,0 +1,2 @@
+{"method": "l2", "budget": 1500, "seed": 0, "n_samples": 300, "H": 5, "extra": 0, "success": 88.0, "final_dist": 1.090279496173639, "time": 19.49729609489441}
+{"method": "l2", "budget": 1500, "seed": 1, "n_samples": 300, "H": 5, "extra": 0, "success": 94.0, "final_dist": 0.9850130836550096, "time": 19.304568767547607}

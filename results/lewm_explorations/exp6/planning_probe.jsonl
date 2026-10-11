@@ -1,0 +1,9 @@
+{"model": "EXP_s0", "objective": "cube_probe", "probe_R2": 0.992, "seed": 0, "success": 16.0}
+{"model": "EXP_s0", "objective": "cube_probe", "probe_R2": 0.992, "seed": 1, "success": 28.000000000000004}
+{"model": "EXP_s0", "objective": "cube_probe", "probe_R2": 0.992, "seed": 2, "success": 16.0}
+{"model": "RND1_s0", "objective": "cube_probe", "probe_R2": 0.979, "seed": 0, "success": 20.0}
+{"model": "RND1_s0", "objective": "cube_probe", "probe_R2": 0.979, "seed": 1, "success": 20.0}
+{"model": "RND1_s0", "objective": "cube_probe", "probe_R2": 0.979, "seed": 2, "success": 14.000000000000002}
+{"model": "RND4_s0", "objective": "cube_probe", "probe_R2": 0.98, "seed": 0, "success": 22.0}
+{"model": "RND4_s0", "objective": "cube_probe", "probe_R2": 0.98, "seed": 1, "success": 22.0}
+{"model": "RND4_s0", "objective": "cube_probe", "probe_R2": 0.98, "seed": 2, "success": 22.0}

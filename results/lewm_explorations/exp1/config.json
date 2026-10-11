@@ -1,0 +1,25 @@
+{
+ "seed": 0,
+ "groups": 300,
+ "C": 32,
+ "C_expert": 24,
+ "max_noise": 2.0,
+ "plan_steps": 25,
+ "L": 25,
+ "n": 96,
+ "iters": 4,
+ "elite": 12,
+ "workers": 30,
+ "out": "results/exp1",
+ "stage": "ABC",
+ "K": [
+  1,
+  2
+ ],
+ "M": [
+  16,
+  64
+ ],
+ "bs": 256,
+ "margin": 0.25
+}

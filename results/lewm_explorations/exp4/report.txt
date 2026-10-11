@@ -1,0 +1,21 @@
+LOCAL  err mean=4.960 median=1.574  disp=5.39  localMaha=4.1  globalMaha=3.9
+MARG   err mean=10.178 median=2.607  disp=5.42  localMaha=593.4  globalMaha=4.4
+GAUSS  err mean=4.812 median=1.898  disp=3.62  localMaha=1424.9  globalMaha=55.0
+
+PRIMARY ratio MARG/LOCAL (disp-adjusted, geometric) = 1.893 CI[1.794,1.998]  raw ratio of means = 2.052
+PRIMARY partial Spearman(err, localMaha | globalMaha, disp, anchor FE) = +0.401
+  (reference) partial Spearman(err, globalMaha | localMaha, disp, anchor FE) = -0.134
+SECONDARY partial Spearman(GAUSS err, rho | density, stratum) = -0.084   (logdet: +0.021)
+  plain Spearman(GAUSS err, log kNN radius) = -0.146
+  stratum free        n= 280  LOCAL=1.375 MARG=4.296 GAUSS=1.328
+  stratum pre-contact n= 188  LOCAL=3.884 MARG=11.385 GAUSS=4.835
+  stratum contact     n= 332  LOCAL=8.593 MARG=14.454 GAUSS=7.737
+
+CONFOUND: probe-induced contact / block motion
+  LOCAL  frac contact=0.53  mean block move=11.05
+  MARG   frac contact=0.47  mean block move=9.69
+  GAUSS  frac contact=0.46  mean block move=6.68
+partial Spearman(err, localMaha | globalMaha, disp, blockmove, contact, anchor FE) = +0.403
+  ratio MARG/LOCAL adj. for disp+blockmove+contact [all              ] n=800 = 1.894 CI[1.807,1.984]
+  ratio MARG/LOCAL adj. for disp+blockmove+contact [no-contact probes] n=441 = 1.791 CI[1.680,1.911]
+  ratio MARG/LOCAL adj. for disp+blockmove+contact [contact probes   ] n=463 = 1.721 CI[1.601,1.851]

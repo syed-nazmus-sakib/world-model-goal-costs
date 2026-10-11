@@ -1,0 +1,5 @@
+geometry   SR= 44.1  per-seed=[43.0, 44.0, 53.0, 47.0, 40.0, 40.0, 43.0, 44.0, 46.0, 41.0]
+L2         SR= 41.5  per-seed=[39.0, 42.0, 51.0, 42.0, 41.0, 36.0, 39.0, 41.0, 46.0, 38.0]
+bestprobe  SR= 40.2  per-seed=[37.0, 40.0, 41.0, 33.0, 40.0, 46.0, 40.0, 41.0, 43.0, 41.0]
+Δ vs L2        =  +2.6  seed-cluster CI[+1.4,+3.6]  episode CI[-0.5,+5.7]  seeds won 8/10  discordant eps: geo-only 139, L2-only 113
+Δ vs bestprobe =  +3.9  seed-cluster CI[+0.7,+7.3]  episode CI[+0.8,+6.9]  seeds won 7/10  discordant eps: geo-only 146, bestprobe-only 107

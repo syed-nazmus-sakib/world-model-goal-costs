@@ -1,0 +1,29 @@
+cond         sub   r=8  (nuis/state) r=16 (nuis/state) r=32 (nuis/state) r=64 (nuis/state) r=96 (nuis/state)
+bg_color     ctrl     0.17/0.10          0.28/0.22          0.46/0.42          0.78/0.78          0.98/0.98      
+bg_color     pca      0.12/0.10          0.22/0.19          0.42/0.37          0.75/0.72          0.98/0.99      
+bg_color     dpca     0.16/0.13          0.27/0.25          0.46/0.47          0.77/0.81          0.98/0.99      
+             |c|/|d| = 0.83
+agent_color  ctrl     nan/0.10          nan/0.22          nan/0.42          nan/0.78          nan/0.98      
+agent_color  pca      nan/0.10          nan/0.19          nan/0.37          nan/0.72          nan/0.99      
+agent_color  dpca     nan/0.13          nan/0.25          nan/0.47          nan/0.81          nan/0.99      
+             |c|/|d| = 0.69
+block_color  ctrl     0.10/0.10          0.20/0.22          0.38/0.42          0.70/0.78          0.97/0.98      
+block_color  pca      0.13/0.10          0.23/0.19          0.43/0.37          0.75/0.72          0.98/0.99      
+block_color  dpca     0.09/0.13          0.19/0.25          0.36/0.47          0.70/0.81          0.98/0.99      
+             |c|/|d| = 0.78
+no_agent     ctrl     nan/0.10          nan/0.22          nan/0.42          nan/0.78          nan/0.98      
+no_agent     pca      nan/0.10          nan/0.19          nan/0.37          nan/0.72          nan/0.99      
+no_agent     dpca     nan/0.13          nan/0.25          nan/0.47          nan/0.81          nan/0.99      
+             |c|/|d| = 0.74
+bg_dark      ctrl     0.08/0.10          0.18/0.22          0.35/0.42          0.68/0.78          0.97/0.98      
+bg_dark      pca      0.16/0.10          0.27/0.19          0.44/0.37          0.77/0.72          0.99/0.99      
+bg_dark      dpca     0.08/0.13          0.18/0.25          0.34/0.47          0.68/0.81          0.97/0.99      
+             |c|/|d| = 0.92
+block_blue   ctrl     0.20/0.10          0.31/0.22          0.48/0.42          0.78/0.78          0.98/0.98      
+block_blue   pca      0.11/0.10          0.21/0.19          0.38/0.37          0.72/0.72          0.97/0.99      
+block_blue   dpca     0.17/0.13          0.28/0.25          0.46/0.47          0.76/0.81          0.98/0.99      
+             |c|/|d| = 0.91
+agent_green  ctrl     nan/0.10          nan/0.22          nan/0.42          nan/0.78          nan/0.98      
+agent_green  pca      nan/0.10          nan/0.19          nan/0.37          nan/0.72          nan/0.99      
+agent_green  dpca     nan/0.13          nan/0.25          nan/0.47          nan/0.81          nan/0.99      
+             |c|/|d| = 0.40

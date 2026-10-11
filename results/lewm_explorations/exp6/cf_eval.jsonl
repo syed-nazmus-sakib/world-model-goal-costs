@@ -1,0 +1,3 @@
+{"model": "results/exp6/models/EXP_s0", "cf_err_geo": 0.20437078177928925, "cf_top1": 0.5120312571525574, "factual_err_geo": 0.007806946989148855, "marg_err_geo": 0.18698827922344208, "gauss_err_geo": 0.22336915135383606}
+{"model": "results/exp6/models/RND1_s0", "cf_err_geo": 0.01019289530813694, "cf_top1": 0.9673437476158142, "factual_err_geo": 0.006221980322152376, "marg_err_geo": 0.008185068145394325, "gauss_err_geo": 0.012693249620497227}
+{"model": "results/exp6/models/RND4_s0", "cf_err_geo": 0.009576932527124882, "cf_top1": 0.9712499976158142, "factual_err_geo": 0.0063600484281778336, "marg_err_geo": 0.007914007641375065, "gauss_err_geo": 0.011589276604354382}

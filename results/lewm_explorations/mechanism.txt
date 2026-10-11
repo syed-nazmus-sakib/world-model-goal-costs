@@ -1,0 +1,14 @@
+(a) probe-scale sweep, cf_ridge K1 M8 rho0.1  [all / contact-ish / free-free]
+  sigma=0.01  geometry 0.645/0.632/0.634   best-probe 0.631/0.620/0.619
+  sigma=0.10  geometry 0.647/0.637/0.633   best-probe 0.634/0.623/0.620
+  sigma=0.30  geometry 0.663/0.661/0.636   best-probe 0.641/0.630/0.624
+  sigma=0.50  geometry 0.674/0.678/0.641   best-probe 0.647/0.638/0.627
+  sigma=1.00  geometry 0.689/0.699/0.652   best-probe 0.662/0.658/0.637
+  sigma=1.50  geometry 0.696/0.712/0.655   best-probe 0.671/0.672/0.641
+  sigma=2.00  geometry 0.701/0.720/0.656   best-probe 0.678/0.684/0.645
+  sigma=3.00  geometry 0.706/0.727/0.659   best-probe 0.688/0.702/0.649
+  Jacobian ridge (sigma->0 limit): [0.646 0.634 0.635]
+
+(b) lucky-probe test at sigma=1 (seed 0)
+  disagreements where bp_right : n= 5415  luck(best-probe pick)=0.052  luck(other)=0.057  pick in contact-ish=0.55
+  disagreements where geo_right: n= 9096  luck(best-probe pick)=0.050  luck(other)=0.065  pick in contact-ish=0.55
