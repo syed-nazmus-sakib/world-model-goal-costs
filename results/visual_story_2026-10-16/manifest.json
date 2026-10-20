@@ -1,0 +1,96 @@
+{
+  "created": "2026-10-16",
+  "scope": "Existing experiments only; no new training or planning",
+  "figures": {
+    "01_project_overview": {
+      "caption": "The project's existing planner, interventions, established goal-image failure, and unresolved method question.",
+      "sources": [
+        "docs/07_RESTART_LOG.md",
+        "artifacts/raw_logs/pusht_failure_attribution/jepa_wm/ep_002.npz"
+      ]
+    },
+    "02_oracle_attribution_results": {
+      "caption": "Success ladders under controlled dynamics and cost replacements; search budget held fixed.",
+      "sources": [
+        "docs/01_ASSESSMENT.md",
+        "results/jepa_wms"
+      ]
+    },
+    "03_drawer_equivalent_goals": {
+      "caption": "Real simulator goal images used in the drawer equivalence test.",
+      "sources": [
+        "source_data/drawer_offline_episode.npz"
+      ]
+    },
+    "04_drawer_DINO_patch_cost": {
+      "caption": "Measured patch-feature discrepancy for one fixed scene and two task-equivalent goals; each task uses its own shared color scale.",
+      "sources": [
+        "source_data/drawer_dino_maps.npz"
+      ]
+    },
+    "03_push_equivalent_goals": {
+      "caption": "Real simulator goal images used in the push equivalence test.",
+      "sources": [
+        "source_data/push_offline_episode.npz"
+      ]
+    },
+    "04_push_DINO_patch_cost": {
+      "caption": "Measured patch-feature discrepancy for one fixed scene and two task-equivalent goals; each task uses its own shared color scale.",
+      "sources": [
+        "source_data/push_dino_maps.npz"
+      ]
+    },
+    "05_goal_set_paired_results": {
+      "caption": "Paired outcomes show drawer recovery and original-goal regressions; oracle masking is a stronger drawer baseline.",
+      "sources": [
+        "artifacts/raw_logs/pod_runs/podA/drawer_alpha0/v0",
+        "artifacts/raw_logs/pod_runs/podA/drawer_alpha0/v3",
+        "artifacts/raw_logs/pod_runs/podA/drawer_alpha0/orbit_234",
+        "artifacts/raw_logs/pod_runs/podA/drawer_alpha0/orbit_01234",
+        "artifacts/raw_logs/pod_runs/podB/drawer_alpha0/wmset_h16k32_v3",
+        "artifacts/raw_logs/pod_runs/podB/drawer_alpha0/wmset_h16k32m07_v3",
+        "artifacts/raw_logs/pod_runs/podB/drawer_alpha0/wmset_h16k32m07_v0",
+        "artifacts/raw_logs/pod_runs/podA/mask_baselines/drawer_v3_robotfree_a01"
+      ]
+    },
+    "06_goal_set_failure_controls": {
+      "caption": "No-harm and arm-relevance controls explain why ungated goal averaging is not a validated general method.",
+      "sources": [
+        "docs/07_RESTART_LOG.md"
+      ]
+    },
+    "07_same_candidates_different_rankings": {
+      "caption": "One saved episode illustrates changed candidate preferences under task-equivalent goals.",
+      "sources": [
+        "source_data/drawer_offline_episode.npz"
+      ]
+    },
+    "08_PushT_saved_plan_replay": {
+      "caption": "Genuine simulator replay of saved JEPA-WM, exact/latent and exact/true plans; selected illustrative failure episode 002, not a representative success-rate estimate.",
+      "sources": [
+        "source_data/pusht_episode.npz",
+        "source_data/replay_validation.json"
+      ],
+      "note": "Target block overlay is aligned to evaluation goal; physics is unchanged."
+    },
+    "09_Metaworld_drawer_goal_variants": {
+      "caption": "Actual saved counterfactual goal frames, explicitly not a temporal rollout.",
+      "sources": [
+        "source_data/drawer_offline_episode.npz"
+      ]
+    },
+    "09_Metaworld_push_goal_variants": {
+      "caption": "Actual saved counterfactual goal frames, explicitly not a temporal rollout.",
+      "sources": [
+        "source_data/push_offline_episode.npz"
+      ]
+    },
+    "10_tested_goal_set_idea": {
+      "caption": "Mechanistic diagram of the frozen-model goal-set experiment, with failed gate and no-harm controls explicitly marked.",
+      "sources": [
+        "code/jepa-wms/evals/failure_attribution/goalset.py",
+        "docs/07_RESTART_LOG.md"
+      ]
+    }
+  }
+}

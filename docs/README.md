@@ -9,6 +9,10 @@ Read in numerical order. 01 is the self-contained summary; 02-04 give the full d
 | [`03_REPORT_area_cost.md`](03_REPORT_area_cost.md) | The area-invariant (top-k) patch cost: why it was proposed, what it fixed offline, why it failed in closed loop. A closed direction, kept for the record. |
 | [`04_NEXT_STEPS.md`](04_NEXT_STEPS.md) | Runbook for continuing: planned experiments E1-E6 with exact commands, decision rules and pitfalls. |
 | [`05_LITERATURE_REVIEW.md`](05_LITERATURE_REVIEW.md) | Literature review from the earlier LeWM phase. |
+| [`06_LITERATURE_REVIEW_v2.md`](06_LITERATURE_REVIEW_v2.md) | **Current literature review** (2026-10-15): verified map, novelty verdict per finding, CVPR calibration, candidate directions. Raw reports in `literature_raw/`. |
+| [`07_RESTART_LOG.md`](07_RESTART_LOG.md) | **Restart log**: findings since 2026-10-15 (proprio confound, drawer alpha 0 results, oracle goal set), code changes, pre-stated decision rules. |
+| [`08_HANDOFF_runpod.md`](08_HANDOFF_runpod.md) | **Handoff**: how to connect to and run on the RunPod pod, what is running, pitfalls, next plan. Start here to continue the work. |
+| [`09_PODS_ACCESS.md`](09_PODS_ACCESS.md) | **Access sheet**: both RunPod pods (ids, IPs, ports, prices), lab machines, API usage, what runs where. No secret values. |
 | [`setup/HANDOFF_from_previous_machine.md`](setup/HANDOFF_from_previous_machine.md) | State of the project when it moved from the first machine (RTX 3090 Ti): Push-T attribution and earlier Metaworld diagnostics. |
 | [`setup/MOVING.md`](setup/MOVING.md) | Portable setup after moving or cloning. |
 | [`setup/GITHUB.md`](setup/GITHUB.md) | Local checks, commit review, and GitHub upload commands. |

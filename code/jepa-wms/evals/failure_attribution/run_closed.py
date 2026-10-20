@@ -52,6 +52,14 @@ def main():
     parser.add_argument("--planners", nargs="+", default=["wm", "sim_latent", "sim_true"])
     parser.add_argument("--goal_variant", type=int, default=0,
                         help="0: the eval's goal; k>0: same object goal, arm moved to pose k (goal_variants.py)")
+    parser.add_argument("--orbit", type=str, default="",
+                        help="comma list of arm-pose goal variants whose encodings are averaged into one goal latent "
+                             "(oracle goal-set upper bound, e.g. 0,1,2,3,4)")
+    parser.add_argument("--wm_set", type=int, default=0,
+                        help="K: goal latent = mean over the goal and K world-model free-motion rollouts (goalset.py)")
+    parser.add_argument("--wm_h", type=int, default=8)
+    parser.add_argument("--wm_mag", type=float, default=1.0)
+    parser.add_argument("--wm_gate", type=float, default=0.0, help="fraction of rollouts kept by the reversibility gate (0 = no gate)")
     parser.add_argument("--robot_free", action="store_true",
                         help="oracle: goal and simulator candidate frames rendered without the robot (sim planners only)")
     args = parser.parse_args()
@@ -67,7 +75,7 @@ def main():
     from evals.utils import prepare_obs
 
     cfg, agent, env, evaluator = build(args_eval, alpha=args.alpha)
-    if args.goal_variant or args.robot_free:
+    if args.goal_variant or args.robot_free or args.orbit:
         from evals.failure_attribution.goal_variants import goal_td, hook_expert_capture, make_arm_variants, robot_free_frame
 
         hook_expert_capture(evaluator)
@@ -121,9 +129,10 @@ def main():
         if goal_obs["visual"].shape[0] > model.tubelet_size_enc:
             goal_obs["visual"] = goal_obs["visual"][-model.tubelet_size_enc :]
         goal_info = {}
-        if args.goal_variant or args.robot_free:
+        orbit_ids = [int(x) for x in args.orbit.split(",")] if args.orbit else []
+        if args.goal_variant or args.robot_free or orbit_ids:
             var = make_arm_variants(evaluator.expert_env, evaluator.expert_init_snap, evaluator.expert_final_snap,
-                                    max(args.goal_variant, 0), seed=ep)
+                                    max([args.goal_variant, 0] + orbit_ids), seed=ep)
             if args.goal_variant >= len(var):
                 raise RuntimeError(f"Episode {ep}: requested goal variant {args.goal_variant}, but only {len(var) - 1} were generated")
             k = args.goal_variant
@@ -131,6 +140,12 @@ def main():
             if args.robot_free:
                 g_frame = robot_free_frame(evaluator.expert_env, g_snap)
             goal_obs = goal_td(g_frame, g_obs)
+            if orbit_ids:  # mean encoding over the goal set (squared distance to the mean latent = mean squared distance)
+                orbit_encs = []
+                for kk in orbit_ids:
+                    _, fr, ob, _ = var[min(kk, len(var) - 1)]
+                    orbit_encs.append(agent.model.encode(prepare_obs(obs_type, goal_td(fr, ob)).unsqueeze(0).to(agent.device),
+                                                         act=False).detach())
             goal_info = {"goal_variant_used": k, "goal_hand": g_obs[:3], "goal_obj": g_obj, "goal_frame": g_frame}
             try:
                 evaluator.expert_env.close()
@@ -138,6 +153,25 @@ def main():
                 pass
             evaluator.expert_env = None
         agent.set_goal(prepare_obs(obs_type, goal_obs))
+        if args.wm_set:
+            from evals.failure_attribution.goalset import build_goalset_target
+            from evals.simu_env_planning.planning.planning.objectives import ReprTargetDistMPCObjective
+
+            tgt, gerr = build_goalset_target(agent, agent.goal_state_enc, K=args.wm_set, H=args.wm_h, mag=args.wm_mag,
+                                             gate_q=args.wm_gate, seed=ep)
+            agent.goal_state_enc = tgt
+            agent.objective = ReprTargetDistMPCObjective(cfg, target_enc=tgt, **cfg.planner.planning_objective)
+            agent.planner.set_objective(agent.objective)
+            goal_info["wm_set_cycle_err"] = gerr.numpy()
+        if orbit_ids:
+            from evals.simu_env_planning.planning.planning.objectives import ReprTargetDistMPCObjective
+
+            mean_enc = orbit_encs[0].clone()
+            for key in ("visual", "proprio"):
+                mean_enc[key] = torch.stack([e[key] for e in orbit_encs]).mean(0)
+            agent.goal_state_enc = mean_enc
+            agent.objective = ReprTargetDistMPCObjective(cfg, target_enc=mean_enc, **cfg.planner.planning_objective)
+            agent.planner.set_objective(agent.objective)
         if args.cost != "l2":  # area-invariant aggregation (evals/failure_attribution/costs.py), same alpha
             from evals.failure_attribution.costs import PatchAggMPCObjective
 
@@ -222,7 +256,10 @@ def main():
         print(f"ep {ep:03d} done: {msg} | so far {tally} | {times[-1]:.0f}s, about {left / 60:.0f} min left", flush=True)
 
     pool.close()
-    save_json(os.path.join(args.out_dir, 'run_meta.json'), {'fname': os.path.abspath(args.fname), 'task': task, 'episodes': n_episodes, 'planners': args.planners, 'alpha': float(cfg.planner.planning_objective.alpha), 'cost': args.cost, 'goal_variant': args.goal_variant, 'robot_free': args.robot_free})
+    save_json(os.path.join(args.out_dir, 'run_meta.json'), {"fname": os.path.abspath(args.fname), "task": task, "episodes": n_episodes,
+                   "planners": args.planners, "alpha": float(cfg.planner.planning_objective.alpha), "cost": args.cost,
+                   "goal_variant": args.goal_variant, "robot_free": args.robot_free,
+                   "wm_set": args.wm_set, "wm_h": args.wm_h, "wm_mag": args.wm_mag, "wm_gate": args.wm_gate})
     print("done", flush=True)
 
 

@@ -190,6 +190,9 @@ def robot_free_frame(env, snap):
 
     w = find_mw_wrapper(env)
     restore(w.unwrapped, snap)
+    # restore() sets qpos/qvel only; the renderer reads geom poses, which are updated by mj_forward. Without it the
+    # render shows the geoms where the last forward/step left them (found 2026-10-17: start and goal renders identical).
+    mujoco.mj_forward(w.unwrapped.model, w.unwrapped.data)
     return render_hidden(w, robot_geoms(w.unwrapped.model))
 
 

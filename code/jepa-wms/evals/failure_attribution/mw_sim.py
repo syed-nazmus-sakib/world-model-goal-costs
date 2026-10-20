@@ -28,7 +28,12 @@ PY_ATTRS = ("curr_path_length", "_prev_obs", "_last_stable_obs", "_did_see_sim_e
 # distance (m) under which Metaworld v3 reports success, per task (evaluate_state); used to scale the
 # true-state cost so that cost < 1 <=> success for tasks whose success is a single distance threshold
 SUCCESS_THRESHOLD = {"mw-reach": 0.05, "mw-reach-wall": 0.05, "mw-push": 0.05, "mw-push-wall": 0.05,
-                     "mw-drawer-close": 0.055, "mw-door-open": 0.03, "mw-button-press-topdown": 0.024}
+                     "mw-drawer-close": 0.055, "mw-door-open": 0.03, "mw-button-press-topdown": 0.024,
+                     # read from metaworld/envs/sawyer_<task>_v3.py at commit 59fc34d7 (evaluate_state: success <=> obj_to_target <= r)
+                     "mw-window-close": 0.05, "mw-window-open": 0.05, "mw-drawer-open": 0.03, "mw-handle-press-side": 0.02,
+                     "mw-handle-press": 0.02, "mw-faucet-open": 0.07, "mw-faucet-close": 0.07, "mw-dial-turn": 0.07,
+                     "mw-door-close": 0.08, "mw-coffee-push": 0.07, "mw-plate-slide": 0.07, "mw-plate-slide-back": 0.07,
+                     "mw-button-press": 0.02}
 
 
 def capture(mw):

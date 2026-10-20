@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="757.44pt" height="356.229938pt" viewBox="0 0 757.44 356.229938" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-16T07:41:09.153799</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 356.229938 
+L 757.44 356.229938 
+L 757.44 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 101.34 275.229938 
+L 380.34 275.229938 
+L 380.34 30.429938 
+L 101.34 30.429938 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 114.021818 275.229938 
+L 209.135455 275.229938 
+L 209.135455 52.684483 
+L 114.021818 52.684483 
+z
+" clip-path="url(#p7b2077e881)" style="fill: #6b7280"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 272.544545 275.229938 
+L 367.658182 275.229938 
+L 367.658182 80.502665 
+L 272.544545 80.502665 
+z
+" clip-path="url(#p7b2077e881)" style="fill: #ba5149"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="ma3b0b773f6" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#ma3b0b773f6" x="161.578636" y="275.229938" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle" x="161.578636" y="290.588219" transform="rotate(-0 161.578636 290.588219)">Single goal</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#ma3b0b773f6" x="320.101364" y="275.229938" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle" x="320.101364" y="290.588219" transform="rotate(-0 320.101364 290.588219)">Learned goal set</text>
+     </g>
+    </g>
+    <g id="text_3">
+     <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="240.84" y="305.589078" transform="rotate(-0 240.84 305.589078)">Goal-cost condition</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_3">
+      <defs>
+       <path id="m63b0aaa3e9" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="101.34" y="275.229938" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="94.34" y="279.408648" transform="rotate(-0 94.34 279.408648)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="101.34" y="230.720847" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="94.34" y="234.899558" transform="rotate(-0 94.34 234.899558)">20</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="101.34" y="186.211756" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="94.34" y="190.390467" transform="rotate(-0 94.34 190.390467)">40</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="101.34" y="141.702665" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="94.34" y="145.881376" transform="rotate(-0 94.34 145.881376)">60</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="101.34" y="97.193574" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="94.34" y="101.372285" transform="rotate(-0 94.34 101.372285)">80</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="101.34" y="52.684483" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="94.34" y="56.863194" transform="rotate(-0 94.34 56.863194)">100</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="66.701172" y="152.829937" transform="rotate(-90 66.701172 152.829937)">Success rate (%)</text>
+    </g>
+   </g>
+   <g id="patch_5">
+    <path d="M 101.34 275.229938 
+L 101.34 30.429938 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 101.34 275.229938 
+L 380.34 275.229938 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="161.578636" y="46.041905" transform="rotate(-0 161.578636 46.041905)">24/24</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="320.101364" y="73.860087" transform="rotate(-0 320.101364 73.860087)">21/24</text>
+   </g>
+   <g id="text_13">
+    <text style="font-weight: 600; font-size: 13.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="240.84" y="24.429937" transform="rotate(-0 240.84 24.429937)">Original drawer goal</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_7">
+    <path d="M 464.04 275.229938 
+L 743.04 275.229938 
+L 743.04 30.429938 
+L 464.04 30.429938 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 476.721818 275.229938 
+L 571.835455 275.229938 
+L 571.835455 61.95721 
+L 476.721818 61.95721 
+z
+" clip-path="url(#pc3d7cd0411)" style="fill: #6b7280"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 635.244545 275.229938 
+L 730.358182 275.229938 
+L 730.358182 275.229938 
+L 635.244545 275.229938 
+z
+" clip-path="url(#pc3d7cd0411)" style="fill: #ba5149"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_3">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#ma3b0b773f6" x="524.278636" y="275.229938" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle" x="524.278636" y="290.588219" transform="rotate(-0 524.278636 290.588219)">Released cost</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#ma3b0b773f6" x="682.801364" y="275.229938" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle" x="682.801364" y="290.588219" transform="rotate(-0 682.801364 290.588219)">Learned goal set</text>
+     </g>
+    </g>
+    <g id="text_16">
+     <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="603.54" y="305.589078" transform="rotate(-0 603.54 305.589078)">Goal-cost condition</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_7">
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="464.04" y="275.229938" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="457.04" y="279.408648" transform="rotate(-0 457.04 279.408648)">0</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="464.04" y="230.720847" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="457.04" y="234.899558" transform="rotate(-0 457.04 234.899558)">20</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="464.04" y="186.211756" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="457.04" y="190.390467" transform="rotate(-0 457.04 190.390467)">40</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="464.04" y="141.702665" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="457.04" y="145.881376" transform="rotate(-0 457.04 145.881376)">60</text>
+     </g>
+    </g>
+    <g id="ytick_11">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="464.04" y="97.193574" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="457.04" y="101.372285" transform="rotate(-0 457.04 101.372285)">80</text>
+     </g>
+    </g>
+    <g id="ytick_12">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m63b0aaa3e9" x="464.04" y="52.684483" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: end" x="457.04" y="56.863194" transform="rotate(-0 457.04 56.863194)">100</text>
+     </g>
+    </g>
+    <g id="text_23">
+     <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="429.401172" y="152.829937" transform="rotate(-90 429.401172 152.829937)">Success rate (%)</text>
+    </g>
+   </g>
+   <g id="patch_10">
+    <path d="M 464.04 275.229938 
+L 464.04 30.429938 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 464.04 275.229938 
+L 743.04 275.229938 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="524.278636" y="55.314632" transform="rotate(-0 524.278636 55.314632)">23/24</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="682.801364" y="268.587359" transform="rotate(-0 682.801364 268.587359)">0/24</text>
+   </g>
+   <g id="text_26">
+    <text style="font-weight: 600; font-size: 13.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #202733" x="603.54" y="24.429937" transform="rotate(-0 603.54 24.429937)">Reach-wall: arm pose matters</text>
+   </g>
+  </g>
+  <g id="text_27">
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="14.4" y="339.667828" transform="rotate(-0 14.4 339.667828)">Exact simulator dynamics. Learned set K32, H16, magnitude 0.7. Drawer α=0; reach-wall α=0.1. These failures reject the current general-method claim.</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p7b2077e881">
+   <rect x="101.34" y="30.429937" width="279" height="244.8"/>
+  </clipPath>
+  <clipPath id="pc3d7cd0411">
+   <rect x="464.04" y="30.429937" width="279" height="244.8"/>
+  </clipPath>
+ </defs>
+</svg>

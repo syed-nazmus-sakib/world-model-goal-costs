@@ -1,0 +1,14 @@
+{
+  "wm": {
+    "max_abs_final_state_error": 0.0,
+    "recorded_success": false
+  },
+  "sim_latent": {
+    "max_abs_final_state_error": 0.0,
+    "recorded_success": false
+  },
+  "sim_true": {
+    "max_abs_final_state_error": 0.0,
+    "recorded_success": true
+  }
+}

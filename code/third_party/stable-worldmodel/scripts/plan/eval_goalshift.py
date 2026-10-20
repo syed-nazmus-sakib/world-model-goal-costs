@@ -16,6 +16,7 @@ os.environ['MUJOCO_GL'] = 'egl'
 
 import importlib  # GoalShift
 import time
+import zlib  # GoalShift
 from pathlib import Path
 
 import hydra
@@ -94,6 +95,12 @@ GOAL_CONDITIONS = {
         'block.color': np.array([255, 140, 0], dtype=np.uint8)
     },  # DarkOrange
     'no_agent': {},  # agent moved off-canvas before rendering
+    # task-equivalent goals (2026-10-19): same block pose, agent drawn elsewhere
+    # (fixed distance, random direction, not touching the block); the block-only
+    # success is unchanged by construction
+    'agent_moved_40': {},
+    'agent_moved_80': {},
+    'agent_moved_160': {},
 }
 
 
@@ -115,6 +122,8 @@ class GoalRenderer:
         state[5:7] = 0.0
         if self.condition == 'no_agent':
             state[0:2] = -1000.0  # far outside the 512x512 canvas
+        if self.condition.startswith('agent_moved_'):
+            state[0:2] = self._moved_agent(state, float(self.condition.split('_')[-1]))
         options = {'state': state, 'goal_state': state}
         values = GOAL_CONDITIONS[self.condition]
         if values:
@@ -123,6 +132,25 @@ class GoalRenderer:
             }
         _, info = self.env.reset(seed=0, options=options)
         return info['goal']
+
+    def _moved_agent(self, state, dist, min_gap=15.0, tries=500):
+        """Agent position `dist` px from the goal agent position, inside the
+        arena and at least `min_gap` px from the block. Deterministic per goal."""
+        rng = np.random.default_rng(
+            zlib.crc32(np.round(state[:5], 3).tobytes())
+        )
+        self.env.reset(seed=0, options={'state': state, 'goal_state': state})
+        e = self.env
+        r = max(s.radius for s in e.agent.shapes)
+        for _ in range(tries):
+            a = rng.uniform(0, 2 * np.pi)
+            p = state[0:2] + dist * np.array([np.cos(a), np.sin(a)])
+            if not (40 <= p[0] <= 472 and 40 <= p[1] <= 472):
+                continue
+            gap = min(s.point_query(tuple(p)).distance for s in e.block.shapes)
+            if gap - r > min_gap:
+                return p
+        raise RuntimeError(f'no valid agent position at {dist} px')
 
 
 def install_goal_shift(condition, goal_log):
