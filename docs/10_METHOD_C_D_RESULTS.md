@@ -94,7 +94,7 @@ state / evid / evid_time 1.00.
 | drawer-close (no-harm control) | 22/22 | – | – | – | 11/12 |
 | reach-wall (arm-is-task control) | 23/24 | – | – | – | **0/12** |
 
-## State head on more Metaworld tasks (2026-10-23, closed loop in progress)
+## State head on more Metaworld tasks (2026-10-23)
 
 Offline, the state head ranks better than the released cost on every task where candidates change the true cost:
 
@@ -106,10 +106,28 @@ Offline, the state head ranks better than the released cost on every task where 
 | faucet-open | 0.911 / 0.603 | 0.984 / 0.942 | 0.61 / 0.65 / 0.65 |
 | door-open | no candidate changes the true cost: not measurable | | |
 
-Closed loop so far (12 episodes, exact dynamics): button-press-topdown state 0/12 vs released 0/12; door-open
-state 0/12; push released 0/12; window-open released 0/12. Remaining runs: push / window-open / faucet-open /
-reach-wall / drawer-close with the state head, door-open released. Pre-stated rule: the head "works" if it beats
-the released cost by ≥ 3/12 on ≥ 4 of the 8 object tasks, with reach-wall and drawer-close ≥ 10/12.
+**Closed loop** (12 episodes, exact dynamics, same episodes for both costs; pods E and G):
+
+| task | released cost | state head | true-state cost (diagnosis) |
+|---|---|---|---|
+| push | 0/12 | 0/12 | – |
+| button-press-topdown | 0/12 | 0/12 | – |
+| door-open | 0/12 | 0/12 | – |
+| window-open | 0/12 | 0/12 | – |
+| faucet-open | 0/12 | 0/12 | 4/12 |
+| drawer-open | 0/12 | 0/12 | 10/12 |
+| plate-slide | 0/12 | **8/12** | 10/12 |
+| drawer-close (control) | 22/22 | 12/12 | 22/22 |
+| reach-wall (arm-is-task control) | 23/24 | **7/12** | – |
+
+**Verdict against the pre-stated rule** (beat the released cost by ≥ 3/12 on ≥ 4 of 8 object tasks, both
+controls ≥ 10/12): **FAIL.** The state head wins on 1 of 8 object tasks (plate-slide) and lowers reach-wall
+from 23/24 to 7/12.
+
+- The failure is not ranking: offline the head ranks near-contact candidates almost perfectly. On push it picks the best available candidate in every set (top-1 success 0.38 of 0.38).
+- From the start pose, no plan within the horizon touches the object. A dense learned cost pulls the arm to a definite place, and that place is not the object.
+- The true-state cost is flat until the object moves, so CEM explores at random. That plausibly explains why it succeeds on drawer-open (10/12) where every learned cost fails. This is a hypothesis to test.
+- On reach-wall the head (trained on 24 episodes) is less precise about the hand than the released patch cost, which already solves the task.
 
 ## What the results say
 
@@ -125,7 +143,7 @@ the released cost by ≥ 3/12 on ≥ 4 of the 8 object tasks, with reach-wall an
    - evid fixes the arm decoy (0.62 → 1.00).
    - But as a dense ranking it is weak (plate-slide 0.66) or inverted (reach-wall 0.02).
    - evid_time breaks reach-wall in closed loop (0/12).
-5. **A second failure, distinct from the arm bias: reaching contact.**
+5. **A second failure, distinct from the arm bias, decides most Metaworld tasks: reaching contact.** Confirmed on 9 tasks: the correctly supervised state head fails on 7 of 8 object tasks.
    - On drawer-open and button-press-topdown, both costs rank candidates near the object almost perfectly (0.96-0.99, top-1 success 92-100%).
    - Yet every cost fails from the start pose (0/12). From the start pose no candidate within the horizon touches the object.
    - So the cost far from the object, and the search, decide these tasks, not the ranking near success.
