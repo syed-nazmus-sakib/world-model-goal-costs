@@ -95,7 +95,11 @@ class MetaworldAdapter:
         return states[:, :4]
 
     def true_cost(self, states, goal):
-        """obj_to_target / success threshold: < 1 exactly when Metaworld reports success (distance tasks)."""
+        """obj_to_target / success threshold: < 1 exactly when Metaworld reports success (distance tasks).
+        Door tasks report obj_to_target = 0 always (found 2026-10-23); their success test is |handle x - target x| <= 0.08,
+        with the target x in obs[36] (the goal field of the observation), so the cost uses that instead."""
+        if self.task in ("mw-door-open", "mw-door-close", "mw-door-lock", "mw-door-unlock"):
+            return np.abs(states[:, 4] - states[:, 36]) / 0.08
         return states[:, 40] / self.threshold
 
     def errors(self, state, goal):
