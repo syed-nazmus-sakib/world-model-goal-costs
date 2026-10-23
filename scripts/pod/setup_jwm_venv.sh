@@ -6,6 +6,8 @@
 # usage: bash scripts/pod/setup_jwm_venv.sh            log: stdout; ends with SETUP_DONE
 set -x
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
+# fail fast on a pod whose GPU cannot initialise CUDA (cuInit != 0): nothing below would work
+/usr/bin/python3 -c "import ctypes; raise SystemExit(ctypes.CDLL('libcuda.so.1').cuInit(0))" || { echo CUDA_FAILED; exit 1; }
 (apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg libegl1 libgl1 libglib2.0-0 libpython3.10 > /dev/null) || echo APT_FAILED
 pip install -q uv
 export UV_LINK_MODE=copy
