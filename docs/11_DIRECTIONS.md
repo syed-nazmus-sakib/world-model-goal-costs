@@ -16,9 +16,11 @@ world models.
    - Cube +11.5 points (p = 0.017);
    - plate-slide 0 → 8/12;
    - TwoRoom 58 → 99 with the time target.
-3. **Limits (found).**
-   - The head fixes ranking. It does not fix reaching contact: drawer-open and button-press-topdown stay at 0/12 although near-contact ranking is near-perfect.
-   - This separates a cost error from a search / approach error, which the diagnosis alone could not.
+3. **Limits (found; 2026-10-23, 9 Metaworld tasks).**
+   - The head fixes ranking. It does not fix reaching contact: it wins only plate-slide (0 → 8/12) and stays at 0/12 on push, button-press-topdown, door-open, window-open, faucet-open and drawer-open.
+   - On those tasks near-contact ranking is already near-perfect, so the failure is the approach phase and the search, not the cost near success.
+   - It also lowers reach-wall (23/24 → 7/12).
+   - **Consequence for the paper:** on Metaworld the diagnosis must separate a cost error near success from an approach / search error far from it. The learned cost is a method only where the first dominates (Cube, plate-slide, TwoRoom).
 
 **Position against the closest work.**
 - *Supervise What Decides Success* (2610.01224) uses the same kind of labels as an auxiliary world-model loss and gains +3.4 on Cube. We keep the world model frozen and gain +11.5 on Cube.
@@ -33,7 +35,7 @@ and the same supervision as the competing paper.
 
 | # | Direction | Status | Next step | Decision rule |
 |---|---|---|---|---|
-| 1 | State head on all 9 Metaworld tasks (closed loop) | running (pod G) | finish; add seeds where the head wins | works if ≥ 3/12 better on ≥ 4 of 8 object tasks, controls ≥ 10/12 |
+| 1 | State head on all 9 Metaworld tasks (closed loop) | **done: FAIL** (wins 1 of 8, reach-wall 23/24 → 7/12; docs/10) | keep as evidence that ranking is not the bottleneck on Metaworld | was: ≥ 3/12 better on ≥ 4 of 8 object tasks, controls ≥ 10/12 |
 | 2 | Baselines for the paper | to do | TEMPO released code; released + min; *Supervise What Decides Success* if code exists | report all on the same goals |
 | 3 | Approach phase (reaching contact) | open question | (a) object-progress time target over frames where the object moves; (b) expert first-contact state as an intermediate goal; (c) longer horizon | drawer-open or button-press-topdown ≥ 4/12 |
 | 4 | Fewer labels | open | state head with 10% / 1% of labelled frames, rest time-only | within 2/12 of the full state head |
