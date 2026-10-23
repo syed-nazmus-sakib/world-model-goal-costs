@@ -53,4 +53,6 @@ Results and findings: `docs/10_METHOD_C_D_RESULTS.md`.
 | `pod/run_mw_time_head.sh` | Method C on Metaworld: time head on the expert dataset, closed loop head vs released per task |
 | `pod/run_mw_methodD_pilot.sh` | Method D pilot: labelled encodings, four heads, offline test, gated closed loop |
 | `pod/run_mw_state_head.sh` | state head on any list of Metaworld tasks, closed loop head vs released (pre-stated rule in the header) |
+| `pod/run_mw_reach_oracle.sh` | reach-then-change Stage 1: oracle reach term with the released, true and robot-free change terms, 4 tasks + reach-wall |
+| `pod/run_mw_reach_image.sh` | reach-then-change Stage 2: robot-mask frames, robot map, smoke, 12-episode closed loop from images only; door-open oracles with the fixed true cost |
 | `pod/backup_and_stop.sh <pod_id> <host> <port> <remote_out> <name>` | laptop side: wait for `ALL_DONE`, copy results home and into `artifacts/`, then stop the pod (key from `.env`, never printed) |
