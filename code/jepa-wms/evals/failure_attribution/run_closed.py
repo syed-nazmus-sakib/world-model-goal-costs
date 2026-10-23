@@ -53,6 +53,7 @@ def main():
                         help="also sim_latent_reach / sim_true_reach: the same cost inside the reach-then-change oracle (costs.py)")
     parser.add_argument("--reach_eps", type=float, default=0.002, help="object displacement (m) that counts as 'moved' in the reach oracle")
     parser.add_argument("--reach_r0", type=float, default=0.02, help="hand-to-object distance (m) below which the reach term saturates")
+    parser.add_argument("--reach_r0_img", type=float, default=1.0, help="--cost reach: grid distance (patches) below which the reach term saturates")
     parser.add_argument("--goal_variant", type=int, default=0,
                         help="0: the eval's goal; k>0: same object goal, arm moved to pose k (goal_variants.py)")
     parser.add_argument("--orbit", type=str, default="",
@@ -175,7 +176,14 @@ def main():
             agent.goal_state_enc = mean_enc
             agent.objective = ReprTargetDistMPCObjective(cfg, target_enc=mean_enc, **cfg.planner.planning_objective)
             agent.planner.set_objective(agent.objective)
-        if args.cost.startswith("head:"):  # method C: learned goal cost (evals/failure_attribution/mw_head_train.py)
+        if args.cost.startswith("reach:"):  # reach-then-change from images (costs.ReachThenChangeImage); robot map from mw_robot_map.py
+            from evals.failure_attribution.costs import ReachThenChangeImage
+
+            agent.objective = ReachThenChangeImage(cfg, target_enc=agent.goal_state_enc, head_path=args.cost[6:],
+                                                   unroll=oracles["sim_latent"][1] if "sim_latent" in oracles else None,
+                                                   r0=args.reach_r0_img)
+            agent.planner.set_objective(agent.objective)
+        elif args.cost.startswith("head:"):  # method C: learned goal cost (evals/failure_attribution/mw_head_train.py)
             from evals.failure_attribution.costs import LearnedHeadMPCObjective
 
             agent.objective = LearnedHeadMPCObjective(cfg, target_enc=agent.goal_state_enc, head_path=args.cost[5:])
@@ -224,6 +232,18 @@ def main():
                 else:
                     z = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
                     unroll.spec = (task, capture(env.unwrapped), args.robot_free)
+                    if replans == 0 and hasattr(planner.objective, "set_start"):  # change map from the episode's start and goal
+                        import mujoco
+
+                        mw0 = env.unwrapped
+                        cid = mujoco.mj_name2id(mw0.model, mujoco.mjtObj.mjOBJ_CAMERA, "corner2")
+                        planner.objective.set_camera(mw0.data.cam_xpos[cid], mw0.data.cam_xmat[cid], float(mw0.model.cam_fovy[cid]),
+                                                     int(cfg.task_specification.img_size))
+                        hand0 = torch.from_numpy(np.asarray(mw0._get_obs(), dtype=np.float32)[:3])
+                        gh = np.asarray(goal_obs["proprio"], dtype=np.float64).reshape(-1, 4)[-1, :3]
+                        planner.objective.set_start(z, hand0, goal_hand_z=float(gh[2]), goal_hand=gh)
+                        out[f"{name}_reach_info"] = json.dumps(planner.objective.info)
+                        print(f"  [{name}] reach-then-change: {planner.objective.info}", flush=True)
                     res = planner.plan(z, steps_left=steps_left)
                     a = res.actions
                     cem_final.append(float(res.losses.squeeze(-1)[-1]))

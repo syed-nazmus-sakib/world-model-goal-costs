@@ -21,6 +21,8 @@ Every frame keeps its 41-d state [39-d obs, success, obj_to_target]. The heads d
 
 Saves ep_XXX.npz: vis (N, P, D) fp16, prop (N, Dp) fp16, state (N, 41), kind (N,) 0 expert / 1 goal / 2 candidate,
 t (N,) expert step (start step for candidates), var (N,) goal variant index (-1 otherwise), start (N,) start index.
+With --robot_mask also rmask (N, P) uint8: 1 where the 14x14 patch shows the robot (the frame differs from the same state
+rendered with the robot hidden), 0 otherwise, 255 unknown (candidates). Training labels for the robot map (mw_robot_map.py).
 
     python -m evals.failure_attribution.mw_pilot_data --fname <mw config> --out_dir <dir> --ep_start 100 --episodes 32
 """
@@ -65,7 +67,13 @@ def main():
     parser.add_argument("--candidates", type=int, default=150, help="per start point")
     parser.add_argument("--stride", type=int, default=2)
     parser.add_argument("--num_workers", type=int, default=12)
+    parser.add_argument("--robot_mask", action="store_true", help="also store the robot patch mask of expert and goal frames")
+    parser.add_argument("--no_cands", action="store_true", help="skip the candidate futures (robot-map training data only)")
     args = parser.parse_args()
+    if args.robot_mask:
+        from evals.failure_attribution.cost_share_mw import patch_mask
+        from evals.failure_attribution.goal_variants import robot_free_frame
+        from evals.failure_attribution.mw_sim import render_hidden, robot_geoms
     os.makedirs(args.out_dir, exist_ok=True)
     args_eval = load_args(args.fname)
     task = args_eval["task_specification"]["task"]
@@ -106,17 +114,25 @@ def main():
         acts = (acts.detach().cpu().numpy() if torch.is_tensor(acts) else np.asarray(acts)).astype(np.float32)
         restore(mw, evaluator.expert_init_snap)
         q0 = object_qpos(mw).copy()
-        snaps, ex_frames, ex_states, ex_t, contact = [evaluator.expert_init_snap], [], [], [], None
+        snaps, ex_frames, ex_states, ex_t, contact, masks = [evaluator.expert_init_snap], [], [], [], None, []
+        geoms = robot_geoms(mw.model) if args.robot_mask else None
         for k, a in enumerate(acts):
             obs, _, _, _, info = w.step(a)
             snaps.append(capture(mw))
             if contact is None and np.abs(object_qpos(mw) - q0).max() > 2e-3:
                 contact = k
             if (k + 1) % args.stride == 0 or k == len(acts) - 1:
-                ex_frames.append(w.render().copy())
+                fr = w.render().copy()
+                ex_frames.append(fr)
+                if args.robot_mask:  # same state, robot hidden: the patches that differ are the robot
+                    masks.append(patch_mask(fr, render_hidden(w, geoms)).reshape(-1).astype(np.uint8))
                 ex_states.append(np.r_[obs, float(info["success"]), float(info.get("obj_to_target", np.nan))].astype(np.float32))
                 ex_t.append(k + 1)
         replay_err = float(np.abs(ex_states[-1][:39] - goal_states[0][:39]).max())
+        goal_masks = []
+        if args.robot_mask:
+            for snap, f, _, _ in var:
+                goal_masks.append(patch_mask(f, robot_free_frame(evaluator.expert_env, snap)).reshape(-1).astype(np.uint8))
         try:  # each expert env holds its own EGL context
             evaluator.expert_env.close()
         except Exception:
@@ -142,6 +158,8 @@ def main():
 
             H = cfg.planner.horizon
             starts = [0] if contact is None else sorted({0, max(0, contact - 12), max(0, contact - 4)})
+            if args.no_cands:
+                starts = []
             M2 = args.candidates // 2
             noise = torch.tensor(np.r_[0.0, np.linspace(0.05, 1.0, args.candidates - M2 - 1)], device=device, dtype=torch.float32)
             for si, s in enumerate(starts):
@@ -154,10 +172,17 @@ def main():
                 states, frames = pool.rollout((task, snaps[s], False), unroll.env_actions(cand), True)
                 add(flat(unroll.encode_final(states, frames)), states, 2, s, -1, si)
 
+        extra = {}
+        if args.robot_mask:  # expert frames, then goals, then candidates (unknown), in the order of V
+            n_total = sum(len(v) for v in V)
+            rm = np.full((n_total, V[0].shape[1]), 255, dtype=np.uint8)
+            known = np.concatenate([np.stack(masks), np.stack(goal_masks)])
+            rm[: len(known)] = known
+            extra["rmask"] = rm
         np.savez(path, vis=np.concatenate(V), prop=np.concatenate(P), state=np.concatenate(S), kind=np.concatenate(K),
                  t=np.concatenate(T), var=np.concatenate(VAR), start=np.concatenate(ST), starts=np.array(starts),
                  contact=np.array(-1 if contact is None else contact), replay_err=np.array(replay_err),
-                 goal_path_diff=np.array(goal_path_diff))
+                 goal_path_diff=np.array(goal_path_diff), **extra)
         st = np.concatenate(S)
         kd = np.concatenate(K)
         print(f"ep {ep:03d}: {len(st)} frames, {len(var)} goals, contact {contact}, starts {starts}, "

@@ -106,6 +106,135 @@ class ReachThenChangeOracle:
         return torch.where(moved, c, c.max().detach() + reach)  # every non-mover ranks below every mover
 
 
+class ReachThenChangeImage:
+    """Stage 2 (2026-10-23): the reach-then-change cost from images, no task labels, no simulator state.
+
+    From the episode's start encoding z0 and the goal encoding g (set_start / __init__), on the 16x16 patch grid:
+      robot map   r_p = P(patch p shows the robot), from mw_robot_map.PatchRobotHead on the frozen patch features
+      change map  c_p = 1 for patches that are not robot in z0 nor in g and differ between them by more than a robust
+                  threshold (median + 4 MAD of the non-robot patch differences, and at least 1% of the largest one):
+                  what the task has to change. Empty change map (reach-wall): fall back to the released cost.
+    Per candidate z (its predicted or simulated final frame):
+      change term  mean over change patches of ||z_p - g_p||^2 (the released patch cost restricted to the change region)
+      moved        the change region has moved away from the start: mean_c ||z_p - z0_p||^2 > eps_c, eps_c = 10% of the
+                   start-to-goal change on those patches
+      reach term   grid distance from the nearest robot patch of z to the change region's centroid, saturating below r0
+      cost = change term for movers; non-movers rank below every mover, by the reach term.
+    In 'proprio' robot-map mode the hand position comes from the robot's own sensor (unroll.last_states[:, :3]).
+    """
+
+    def __init__(self, cfg, target_enc: TensorDict, head_path: str, unroll=None, r0: float = 1.0, mad_k: float = 4.0, **kwargs):
+        from evals.failure_attribution.mw_robot_map import PatchRobotHead
+        from evals.simu_env_planning.planning.planning.objectives import ReprTargetDistMPCObjective
+
+        ck = torch.load(head_path, map_location="cpu")
+        self.head = PatchRobotHead(ck["d_in"], ck["mode"])
+        self.head.load_state_dict(ck["state_dict"])
+        self.device = target_enc["visual"].device
+        self.head = self.head.to(self.device).eval().requires_grad_(False)
+        self.unroll, self.r0, self.mad_k = unroll, r0, mad_k
+        self.released = ReprTargetDistMPCObjective(cfg, target_enc=target_enc, alpha=cfg.planner.planning_objective.alpha)
+        self.g = self._flat(target_enc)[0]  # (P, D)
+        P = self.g.shape[0]
+        side = int(round(P ** 0.5))
+        yy, xx = torch.meshgrid(torch.arange(side), torch.arange(side), indexing="ij")
+        self.grid = torch.stack([yy, xx], -1).reshape(P, 2).float().to(self.device)
+        self.active, self.info = False, {}
+
+    @staticmethod
+    def _flat(enc):
+        """visual (*lead, V, H, W, D) -> (n, V*H*W, D); the grid below assumes V = 1 (one frame per encoding)"""
+        vis = enc["visual"]
+        return vis.reshape(int(np.prod(vis.shape[:-4])), -1, vis.shape[-1]).float()
+
+    def _hand(self, n):
+        if self.head.mode != "proprio":
+            return None
+        return torch.from_numpy(np.asarray(self.unroll.last_states)[:, :3]).to(self.device).float()[:n]
+
+    def set_camera(self, pos, mat, fovy, img_size, patch=14):
+        """Calibrated render camera (MuJoCo corner2): pos (3,), mat (3, 3) world<-camera, fovy in degrees. With it the reach
+        term is the 3D hand-to-object distance: the hand from the robot's own sensor, the object as the change-map centroid
+        lifted to the goal's hand height. Convention validated on the robot masks (projected hand on a robot patch in 100%
+        of training frames): x = W/2 + f px/(-pz), row = H/2 + f py/(-pz) with p = mat^T (X - pos)."""
+        self.cam = {"pos": np.asarray(pos, dtype=np.float64), "mat": np.asarray(mat, dtype=np.float64).reshape(3, 3),
+                    "f": (img_size / 2) / np.tan(np.deg2rad(fovy) / 2), "hw": img_size / 2, "patch": patch}
+
+    def lift(self, row_col, z):
+        """patch-grid (row, col) -> the 3D point on the camera ray through that patch centre at height z (world)."""
+        c = self.cam
+        row, col = (np.asarray(row_col, dtype=np.float64) + 0.5) * c["patch"]
+        d = c["mat"] @ np.array([(col - c["hw"]) / c["f"], (row - c["hw"]) / c["f"], -1.0])
+        t = (z - c["pos"][2]) / d[2] if abs(d[2]) > 1e-6 else 0.0
+        return c["pos"] + max(t, 0.0) * d
+
+    @torch.no_grad()
+    def set_start(self, z0_enc, hand0=None, goal_hand_z=None, goal_hand=None):
+        z0 = self._flat(z0_enc)[0]
+        r0 = self.head.robot_prob(z0[None], None if hand0 is None else hand0[None].to(self.device).float())[0]
+        rg = self.head.robot_prob(self.g[None], None if hand0 is None else hand0[None].to(self.device).float())[0]
+        nonrobot = (r0 < 0.5) & (rg < 0.5)
+        diff = (z0 - self.g).pow(2).sum(-1)
+        d = diff[nonrobot]
+        med = d.median()
+        mad = (d - med).abs().median() + 1e-8
+        change = nonrobot & (diff > med + self.mad_k * mad) & (diff > 0.01 * diff.max())
+        self.z0, self.change, self.robot0 = z0, change, r0 > 0.5
+        self.active = bool(change.sum() >= 1)
+        self.info = {"n_change": int(change.sum()), "n_robot_start": int((r0 > 0.5).sum()), "n_robot_goal": int((rg > 0.5).sum()),
+                     "active": self.active}
+        self.obj3d = None
+        if self.active:
+            self.cent = self.grid[change].mean(0)
+            self.eps_c = 0.1 * (z0[change] - self.g[change]).pow(2).sum(-1).mean()
+            self.info["change_centroid"] = self.cent.tolist()
+            if getattr(self, "cam", None) is not None and goal_hand_z is not None:
+                pts = np.stack([self.lift(rc, float(goal_hand_z)) for rc in self.grid[change].cpu().numpy()])  # (n_change, 3)
+                if goal_hand is not None:  # at the goal the hand touches the object: changes lifted far from it are not the object
+                    gh = np.asarray(goal_hand, dtype=np.float64)
+                    near = np.linalg.norm(pts - gh, axis=1) < 0.3
+                    self.info["n_change_near_goal_hand"] = int(near.sum())
+                    obj = pts[near].mean(0) if near.any() else gh
+                else:
+                    obj = pts.mean(0)
+                self.obj3d = torch.from_numpy(obj).to(self.device).float()
+                self.info["object_3d_estimate"] = [round(float(v), 3) for v in obj]
+
+    def __call__(self, encodings, actions, keepdims: bool = False):
+        if not self.active or keepdims:
+            return self.released(encodings, actions, keepdims)
+        z = self._flat(encodings)  # (B, P, D)
+        c = self.change
+        robot = self.head.robot_prob(z, self._hand(len(z))) > 0.5  # (B, P)
+        change_term = (z[:, c] - self.g[c]).pow(2).sum(-1).mean(-1)
+        # moved: judged on the change patches the robot does not cover in the candidate; all covered = the arm is on the object
+        visible = (~robot)[:, c].float()
+        d0 = (z[:, c] - self.z0[c]).pow(2).sum(-1)
+        d0v = (d0 * visible).sum(-1) / visible.sum(-1).clamp_min(1.0)
+        # a candidate has moved the object if its visible change patches departed from the start by more than the absolute
+        # floor eps_c AND stand out from the other candidates (3x the batch median: arm shadows and render variation move
+        # every candidate a little, a real object motion moves a few a lot)
+        thr = torch.maximum(self.eps_c, 3.0 * d0v.median())
+        moved = (d0v > thr) | (visible.sum(-1) == 0)
+        # reach: the arm's new footprint (robot in the candidate, not robot at the episode start), so the static base cancels
+        # and the nearest new patch to the change region tracks the moving arm (2026-10-23: the nearest *robot* patch was
+        # always the base near the top of the image, saturated from the start, and the hand never approached)
+        new = robot & ~self.robot0[None]
+        if self.obj3d is not None:  # calibrated camera: 3D distance from the hand (own sensor) to the lifted change centroid
+            hand = torch.from_numpy(np.asarray(self.unroll.last_states)[:len(z), :3]).to(self.device).float()
+            reach = ((hand - self.obj3d).norm(dim=-1) - 0.02).clamp_min(0.0)
+        else:  # image only: the arm's new footprint on the patch grid
+            dist = (self.grid[None] - self.cent).norm(dim=-1).expand(len(z), -1)
+            reach = torch.where(new, dist, torch.full_like(dist, float(self.grid.shape[0]))).min(-1).values
+            reach = (reach - self.r0).clamp_min(0.0)
+        if not getattr(self, "_dbg", False):  # one line per episode, to check that the two phases behave
+            self._dbg = True
+            print(f"  [reach-img] B={len(z)} moved={moved.float().mean():.2f} eps_c={float(self.eps_c):.3g} thr={float(thr):.3g} "
+                  f"d0v med={float(d0v.median()):.3g} max={float(d0v.max()):.3g} | reach min={float(reach.min()):.1f} "
+                  f"med={float(reach.median()):.1f} new-footprint patches med={float(new.float().sum(-1).median()):.0f}", flush=True)
+        return torch.where(moved, change_term, change_term.max().detach() + reach)
+
+
 class LearnedHeadMPCObjective:
     """Method C: squared distance between learned embeddings of the candidate and the goal (see mw_head_train.py)."""
 
