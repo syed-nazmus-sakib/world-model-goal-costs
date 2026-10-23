@@ -27,6 +27,16 @@ root. Launchers create their output folders and stop when a command fails.
 
 The LeWM study has its own entry point: `code/lewm_explorations/run_all.sh` (see its README).
 
+## Running on a cluster with Conda (`setup/`, three steps)
+
+| Step | Script | What it does |
+|---|---|---|
+| 1 | `setup/01_conda_env.sh` | creates the Conda envs `jepa-wms` (Metaworld / Push-T / Wall planning) and `swm` (LeWM), with a GPU and rendering smoke test |
+| 2 | `setup/02_download.sh [metaworld ckpt lewm]` | Metaworld dataset and released checkpoints into `artifacts/`; LeWM checkpoints and datasets into `~/.stable_worldmodel/` |
+| 3 | `setup/03_run.sh <smoke\|mw_state\|lewm_cube\|lewm_pusht>` | `smoke` first (about 5 min), then the experiments: Metaworld state head on 9 tasks, LeWM Cube / PushT heads over 3 seeds |
+
+Results land in `artifacts/raw_logs/<experiment>/`; the success lines are in each folder's `queue.log` / `summary.txt`.
+
 ## Pod scripts for the learned goal costs (`pod/`, 2026-10-22)
 
 These run on a RunPod pod with the project at `/root/jepa-wms-project` (override with `JEPAWM_HOME`) and write
