@@ -73,6 +73,34 @@ class PatchAggMPCObjective:
         return diff.cumsum(0).flip(0) if self.sum_all_diffs else diff
 
 
+class ReachThenChangeOracle:
+    """Stage-1 oracle of the reach-then-change cost (2026-10-23): simulator states give the reach term and the gate.
+
+    A Metaworld reward is written as "bring the hand to the object, then bring the object to its target". This cost
+    imposes that order on any goal cost `inner` (the change term: the released latent cost, or the true object cost):
+      - candidates that have moved the object (|obj - obj_start| > eps) are ranked by `inner`;
+      - candidates that have not are ranked below all of them, by the hand-to-object distance (the reach term);
+      - if the goal moves no object (|obj_goal - obj_start| <= eps, e.g. reach-wall), `inner` is used unchanged.
+    States (B, 41) = [39-d obs, success, obj_to_target] come from the SimUnroll that produced the encodings
+    (unroll.last_states): hand = obs[:3], object = obs[4:7]. The image-based method replaces both with maps
+    computed from the frozen encoder; this oracle tells whether the structure itself solves the approach phase.
+    """
+
+    def __init__(self, inner, unroll, obj_start, obj_goal, eps: float = 0.005):
+        self.inner, self.unroll, self.eps = inner, unroll, eps
+        self.obj_start = np.asarray(obj_start, dtype=np.float64)
+        self.active = bool(np.linalg.norm(np.asarray(obj_goal, dtype=np.float64) - self.obj_start) > eps)
+
+    def __call__(self, encodings, actions, keepdims: bool = False):
+        c = self.inner(encodings, actions, keepdims)
+        if not self.active or keepdims:
+            return c
+        st = np.asarray(self.unroll.last_states, dtype=np.float64)
+        moved = torch.from_numpy(np.linalg.norm(st[:, 4:7] - self.obj_start, axis=1) > self.eps).to(c.device)
+        reach = torch.from_numpy(np.linalg.norm(st[:, :3] - st[:, 4:7], axis=1)).to(c.device, c.dtype)
+        return torch.where(moved, c, c.max().detach() + reach)  # every non-mover ranks below every mover
+
+
 class LearnedHeadMPCObjective:
     """Method C: squared distance between learned embeddings of the candidate and the goal (see mw_head_train.py)."""
 

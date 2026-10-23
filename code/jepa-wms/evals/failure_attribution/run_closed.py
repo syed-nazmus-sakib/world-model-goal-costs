@@ -49,7 +49,9 @@ def main():
     parser.add_argument("--num_workers", type=int, default=16)
     parser.add_argument("--alpha", type=float, default=None, help="overrides the proprio weight of the planning cost")
     parser.add_argument("--cost", default="l2", help="patch aggregation of the latent cost: l2 (released), topk:K, pmean:P")
-    parser.add_argument("--planners", nargs="+", default=["wm", "sim_latent", "sim_true"])
+    parser.add_argument("--planners", nargs="+", default=["wm", "sim_latent", "sim_true"],
+                        help="also sim_latent_reach / sim_true_reach: the same cost inside the reach-then-change oracle (costs.py)")
+    parser.add_argument("--reach_eps", type=float, default=0.005, help="object displacement (m) that counts as 'moved' in the reach oracle")
     parser.add_argument("--goal_variant", type=int, default=0,
                         help="0: the eval's goal; k>0: same object goal, arm moved to pose k (goal_variants.py)")
     parser.add_argument("--orbit", type=str, default="",
@@ -87,7 +89,7 @@ def main():
 
     sim_unrolls = {m: SimUnroll(agent, pool, adapter, m) for m in ("latent", "state")}
     oracles = {}
-    for name, mode in (("sim_latent", "latent"), ("sim_true", "state")):
+    for name, mode in (("sim_latent", "latent"), ("sim_true", "state"), ("sim_latent_reach", "latent"), ("sim_true_reach", "state")):
         if name in args.planners:
             oracles[name] = (
                 CEMPlanner(
@@ -186,6 +188,7 @@ def main():
             agent.planner.set_objective(agent.objective)
         goal_state = np.asarray(evaluator.state_g, dtype=np.float64)
         snap0 = capture_env(env)
+        init_state = np.asarray(env.unwrapped._get_obs(), dtype=np.float64)
         out = {
             "episode": ep,
             "ep_seed": ep_seed,
@@ -203,9 +206,13 @@ def main():
             replans, chunk_success, cem_final, hand, obj = 0, [], [], [], []
             if name != "wm":
                 planner, unroll = oracles[name]
-                planner.set_objective(
-                    agent.objective if name == "sim_latent" else TrueCostObjective(adapter, goal_state, device)
-                )
+                objective = agent.objective if name.startswith("sim_latent") else TrueCostObjective(adapter, goal_state, device)
+                if name.endswith("_reach"):
+                    from evals.failure_attribution.costs import ReachThenChangeOracle
+
+                    objective = ReachThenChangeOracle(objective, unroll, init_state[4:7], goal_state[4:7], eps=args.reach_eps)
+                    out[f"{name}_active"] = objective.active
+                planner.set_objective(objective)
                 planner.local_generator.manual_seed(int(ep_seed) + 1000 * (k + 1))
             while True:
                 steps_left = max((env.steps_left() + 1) * model.action_skip // cfg.frameskip, 1)
@@ -263,7 +270,7 @@ def main():
     pool.close()
     save_json(os.path.join(args.out_dir, 'run_meta.json'), {"fname": os.path.abspath(args.fname), "task": task, "episodes": n_episodes,
                    "planners": args.planners, "alpha": float(cfg.planner.planning_objective.alpha), "cost": args.cost,
-                   "goal_variant": args.goal_variant, "robot_free": args.robot_free,
+                   "goal_variant": args.goal_variant, "robot_free": args.robot_free, "reach_eps": args.reach_eps,
                    "wm_set": args.wm_set, "wm_h": args.wm_h, "wm_mag": args.wm_mag, "wm_gate": args.wm_gate})
     print("done", flush=True)
 

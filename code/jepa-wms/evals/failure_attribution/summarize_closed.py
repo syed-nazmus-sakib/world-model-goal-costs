@@ -39,7 +39,7 @@ def main():
     eps = [np.load(os.path.join(args.run_dir, f)) for f in files]
     if not eps:
         parser.error("No completed ep_*.npz files found in --run_dir")
-    names = [n for n in ("wm", "sim_latent", "sim_true") if f"{n}_success" in eps[0].files]
+    names = [n for n in ("wm", "sim_latent", "sim_true", "sim_latent_reach", "sim_true_reach") if f"{n}_success" in eps[0].files]
     n = len(eps)
     S = {k: np.array([bool(e[f"{k}_success"]) for e in eps]) for k in names}
     A = {k: np.array([bool(e[f"{k}_success_any"]) for e in eps]) for k in names}

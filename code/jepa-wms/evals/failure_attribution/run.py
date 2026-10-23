@@ -125,6 +125,7 @@ class SimUnroll:
 
     def __call__(self, z_ctxt, act_suffix=None, **kwargs):
         states, frames = self.pool.rollout(self.spec, self.env_actions(act_suffix), self.mode == "latent")
+        self.last_states = states  # (B, state_dim) of the candidates just rolled out, for oracle costs that need states
         if self.mode == "latent":
             return self.encode_final(states, frames)
         return torch.from_numpy(states).unsqueeze(0)  # (1, B, state_dim)
