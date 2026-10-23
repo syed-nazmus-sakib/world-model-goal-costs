@@ -1,0 +1,28 @@
+released_off50_s0 
+released_off25_s0 
+relmin_h10_off50_s0 
+relmin_h10_off75_s0 
+state_h5_off75_s0 
+time_h5_off75_s0 
+state_h10min_off50_s0 
+time_h10min_off50_s0 
+state_h10min_off75_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=75 budget=150 horizon=10 metric=head_state agg=min success_rate=78.0 n=50
+time_h10min_off75_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=75 budget=150 horizon=10 metric=head_time agg=min success_rate=66.0 n=50
+released_off25_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=25 budget=50 horizon=5 metric=none agg=last success_rate=66.0 n=50
+released_off50_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=50 budget=100 horizon=5 metric=none agg=last success_rate=58.0 n=50
+relmin_h10_off50_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=50 budget=100 horizon=10 metric=released agg=min success_rate=54.0 n=50
+relmin_h10_off75_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=75 budget=150 horizon=10 metric=released agg=min success_rate=70.0 n=50
+released_off75_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=75 budget=150 horizon=5 metric=none agg=last success_rate=64.0 n=50
+state_h5_off50_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=50 budget=100 horizon=5 metric=head_state agg=last success_rate=72.0 n=50
+time_h5_off50_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=50 budget=100 horizon=5 metric=head_time agg=last success_rate=48.0 n=50
+state_h5_off75_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=75 budget=150 horizon=5 metric=head_state agg=last success_rate=78.0 n=50
+time_h5_off75_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=75 budget=150 horizon=5 metric=head_time agg=last success_rate=68.0 n=50
+state_h10min_off50_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=50 budget=100 horizon=10 metric=head_state agg=min success_rate=66.0 n=50
+time_h10min_off50_s0 [summary] env=swm/OGBCube-v0 seed=0 goal_offset=50 budget=100 horizon=10 metric=head_time agg=min success_rate=60.0 n=50
+released_off75_s42 [summary] env=swm/OGBCube-v0 seed=42 goal_offset=75 budget=150 horizon=5 metric=none agg=last success_rate=60.0 n=50
+relmin_h10_off75_s42 [summary] env=swm/OGBCube-v0 seed=42 goal_offset=75 budget=150 horizon=10 metric=released agg=min success_rate=74.0 n=50
+state_h10min_off75_s42 [summary] env=swm/OGBCube-v0 seed=42 goal_offset=75 budget=150 horizon=10 metric=head_state agg=min success_rate=90.0 n=50
+time_h10min_off75_s42 [summary] env=swm/OGBCube-v0 seed=42 goal_offset=75 budget=150 horizon=10 metric=head_time agg=min success_rate=70.0 n=50
+released_off50_s42 [summary] env=swm/OGBCube-v0 seed=42 goal_offset=50 budget=100 horizon=5 metric=none agg=last success_rate=56.0 n=50
+relmin_h10_off50_s42 [summary] env=swm/OGBCube-v0 seed=42 goal_offset=50 budget=100 horizon=10 metric=released agg=min success_rate=54.0 n=50
+state_h10min_off50_s42 [summary] env=swm/OGBCube-v0 seed=42 goal_offset=50 budget=100 horizon=10 metric=head_state agg=min success_rate=64.0 n=50

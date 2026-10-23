@@ -1,0 +1,11 @@
+{"step": 2000, "loss": 0.04134026914834976, "val_spearman_head": 0.9073927733724353, "val_spearman_released": 0.6772652894544166}
+{"step": 4000, "loss": 0.02607794851064682, "val_spearman_head": 0.9352483078913031, "val_spearman_released": 0.6772652894544166}
+{"step": 6000, "loss": 0.01428517047315836, "val_spearman_head": 0.9392421185572267, "val_spearman_released": 0.6772652894544166}
+{"step": 8000, "loss": 0.016359074041247368, "val_spearman_head": 0.946173777995955, "val_spearman_released": 0.6772652894544166}
+{"step": 10000, "loss": 0.013028274290263653, "val_spearman_head": 0.9424358521638614, "val_spearman_released": 0.6772652894544166}
+{"step": 12000, "loss": 0.004046633839607239, "val_spearman_head": 0.9397073469046818, "val_spearman_released": 0.6772652894544166}
+{"step": 14000, "loss": 0.0048184702172875404, "val_spearman_head": 0.941164378619038, "val_spearman_released": 0.6772652894544166}
+{"step": 16000, "loss": 0.006987250410020351, "val_spearman_head": 0.9426468719427166, "val_spearman_released": 0.6772652894544166}
+{"step": 18000, "loss": 0.0033193593844771385, "val_spearman_head": 0.9427046821679996, "val_spearman_released": 0.6772652894544166}
+{"step": 20000, "loss": 0.0020946799777448177, "val_spearman_head": 0.9415898289786326, "val_spearman_released": 0.6772652894544166}
+saved /root/out/MW/head_time.pt

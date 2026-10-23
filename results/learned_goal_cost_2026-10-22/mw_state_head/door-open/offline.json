@@ -1,0 +1,44 @@
+{
+ "task": "mw-door-open",
+ "args": {
+  "train_dir": "/root/out/F/door-open/train",
+  "test_dir": "/root/out/F/door-open/test",
+  "task": "mw-door-open",
+  "out_dir": "/root/out/F/door-open/heads",
+  "modes": "state",
+  "steps": 6000,
+  "n_pos": 64,
+  "n_neg": 64,
+  "c_head": "",
+  "seed": 0
+ },
+ "train_info": {
+  "state": {
+   "n_pos": 64,
+   "n_neg": 0,
+   "pos_pool": 248,
+   "neg_pool": 0,
+   "final_loss": 3.660267111627036e-08
+  }
+ },
+ "results": {
+  "released_a0": {
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "released_a0.1": {
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "state": {
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  }
+ }
+}

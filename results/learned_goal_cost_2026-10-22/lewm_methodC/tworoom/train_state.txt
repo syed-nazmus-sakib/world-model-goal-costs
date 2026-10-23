@@ -1,0 +1,16 @@
+{"step": 2000, "loss": 0.0019067092798650265, "val_spearman_head": 0.993980058198754, "val_spearman_released": 0.6883147476479524}
+{"step": 4000, "loss": 0.0010385052300989628, "val_spearman_head": 0.9942172115011786, "val_spearman_released": 0.7110310610267102}
+{"step": 6000, "loss": 0.0008496230002492666, "val_spearman_head": 0.9944961654247967, "val_spearman_released": 0.7026645241026367}
+{"step": 8000, "loss": 0.001124801579862833, "val_spearman_head": 0.9942035949366412, "val_spearman_released": 0.7115109838594883}
+{"step": 10000, "loss": 0.0017335353186354041, "val_spearman_head": 0.994279397157829, "val_spearman_released": 0.7020192800929145}
+{"step": 12000, "loss": 0.0013518481282517314, "val_spearman_head": 0.993667373478101, "val_spearman_released": 0.7079116745243991}
+{"step": 14000, "loss": 0.0019791191443800926, "val_spearman_head": 0.9946009753652745, "val_spearman_released": 0.7009462921445221}
+{"step": 16000, "loss": 0.001125516602769494, "val_spearman_head": 0.9941224184512321, "val_spearman_released": 0.7042265696351376}
+{"step": 18000, "loss": 0.0004936421173624694, "val_spearman_head": 0.9945208358589424, "val_spearman_released": 0.6990088178805843}
+{"step": 20000, "loss": 0.0005090205231681466, "val_spearman_head": 0.9946629325812176, "val_spearman_released": 0.7003573518037087}
+{"step": 22000, "loss": 0.0007136958301998675, "val_spearman_head": 0.9941982775071198, "val_spearman_released": 0.7015651057141791}
+{"step": 24000, "loss": 0.0007481383509002626, "val_spearman_head": 0.9950974145612214, "val_spearman_released": 0.6872983661157229}
+{"step": 26000, "loss": 0.001058888272382319, "val_spearman_head": 0.9944024665300887, "val_spearman_released": 0.708691346083814}
+{"step": 28000, "loss": 0.0007825482753105462, "val_spearman_head": 0.9953259740373293, "val_spearman_released": 0.6908392532526216}
+{"step": 30000, "loss": 0.001228335197083652, "val_spearman_head": 0.9951882715011223, "val_spearman_released": 0.6911474673567582}
+saved /root/out/T/head_state.pt

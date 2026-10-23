@@ -1,0 +1,92 @@
+{
+ "task": "mw-push",
+ "args": {
+  "train_dir": "/root/out/F/push/train",
+  "test_dir": "/root/out/F/push/test",
+  "task": "mw-push",
+  "out_dir": "/root/out/F/push/heads",
+  "modes": "state",
+  "steps": 6000,
+  "n_pos": 64,
+  "n_neg": 64,
+  "c_head": "",
+  "seed": 0
+ },
+ "train_info": {
+  "state": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 1829,
+   "neg_pool": 2868,
+   "final_loss": 0.0006268894649110734
+  }
+ },
+ "results": {
+  "released_a0": {
+   "eval_goal": {
+    "n_sets": 32,
+    "acc": 0.888762256604763,
+    "spearman": 0.6868233058020048,
+    "regret": 0.3915432896465063,
+    "top1": 0.21875,
+    "any": 0.375
+   },
+   "arm_moved": {
+    "n_sets": 87,
+    "acc": 0.5526577438469904,
+    "spearman": 0.10117262676117461,
+    "regret": 1.5601835566005489,
+    "top1": 0.06896551724137931,
+    "any": 0.3448275862068966
+   },
+   "decoy": {
+    "n_eps": 1,
+    "pref_success": 0.8776978417266187
+   }
+  },
+  "released_a0.1": {
+   "eval_goal": {
+    "n_sets": 32,
+    "acc": 0.8910322891676269,
+    "spearman": 0.6891599524833678,
+    "regret": 0.3915432896465063,
+    "top1": 0.21875,
+    "any": 0.375
+   },
+   "arm_moved": {
+    "n_sets": 87,
+    "acc": 0.5512484161991005,
+    "spearman": 0.09939637234475816,
+    "regret": 1.5058246193260982,
+    "top1": 0.06896551724137931,
+    "any": 0.3448275862068966
+   },
+   "decoy": {
+    "n_eps": 1,
+    "pref_success": 0.8776978417266187
+   }
+  },
+  "state": {
+   "eval_goal": {
+    "n_sets": 32,
+    "acc": 0.9298170282580487,
+    "spearman": 0.7765209908922666,
+    "regret": 0.04760638251900673,
+    "top1": 0.375,
+    "any": 0.375
+   },
+   "arm_moved": {
+    "n_sets": 87,
+    "acc": 0.9184537139300253,
+    "spearman": 0.7192132011528282,
+    "regret": 0.24805560194212814,
+    "top1": 0.28735632183908044,
+    "any": 0.3448275862068966
+   },
+   "decoy": {
+    "n_eps": 1,
+    "pref_success": 1.0
+   }
+  }
+ }
+}

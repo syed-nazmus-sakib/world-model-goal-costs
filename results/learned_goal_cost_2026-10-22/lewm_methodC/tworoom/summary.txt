@@ -1,0 +1,10 @@
+released_off75_s0 
+released_off50_s0 
+released_off25_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=25 budget=50 horizon=5 metric=none agg=last success_rate=86.0 n=50
+time_h5_off75_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=75 budget=150 horizon=5 metric=head_time agg=last success_rate=94.0 n=50
+state_h5_off75_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=75 budget=150 horizon=5 metric=head_state agg=last success_rate=90.0 n=50
+state_h10min_off75_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=75 budget=150 horizon=10 metric=head_state agg=min success_rate=96.0 n=50
+state_h5_off50_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=50 budget=100 horizon=5 metric=head_state agg=last success_rate=96.0 n=50
+time_h5_off50_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=50 budget=100 horizon=5 metric=head_time agg=last success_rate=98.0 n=50
+time_h10min_off75_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=75 budget=150 horizon=10 metric=head_time agg=min success_rate=98.0 n=50
+released_h10_off75_s0 [summary] env=swm/TwoRoom-v1 seed=0 goal_offset=75 budget=150 horizon=10 metric=none agg=last success_rate=36.0 n=50

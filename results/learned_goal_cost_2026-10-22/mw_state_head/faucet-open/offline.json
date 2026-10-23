@@ -1,0 +1,92 @@
+{
+ "task": "mw-faucet-open",
+ "args": {
+  "train_dir": "/root/out/F/faucet-open/train",
+  "test_dir": "/root/out/F/faucet-open/test",
+  "task": "mw-faucet-open",
+  "out_dir": "/root/out/F/faucet-open/heads",
+  "modes": "state",
+  "steps": 6000,
+  "n_pos": 64,
+  "n_neg": 64,
+  "c_head": "",
+  "seed": 0
+ },
+ "train_info": {
+  "state": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 3040,
+   "neg_pool": 1191,
+   "final_loss": 0.0002508949546609074
+  }
+ },
+ "results": {
+  "released_a0": {
+   "eval_goal": {
+    "n_sets": 31,
+    "acc": 0.9102006563951502,
+    "spearman": 0.6514065767761531,
+    "regret": 0.17061108158480737,
+    "top1": 0.6129032258064516,
+    "any": 0.6451612903225806
+   },
+   "arm_moved": {
+    "n_sets": 93,
+    "acc": 0.5977097761700744,
+    "spearman": 0.12036448411174629,
+    "regret": 1.3391061450845452,
+    "top1": 0.3010752688172043,
+    "any": 0.6451612903225806
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "released_a0.1": {
+   "eval_goal": {
+    "n_sets": 31,
+    "acc": 0.9111875249821132,
+    "spearman": 0.653171107837329,
+    "regret": 0.17061108158480737,
+    "top1": 0.6129032258064516,
+    "any": 0.6451612903225806
+   },
+   "arm_moved": {
+    "n_sets": 93,
+    "acc": 0.6031704852833815,
+    "spearman": 0.12603408500914468,
+    "regret": 1.3335597418969678,
+    "top1": 0.3010752688172043,
+    "any": 0.6451612903225806
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "state": {
+   "eval_goal": {
+    "n_sets": 31,
+    "acc": 0.9835984402990249,
+    "spearman": 0.7400860297274053,
+    "regret": 0.03275753798023347,
+    "top1": 0.6451612903225806,
+    "any": 0.6451612903225806
+   },
+   "arm_moved": {
+    "n_sets": 93,
+    "acc": 0.9423716331243596,
+    "spearman": 0.7135890241455981,
+    "regret": 0.06155824276708787,
+    "top1": 0.6236559139784946,
+    "any": 0.6451612903225806
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  }
+ }
+}

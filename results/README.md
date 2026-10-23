@@ -23,6 +23,10 @@ with the same folder names.
 | `mw_cycles/` | earlier: reversibility of action cycles | closed |
 | `failure_attribution/{smoke_*,regress_*}` | smoke tests and the regression check after moving to the RTX 5090 | sanity |
 
+## `learned_goal_cost_2026-10-22/`: learned goal costs (Methods A, C, D, state head)
+
+LeWM (PushT, TwoRoom, Cube) and Metaworld summaries behind `docs/10_METHOD_C_D_RESULTS.md`; folder map in its README.
+
 ## `lewm_explorations/`: earlier LeWM study (stable-worldmodel)
 
 | File / folder | Experiment | Outcome |

@@ -1,0 +1,201 @@
+{
+ "task": "mw-reach-wall",
+ "args": {
+  "train_dir": "/root/out/D/reach-wall/train",
+  "test_dir": "/root/out/D/reach-wall/test",
+  "task": "mw-reach-wall",
+  "out_dir": "/root/out/D/reach-wall/heads",
+  "modes": "state,time,evid,evid_time",
+  "steps": 6000,
+  "n_pos": 64,
+  "n_neg": 64,
+  "c_head": "/root/out/head_time.pt",
+  "seed": 0
+ },
+ "train_info": {
+  "state": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 683,
+   "neg_pool": 1754,
+   "final_loss": 0.0003437087289057672
+  },
+  "time": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 683,
+   "neg_pool": 1754,
+   "final_loss": 0.0016598905203863978
+  },
+  "evid": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 683,
+   "neg_pool": 1754,
+   "final_loss": 7.038457169983303e-06
+  },
+  "evid_time": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 683,
+   "neg_pool": 1754,
+   "final_loss": 0.05558609217405319
+  }
+ },
+ "results": {
+  "released_a0": {
+   "eval_goal": {
+    "n_sets": 12,
+    "acc": 0.8315285484159656,
+    "spearman": 0.7031629544181436,
+    "regret": 0.42067329088846844,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "arm_moved": {
+    "n_sets": 36,
+    "acc": 0.4558747489211065,
+    "spearman": -0.018601437324425332,
+    "regret": 2.1338306168715158,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "released_a0.1": {
+   "eval_goal": {
+    "n_sets": 12,
+    "acc": 0.8534842789809679,
+    "spearman": 0.7384337157842603,
+    "regret": 0.42067329088846844,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "arm_moved": {
+    "n_sets": 36,
+    "acc": 0.4586391026788379,
+    "spearman": -0.012083024271186314,
+    "regret": 2.105059971412023,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "methodC_time": {
+   "eval_goal": {
+    "n_sets": 12,
+    "acc": 0.5690143786170276,
+    "spearman": 0.02002439673427957,
+    "regret": 1.319672445456187,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "arm_moved": {
+    "n_sets": 36,
+    "acc": 0.39780840443092097,
+    "spearman": -0.2731800369293612,
+    "regret": 2.126005391279856,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "state": {
+   "eval_goal": {
+    "n_sets": 12,
+    "acc": 0.9904092834556412,
+    "spearman": 0.9739972729041435,
+    "regret": 0.18889222542444864,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "arm_moved": {
+    "n_sets": 36,
+    "acc": 0.9772786031064177,
+    "spearman": 0.9234191614109152,
+    "regret": 0.23104081551233926,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "time": {
+   "eval_goal": {
+    "n_sets": 12,
+    "acc": 0.7724479446333751,
+    "spearman": 0.4146040892354245,
+    "regret": 4.187146067619324,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "arm_moved": {
+    "n_sets": 36,
+    "acc": 0.7097030805640077,
+    "spearman": 0.3171745240249011,
+    "regret": 3.9728989369339414,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "evid": {
+   "eval_goal": {
+    "n_sets": 12,
+    "acc": 0.024193067239424854,
+    "spearman": -0.7749813179606263,
+    "regret": 3.0804514288902283,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "arm_moved": {
+    "n_sets": 36,
+    "acc": 0.10384722470815186,
+    "spearman": -0.647127141076093,
+    "regret": 2.7986975643369885,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "evid_time": {
+   "eval_goal": {
+    "n_sets": 12,
+    "acc": 0.819148618817493,
+    "spearman": 0.5474119314478378,
+    "regret": 3.6069263219833374,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "arm_moved": {
+    "n_sets": 36,
+    "acc": 0.7975856651353339,
+    "spearman": 0.4942682863600216,
+    "regret": 3.4987361199325986,
+    "top1": 0.0,
+    "any": 0.0
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  }
+ }
+}

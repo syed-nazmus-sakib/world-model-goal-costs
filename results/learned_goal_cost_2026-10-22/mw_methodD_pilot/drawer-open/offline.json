@@ -1,0 +1,145 @@
+{
+ "task": "mw-drawer-open",
+ "args": {
+  "train_dir": "/root/out/D/drawer-open/train",
+  "test_dir": "/root/out/D/drawer-open/test",
+  "task": "mw-drawer-open",
+  "out_dir": "/root/out/D/drawer-open/heads",
+  "modes": "state,time,evid,evid_time",
+  "steps": 6000,
+  "n_pos": 64,
+  "n_neg": 64,
+  "c_head": "/root/out/head_time.pt",
+  "seed": 0
+ },
+ "train_info": {
+  "state": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 2820,
+   "neg_pool": 1008,
+   "final_loss": 0.0001110459998017177
+  },
+  "time": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 2820,
+   "neg_pool": 1008,
+   "final_loss": 0.00021438932162709534
+  },
+  "evid": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 2820,
+   "neg_pool": 1008,
+   "final_loss": 1.8568451878309133e-06
+  },
+  "evid_time": {
+   "n_pos": 64,
+   "n_neg": 64,
+   "pos_pool": 2820,
+   "neg_pool": 1008,
+   "final_loss": 0.0013631419278681278
+  }
+ },
+ "results": {
+  "released_a0": {
+   "eval_goal": {
+    "n_sets": 26,
+    "acc": 0.9581827568404749,
+    "spearman": 0.7941898668362376,
+    "regret": 0.04970063613011287,
+    "top1": 0.9230769230769231,
+    "any": 0.9230769230769231
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "released_a0.1": {
+   "eval_goal": {
+    "n_sets": 26,
+    "acc": 0.9579246257098606,
+    "spearman": 0.7946512304034579,
+    "regret": 0.04970063613011287,
+    "top1": 0.9230769230769231,
+    "any": 0.9230769230769231
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "methodC_time": {
+   "eval_goal": {
+    "n_sets": 26,
+    "acc": 0.9238581081774112,
+    "spearman": 0.7380041053568823,
+    "regret": 0.10834895532864791,
+    "top1": 0.9230769230769231,
+    "any": 0.9230769230769231
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "state": {
+   "eval_goal": {
+    "n_sets": 26,
+    "acc": 0.9568921011874032,
+    "spearman": 0.8433997951288099,
+    "regret": 0.026208142821605388,
+    "top1": 0.9230769230769231,
+    "any": 0.9230769230769231
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "time": {
+   "eval_goal": {
+    "n_sets": 26,
+    "acc": 0.9297883324728963,
+    "spearman": 0.7836891147827837,
+    "regret": 0.03835207453140846,
+    "top1": 0.9230769230769231,
+    "any": 0.9230769230769231
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "evid": {
+   "eval_goal": {
+    "n_sets": 26,
+    "acc": 0.9593735697562534,
+    "spearman": 0.7619359106933352,
+    "regret": 0.15791545579066643,
+    "top1": 0.8076923076923077,
+    "any": 0.9230769230769231
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  },
+  "evid_time": {
+   "eval_goal": {
+    "n_sets": 26,
+    "acc": 0.9290139390810531,
+    "spearman": 0.7885357112350065,
+    "regret": 0.1262621724834809,
+    "top1": 0.8846153846153846,
+    "any": 0.9230769230769231
+   },
+   "decoy": {
+    "n_eps": 0,
+    "pref_success": null
+   }
+  }
+ }
+}
