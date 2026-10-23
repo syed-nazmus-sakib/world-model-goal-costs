@@ -13,6 +13,8 @@ Read in numerical order. 01 is the self-contained summary; 02-04 give the full d
 | [`07_RESTART_LOG.md`](07_RESTART_LOG.md) | **Restart log**: findings since 2026-10-15 (proprio confound, drawer alpha 0 results, oracle goal set), code changes, pre-stated decision rules. |
 | [`08_HANDOFF_runpod.md`](08_HANDOFF_runpod.md) | **Handoff**: how to connect to and run on the RunPod pod, what is running, pitfalls, next plan. Start here to continue the work. |
 | [`09_PODS_ACCESS.md`](09_PODS_ACCESS.md) | **Access sheet**: both RunPod pods (ids, IPs, ports, prices), lab machines, API usage, what runs where. No secret values. |
+| [`10_METHOD_C_D_RESULTS.md`](10_METHOD_C_D_RESULTS.md) | **Learned goal costs** (2026-10-21 to 10-23): Methods A, C, D and the state head on LeWM and Metaworld; tables, findings, related work, infrastructure lessons. |
+| [`11_DIRECTIONS.md`](11_DIRECTIONS.md) | **Current directions**: the paper, open and closed directions with decision rules, plan to the CVPR deadline. Start here for what to do next. |
 | [`setup/HANDOFF_from_previous_machine.md`](setup/HANDOFF_from_previous_machine.md) | State of the project when it moved from the first machine (RTX 3090 Ti): Push-T attribution and earlier Metaworld diagnostics. |
 | [`setup/MOVING.md`](setup/MOVING.md) | Portable setup after moving or cloning. |
 | [`setup/GITHUB.md`](setup/GITHUB.md) | Local checks, commit review, and GitHub upload commands. |
