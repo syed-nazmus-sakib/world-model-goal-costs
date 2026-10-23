@@ -46,6 +46,7 @@ Results and findings: `docs/10_METHOD_C_D_RESULTS.md`.
 | Script | What it does |
 |---|---|
 | `pod/check_egl.sh` | first check on a new pod: NVIDIA EGL present and render time per frame (CPU fallback is about 15x slower) |
+| `pod/fetch_mw_data.sh` | Metaworld dataset from Hugging Face onto the pod (about a minute; the model build needs it for the action normalisation) |
 | `pod/setup_jwm_venv.sh`, `pod/jwm_env.sh` | JEPA-WM uv venv (`/root/venv_jwm`); source `jwm_env.sh` before the Metaworld scripts |
 | `pod/setup_swm_venv.sh` | LeWM / stable-worldmodel uv venv (`/root/venv_swm`), dataset notes for TwoRoom and Cube |
 | `pod/run_lewm_methodC.sh <pusht\|tworoom\|cube> [seed]` | Method C on LeWM: latents, state and time heads, released / min-over-plan / head runs at offsets 50 and 75 |
