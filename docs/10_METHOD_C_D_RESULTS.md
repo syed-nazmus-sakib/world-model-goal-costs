@@ -129,6 +129,38 @@ from 23/24 to 7/12.
 - The true-state cost is flat until the object moves, so CEM explores at random. That plausibly explains why it succeeds on drawer-open (10/12) where every learned cost fails. This is a hypothesis to test.
 - On reach-wall the head (trained on 24 episodes) is less precise about the hand than the released patch cost, which already solves the task.
 
+## Reach-then-change (2026-10-23): Stage 1 oracle and the start of Stage 2
+
+A hand-written Metaworld reward says "bring the hand to the object, then the object to its target". The reach-then-change
+cost imposes that order on a goal cost: candidates that have moved the object are ranked by a change term; the others
+rank below them, by the hand-to-object distance (the reach term, saturating within 2 cm); if start and goal differ only
+in the robot, the released cost is used (fallback). Code: `costs.ReachThenChangeOracle` (Stage 1, simulator hand and
+object positions) and `costs.ReachThenChangeImage` (Stage 2, images only). Pre-stated rule: ≥ 6/12 on ≥ 2 of 4 object
+tasks with the fallback ≥ 10/12.
+
+**Stage 1** (12 episodes, exact dynamics, same episodes; reach term from simulator positions, change term varies):
+
+| task | released | released + reach | **robot-free latent cost + reach** (no labels) | true object cost alone | true + reach |
+|---|---|---|---|---|---|
+| button-press-topdown | 0/12 | 0/12 | **12/12** | 0/12 | 12/12 |
+| push | 0/12 | 3/12 | **7/12** | 11/12 | 12/12 |
+| drawer-open | 0/12 | 1/12 | **6/12** | 10/12 | 6/12 |
+| door-open | 0/12 | 0/12 | 0/12 | invalid: the env reports obj_to_target = 0 (fixed in `adapters.py`, not rerun) | invalid |
+| reach-wall (fallback) | 23/24 | 12/12 | – | – | – |
+
+- The bar is met with the robot-free change term (3 of 4 tasks). The released cost is 0/12 on every one of these tasks.
+- Button: the flat true cost never finds the button (0/12); with the reach term it is 12/12, success by replan 3 in every episode. This is the approach-phase failure, fixed.
+- Released + reach fails after contact: once the object is nudged the released cost drags the arm toward the goal arm pose. The change term must be object-focused.
+- Drawer-open: the reach term costs 4 episodes against the pure object cost (the hand parks 3-5 cm from the handle); a cost of the structure, to fix by releasing the reach term sooner.
+- Per-episode strings and the smoke history: `results/learned_goal_cost_2026-10-22/mw_reach_oracle/README.md`.
+
+**Stage 2 (images only), state when pod J was terminated by its host (12:00 UTC):**
+- Robot map: a per-patch logistic head on the frozen DINOv2 features trained with render masks (robot hidden vs shown; no task labels) reaches AUC 0.998 / IoU 0.94 on held-out episodes. The self-supervised proprio-prediction version is at chance (AUC 0.48): dropped.
+- Change map: non-robot patches that differ between start and goal (median + 4 MAD). Drawer-open: 24 patches on the drawer; button: 18 patches 5 patches away from the button (arm shadows): the button's own change is too small to detect this way.
+- Reach term from images alone (nearest robot patch, then the arm's new footprint) does not bring the hand to the object: the robot base is near the objects in 2D and depth is unobserved.
+- Calibrated camera (corner2; projection validated: the projected hand lands on a robot patch in 100% of frames; lift(project(X)) = X): the hand from its own sensor, the object as the change centroid lifted to the goal's hand height, gives a 3D reach term. With the goal-hand proximity filter (change patches lifted more than 0.3 m from the goal hand are not the object; none left: use the goal hand), the cost is implemented but **not yet run**: the pod died before the smoke.
+- Still needed: one smoke, then 12 episodes on button, push, drawer-open (about $0.3 of pod time plus setup), i.e. more credit than remains.
+
 ## What the results say
 
 1. **The learned cost helps where the released distance contradicts task progress in a way the data shows.**
