@@ -14,6 +14,7 @@ Small summary files behind `docs/10_METHOD_C_D_RESULTS.md`. Per-episode files an
 | `lewm_methodC/cube/` | OGBench Cube: heads, released, released + min h10, seeds 0 / 42 (empty lines: OOM-killed, rerun later in the file) | `run_lewm_methodC.sh cube` |
 | `mw_methodC_time/` | Metaworld time head (8-task dataset): drawer-open closed loop vs released; training log | `run_mw_time_head.sh` |
 | `mw_methodD_pilot/` | Method D pilot: `offline.json` (ranking, regret, decoy) and closed-loop summaries per head | `run_mw_methodD_pilot.sh` |
+| `mw_reach_oracle/` | reach-then-change, Stage 1 oracle (2026-10-23): full table with per-episode strings; raw files were lost with pod J | `run_mw_reach_oracle.sh` |
 | `mw_state_head/` | state head on seven more Metaworld tasks: offline tests and closed-loop summaries (state head and released cost) | `run_mw_state_head.sh` |
 
 Line format of the LeWM summaries: `<run name> [summary] env=... seed=... goal_offset=... horizon=... metric=<head> agg=<last|min> success_rate=<%> n=<goals>`.
