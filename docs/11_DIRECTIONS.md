@@ -37,7 +37,7 @@ and the same supervision as the competing paper.
 |---|---|---|---|---|
 | 1 | State head on all 9 Metaworld tasks (closed loop) | **done: FAIL** (wins 1 of 8, reach-wall 23/24 → 7/12; docs/10) | keep as evidence that ranking is not the bottleneck on Metaworld | was: ≥ 3/12 better on ≥ 4 of 8 object tasks, controls ≥ 10/12 |
 | 2 | Baselines for the paper | to do | TEMPO released code; released + min; *Supervise What Decides Success* if code exists | report all on the same goals |
-| 3 | Approach phase (reaching contact) | open question | (a) object-progress time target over frames where the object moves; (b) expert first-contact state as an intermediate goal; (c) longer horizon | drawer-open or button-press-topdown ≥ 4/12 |
+| 3 | **Reach-then-change cost** (approach phase): a Metaworld reward says "hand to the object, then object to its target"; derive that order from the start and goal images with no labels (robot map from proprio prediction per patch, change map = non-robot patches that differ between start and goal; reach term pulls the hand to the change region until the object moves; fallback to the released cost when nothing but the robot changes) | **Stage 1 running (2026-10-23)**: oracle version with simulator hand and object positions (`run_closed.py --planners sim_latent_reach sim_true_reach`, `costs.ReachThenChangeOracle`) | Stage 2: the two maps from DINOv2 patches | Stage 1 PASS: released cost + oracle reach ≥ 6/12 on ≥ 2 of {drawer-open, button-press-topdown, push, door-open}, reach-wall ≥ 10/12; else the idea is dead. Stage 2 PASS: ≥ 4/12 on ≥ 2 tasks |
 | 4 | Fewer labels | open | state head with 10% / 1% of labelled frames, rest time-only | within 2/12 of the full state head |
 | 5 | Paired statistics | to do | save per-episode success, McNemar / bootstrap over goals | – |
 
@@ -63,7 +63,8 @@ and the same supervision as the competing paper.
 
 ## 5. Working rules
 
-- Experiments run on a RunPod pod, never on the laptop. Check EGL and disk first (`scripts/pod/check_egl.sh`).
+- Experiments run on a RunPod pod, never on the laptop. Check CUDA, EGL and disk first (`scripts/pod/check_egl.sh`): on 2026-10-23 three pods in a row came up on a host whose GPU could not initialise CUDA (`cuInit` 999) although `nvidia-smi` listed it; terminate such a pod at once.
+- Prior art for the reach-then-change direction, checked 2026-10-23: subgoal methods (SAGE 2607.17973, "Mind the Gap" 2607.12547, LAGO 2606.20627, "The Planning Limits of Latent World Models" 2609.39235: expert subgoals 76% vs 23% on Metaworld), change masks (DDP-WM 2602.01780), robot masks (Know Thyself), contact gate in TD-JEPA (2607.25337). None derives reach-then-move shaping from the goal image for a frozen world model.
 - Pod runs end with `ALL_DONE`; `scripts/pod/backup_and_stop.sh` copies the results home and stops the pod.
 - State a decision rule before each run, and report a failed rule as a failure.
 - Never commit or push `artifacts/`, `reports/`, `research_notes/`, `writeup/`, `meeting/`, `candidate_figs/`, the PDFs or `.env`.
