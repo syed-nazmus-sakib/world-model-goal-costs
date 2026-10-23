@@ -5,11 +5,11 @@
 #   3. plans:   released cost h5, released + min-over-plan h10 (the fair control), each head h5 and + min h10;
 #               goal offsets 50 and 75 (budget 2x offset), 50 goals per run
 # usage: bash scripts/pod/run_lewm_methodC.sh <pusht|tworoom|cube> [seed=0] [out=/root/out/C_<env>]
-# Needs /root/venv_swm (setup_swm_venv.sh). Runs one at a time: a Cube eval needs about 20 GB of RAM.
+# Needs /root/venv_swm (setup_swm_venv.sh) or SWM_PY=<python of the conda env swm>. Runs one at a time: a Cube eval needs about 20 GB of RAM.
 set -u
 ENV=$1; SEED=${2:-0}; OUT=${3:-/root/out/C_$ENV}; mkdir -p $OUT
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
-SWM=$R/code/third_party/stable-worldmodel; CS=$R/code/lewm_explorations/scripts; PY=/root/venv_swm/bin/python
+SWM=$R/code/third_party/stable-worldmodel; CS=$R/code/lewm_explorations/scripts; PY=${SWM_PY:-/root/venv_swm/bin/python}
 export MUJOCO_GL=egl HF_HUB_DISABLE_PROGRESS_BARS=1 OMP_NUM_THREADS=5 MKL_NUM_THREADS=5
 case $ENV in
   pusht)   CFG=pusht;   M=quentinll/lewm-pusht;    DS=galilai-group/lewm-pusht;    KEY=state ;;
