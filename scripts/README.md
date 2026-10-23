@@ -45,6 +45,7 @@ Results and findings: `docs/10_METHOD_C_D_RESULTS.md`.
 
 | Script | What it does |
 |---|---|
+| `pod/find_pod.sh` | create a community pod and keep it only if CUDA and EGL work (three dead-GPU pods on 2026-10-23); `KEYVAR` picks the `.env` key |
 | `pod/check_egl.sh` | first check on a new pod: NVIDIA EGL present and render time per frame (CPU fallback is about 15x slower) |
 | `pod/fetch_mw_data.sh` | Metaworld dataset from Hugging Face onto the pod (about a minute; the model build needs it for the action normalisation) |
 | `pod/setup_jwm_venv.sh`, `pod/jwm_env.sh` | JEPA-WM uv venv (`/root/venv_jwm`); source `jwm_env.sh` before the Metaworld scripts |
