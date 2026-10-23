@@ -172,7 +172,12 @@ def main():
             agent.goal_state_enc = mean_enc
             agent.objective = ReprTargetDistMPCObjective(cfg, target_enc=mean_enc, **cfg.planner.planning_objective)
             agent.planner.set_objective(agent.objective)
-        if args.cost != "l2":  # area-invariant aggregation (evals/failure_attribution/costs.py), same alpha
+        if args.cost.startswith("head:"):  # method C: learned goal cost (evals/failure_attribution/mw_head_train.py)
+            from evals.failure_attribution.costs import LearnedHeadMPCObjective
+
+            agent.objective = LearnedHeadMPCObjective(cfg, target_enc=agent.goal_state_enc, head_path=args.cost[5:])
+            agent.planner.set_objective(agent.objective)
+        elif args.cost != "l2":  # area-invariant aggregation (evals/failure_attribution/costs.py), same alpha
             from evals.failure_attribution.costs import PatchAggMPCObjective
 
             agent.objective = PatchAggMPCObjective(
