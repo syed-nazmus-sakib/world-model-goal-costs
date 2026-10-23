@@ -1,0 +1,239 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+#
+
+"""
+Method D pilot (2026-10-22), step 2: train goal-cost heads on mw_pilot_data encodings and score them offline.
+
+All heads are mw_head_train.PatchHead on the frozen encodings, cost ||f(z) - f(g)||^2, g = an encoded goal image.
+They differ only in what supervision they get (training episodes only):
+  state      privileged: ||f(z) - f(g)|| regresses log(1 + obj_to_target / threshold) of z (distance to the success set,
+             since every goal g is a success state). Upper reference, not a method.
+  time       unlabeled: expert frames, ||f(z) - f(g)|| regresses log(1 + steps from z to g / 5) (Method C target).
+  evid       weak task evidence: a budget of --n_pos success frames and --n_neg near-miss frames
+             (1 < obj_to_target / threshold < 3); success frames pulled onto f(g), near misses pushed beyond a margin.
+  evid_time  both losses (Method D: "what counts as done" from evidence, "how to get there" from time).
+
+Offline test on held-out episodes, per candidate set (one start point of one episode; sets where no candidate changes
+the true cost are skipped):
+  acc       ordering accuracy against the true cost on clearly different pairs (true-cost gap above the set's median gap)
+  spearman  rank correlation with the true cost
+  regret    true cost (success units) of the candidate the cost selects minus the best candidate's
+  top1      the selected candidate is a success; any = at least one candidate in the set is a success
+  decoy     over all frames of a test episode: fraction of (success frame, arm-at-goal failure) pairs in which the cost
+            prefers the success frame (arm-at-goal failure: hand within 5 cm of the eval goal's hand, obj_to_target > 2x)
+Costs: released (alpha 0 and the eval's 0.1), Method C time head (--c_head), and the heads above; goals: eval goal
+(variant 0) and, where they exist, arm-moved variants.
+
+    python -m evals.failure_attribution.mw_pilot_heads --train_dir <dir> --test_dir <dir> --task mw-drawer-open --out_dir <dir>
+"""
+
+import argparse
+import glob
+import json
+import os
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from scipy.stats import spearmanr
+
+from evals.failure_attribution.mw_head_train import PatchHead
+from evals.failure_attribution.mw_sim import SUCCESS_THRESHOLD
+
+
+def load(d):
+    out = {k: [] for k in ("vis", "prop", "state", "kind", "t", "var", "start", "ep")}
+    for i, f in enumerate(sorted(glob.glob(os.path.join(d, "ep_*.npz")))):
+        z = np.load(f)
+        for k in out:
+            out[k].append(np.full(len(z["kind"]), i) if k == "ep" else z[k])
+    return {k: np.concatenate(v) for k, v in out.items()}
+
+
+def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    vis = torch.from_numpy(D["vis"]).to(dev)
+    prop = torch.from_numpy(D["prop"]).to(dev)
+    ep, kind, t, st = D["ep"], D["kind"], D["t"], D["state"]
+    y_succ = np.log1p(st[:, 40] / thr).astype(np.float32)
+    goals_of = {e: np.nonzero((ep == e) & (kind == 1))[0] for e in np.unique(ep)}
+    expert_of = {e: np.nonzero((ep == e) & (kind == 0))[0] for e in np.unique(ep)}
+    labelled = np.nonzero(kind != 1)[0]
+    ratio = st[:, 40] / thr
+    pos_pool = labelled[st[labelled, 39] > 0.5]
+    neg_pool = labelled[(ratio[labelled] > 1) & (ratio[labelled] < 3) & (st[labelled, 39] < 0.5)]
+    pos = rng.choice(pos_pool, size=min(n_pos, len(pos_pool)), replace=False) if len(pos_pool) else np.zeros(0, int)
+    neg = rng.choice(neg_pool, size=min(n_neg, len(neg_pool)), replace=False) if len(neg_pool) else np.zeros(0, int)
+    head = PatchHead(vis.shape[1], vis.shape[2], prop.shape[1]).to(dev)
+    opt = torch.optim.AdamW(head.parameters(), lr=3e-4, weight_decay=1e-4)
+    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-4, total_steps=steps, pct_start=0.05)
+    B = 256
+
+    def f(i):
+        return head(vis[i].float(), prop[i].float())
+
+    def dist(a, g):
+        return (f(a) - f(g)).pow(2).sum(-1).add(1e-8).sqrt()
+
+    def goal_for(a):
+        return np.array([rng.choice(goals_of[e]) for e in ep[a]])
+
+    for step in range(steps):
+        loss = 0.0
+        if mode == "state":
+            a = rng.choice(labelled, size=B)
+            loss = F.smooth_l1_loss(dist(a, goal_for(a)), torch.from_numpy(y_succ[a]).to(dev))
+        if mode in ("time", "evid_time"):
+            e = rng.choice(list(expert_of), size=B)
+            a, g, gap = [], [], []
+            for ee in e:
+                ix = expert_of[ee]
+                i = rng.integers(len(ix))
+                if rng.random() < 0.5:  # the goal image itself (one step after the last expert frame)
+                    a.append(ix[i]), g.append(rng.choice(goals_of[ee])), gap.append(t[goals_of[ee][0]] - t[ix[i]])
+                else:
+                    j = rng.integers(i, len(ix))
+                    a.append(ix[i]), g.append(ix[j]), gap.append(t[ix[j]] - t[ix[i]])
+            a, g = np.array(a), np.array(g)
+            y = torch.from_numpy(np.log1p(np.maximum(np.array(gap), 0) / 5.0).astype(np.float32)).to(dev)
+            loss = loss + F.smooth_l1_loss(dist(a, g), y)
+        if mode in ("evid", "evid_time") and len(pos) and len(neg):
+            p = rng.choice(pos, size=B // 2)
+            n = rng.choice(neg, size=B // 2)
+            loss = loss + dist(p, goal_for(p)).pow(2).mean() + F.relu(1.0 - dist(n, goal_for(n))).pow(2).mean()
+        if not torch.is_tensor(loss):  # evid without any success or near-miss frame: nothing to learn
+            break
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        opt.step()
+        sched.step()
+    head.eval()
+    return head, {"n_pos": int(len(pos)), "n_neg": int(len(neg)), "pos_pool": int(len(pos_pool)), "neg_pool": int(len(neg_pool)),
+                  "final_loss": float(loss)}
+
+
+def ordering_accuracy(c, y):
+    i, j = np.triu_indices(len(y), 1)
+    gap = np.abs(y[i] - y[j])
+    keep = gap > np.median(gap)
+    if keep.sum() == 0:
+        return np.nan
+    return float((np.sign(c[i] - c[j]) == np.sign(y[i] - y[j]))[keep].mean())
+
+
+@torch.no_grad()
+def embed(head, vis, prop, dev, bs=512):
+    out = []
+    for s in range(0, len(vis), bs):
+        out.append(head(torch.from_numpy(vis[s : s + bs]).to(dev).float(), torch.from_numpy(prop[s : s + bs]).to(dev).float()))
+    return torch.cat(out)
+
+
+@torch.no_grad()
+def released(vis, prop, gi, alpha, dev, bs=512):
+    gv = torch.from_numpy(vis[gi]).to(dev).float()
+    gp = torch.from_numpy(prop[gi]).to(dev).float()
+    out = []
+    for s in range(0, len(vis), bs):
+        v = torch.from_numpy(vis[s : s + bs]).to(dev).float()
+        p = torch.from_numpy(prop[s : s + bs]).to(dev).float()
+        out.append((v - gv).pow(2).mean((1, 2)) + alpha * (p - gp).pow(2).mean(1))
+    return torch.cat(out).cpu().numpy()
+
+
+def evaluate(T, cost_fns, thr):
+    """cost_fns: name -> fn(goal index) -> cost of every test frame. Returns per (cost, goal kind) metrics."""
+    st, ep, kind, var, start = T["state"], T["ep"], T["kind"], T["var"], T["start"]
+    y = st[:, 40] / thr
+    res = {}
+    for name, fn in cost_fns.items():
+        rows = {"eval_goal": [], "arm_moved": []}
+        decoy = []
+        for e in np.unique(ep):
+            goals = np.nonzero((ep == e) & (kind == 1))[0]
+            for gi in goals:
+                gk = "eval_goal" if var[gi] == 0 else ("arm_moved" if var[gi] >= 2 else None)
+                if gk is None:
+                    continue
+                c = fn(gi)
+                for s in np.unique(start[(ep == e) & (kind == 2)]):
+                    ix = np.nonzero((ep == e) & (kind == 2) & (start == s))[0]
+                    ys, cs = y[ix], c[ix]
+                    if np.nanstd(ys) < 1e-3 or np.isnan(ys).any():
+                        continue
+                    b = int(np.argmin(cs))
+                    rows[gk].append([ordering_accuracy(cs, ys), spearmanr(cs, ys)[0], ys[b] - ys.min(),
+                                     float(st[ix[b], 39] > 0.5), float((st[ix, 39] > 0.5).any())])
+                if var[gi] == 0:  # decoy test against the eval goal
+                    fr = np.nonzero((ep == e) & (kind != 1))[0]
+                    hand_d = np.linalg.norm(st[fr, :3] - st[gi, :3], axis=1)
+                    succ = fr[st[fr, 39] > 0.5]
+                    dec = fr[(hand_d < 0.05) & (y[fr] > 2)]
+                    if len(succ) and len(dec):
+                        decoy.append(float((c[succ][:, None] < c[dec][None, :]).mean()))
+        res[name] = {}
+        for gk, r in rows.items():
+            if r:
+                a = np.array(r, dtype=float)
+                res[name][gk] = {"n_sets": len(r), "acc": float(np.nanmean(a[:, 0])), "spearman": float(np.nanmean(a[:, 1])),
+                                 "regret": float(np.nanmean(a[:, 2])), "top1": float(a[:, 3].mean()), "any": float(a[:, 4].mean())}
+        res[name]["decoy"] = {"n_eps": len(decoy), "pref_success": float(np.mean(decoy)) if decoy else None}
+    return res
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--train_dir", required=True)
+    ap.add_argument("--test_dir", required=True)
+    ap.add_argument("--task", required=True)
+    ap.add_argument("--out_dir", required=True)
+    ap.add_argument("--modes", default="state,time,evid,evid_time")
+    ap.add_argument("--steps", type=int, default=6000)
+    ap.add_argument("--n_pos", type=int, default=64)
+    ap.add_argument("--n_neg", type=int, default=64)
+    ap.add_argument("--c_head", default="", help="Method C time head (mw_head_train) to score as a baseline")
+    ap.add_argument("--seed", type=int, default=0)
+    args = ap.parse_args()
+    os.makedirs(args.out_dir, exist_ok=True)
+    dev = "cuda"
+    thr = SUCCESS_THRESHOLD.get(args.task, 0.05)
+    D, T = load(args.train_dir), load(args.test_dir)
+    print(f"train {len(D['kind'])} frames / {len(np.unique(D['ep']))} eps, test {len(T['kind'])} / {len(np.unique(T['ep']))}; "
+          f"train success frames {int((D['state'][:, 39] > 0.5).sum())}", flush=True)
+    cost_fns = {"released_a0": lambda gi: released(T["vis"], T["prop"], gi, 0.0, dev),
+                "released_a0.1": lambda gi: released(T["vis"], T["prop"], gi, 0.1, dev)}
+    heads, info = {}, {}
+    if args.c_head:
+        ck = torch.load(args.c_head, map_location="cpu")
+        h = PatchHead(ck["n_patches"], ck["d_in"], ck["d_prop"])
+        h.load_state_dict(ck["state_dict"])
+        heads["methodC_time"] = h.to(dev).eval()
+    for mode in args.modes.split(","):
+        h, info[mode] = train_head(D, mode, thr, args.steps, args.n_pos, args.n_neg, args.seed, dev)
+        heads[mode] = h
+        torch.save({"state_dict": h.state_dict(), "n_patches": D["vis"].shape[1], "d_in": D["vis"].shape[2],
+                    "d_prop": D["prop"].shape[1], "mode": mode, "task": args.task, "info": info[mode]},
+                   os.path.join(args.out_dir, f"head_{mode}.pt"))
+        print(mode, json.dumps(info[mode]), flush=True)
+    for name, h in heads.items():
+        E = embed(h, T["vis"], T["prop"], dev)
+        cost_fns[name] = (lambda E: lambda gi: (E - E[gi]).pow(2).sum(-1).cpu().numpy())(E)
+    res = evaluate(T, cost_fns, thr)
+    json.dump({"task": args.task, "args": vars(args), "train_info": info, "results": res}, open(os.path.join(args.out_dir, "offline.json"), "w"), indent=1)
+    print(f"{'cost':<14}{'goal':<10}{'sets':>5}{'acc':>7}{'rho':>7}{'regret':>8}{'top1':>6}{'any':>6}{'decoy':>7}")
+    for name, r in res.items():
+        for gk in ("eval_goal", "arm_moved"):
+            if gk in r:
+                m = r[gk]
+                dec = r["decoy"]["pref_success"] if gk == "eval_goal" else None
+                print(f"{name:<14}{gk:<10}{m['n_sets']:>5}{m['acc']:>7.3f}{m['spearman']:>7.3f}{m['regret']:>8.2f}{m['top1']:>6.2f}"
+                      f"{m['any']:>6.2f}{(f'{dec:.2f}' if dec is not None else '-'):>7}")
+
+
+if __name__ == "__main__":
+    main()
