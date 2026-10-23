@@ -212,6 +212,82 @@ def install_block_success():
     PushT.eval_state = eval_state_with_block
 
 
+
+def install_action_guidance(w, action_scaler, null='stay', null_path=None):
+    """Method candidate A (2026-10-22): action guidance at planning time.
+
+    Each predictor step is run twice, with the candidate's newest action and with a
+    null action, and the next latent is z_null + w * (z_a - z_null). w = 1 is the
+    unchanged model. null='stay': the zero relative action (PushT agent holds its
+    position), normalized like every planned action (training-free variant).
+    null='learned': the null embedding learned by candA_finetune.py (null_emb.pth in
+    the checkpoint folder), used in place of the action embedding.
+    """
+    from einops import rearrange
+    from stable_worldmodel.wm.lewm.lewm import LeWM
+
+    if null not in ('stay', 'learned'):
+        raise ValueError(f'unknown null action {null!r}')
+    learned = torch.load(null_path) if null == 'learned' else None
+    zero = action_scaler.transform(
+        np.zeros((1, action_scaler.mean_.shape[0]))
+    )[0]
+
+    def rollout(self, info, action_sequence, history_size=None):
+        if history_size is None:
+            history_size = getattr(self.predictor, 'num_frames', 3)
+        H = info['pixels'].size(2)
+        B, S, T = action_sequence.shape[:3]
+        act_past = info.get('action_history')
+        if act_past is None:
+            act_past = action_sequence.new_zeros(
+                B, S, 0, action_sequence.size(-1)
+            )
+        info['action'] = torch.cat([act_past, action_sequence[:, :, :1]], dim=2)
+        if 'emb' not in info:
+            _init = {k: v[:, 0] for k, v in info.items() if torch.is_tensor(v)}
+            _init = self.encode(_init)
+            info['emb'] = (
+                _init['emb'].detach().unsqueeze(1).expand(B, S, -1, -1)
+            )
+        emb_init = rearrange(info['emb'], 'b s ... -> (b s) ...')
+        acts = torch.cat(
+            [
+                rearrange(act_past, 'b s ... -> (b s) ...'),
+                rearrange(action_sequence, 'b s ... -> (b s) ...'),
+            ],
+            dim=1,
+        )
+        all_act_emb = self.action_encoder(acts)
+        reps = acts.size(-1) // zero.shape[0]
+        null_act = torch.as_tensor(
+            np.tile(zero, reps), dtype=acts.dtype, device=acts.device
+        )
+        if learned is None:
+            null_emb = self.action_encoder(null_act.expand(acts.size(0), 1, -1))
+        else:
+            null_emb = learned.to(all_act_emb)[None, None].expand(acts.size(0), 1, -1)
+        HS = history_size
+        emb_list = list(emb_init.unbind(dim=1))
+        for t in range(T):
+            lo = max(0, H + t - HS)
+            emb_trunc = torch.stack(emb_list[lo:], dim=1)
+            act_trunc = all_act_emb[:, lo : H + t]
+            z_a = self.predict(emb_trunc, act_trunc)[:, -1]
+            if w == 1.0:
+                emb_list.append(z_a)
+                continue
+            act_null = torch.cat([act_trunc[:, :-1], null_emb], dim=1)
+            z_0 = self.predict(emb_trunc, act_null)[:, -1]
+            emb_list.append(z_0 + w * (z_a - z_0))
+        emb = torch.stack(emb_list, dim=1)
+        info['predicted_emb'] = rearrange(emb, '(b s) ... -> b s ...', b=B, s=S)
+        return info
+
+    LeWM.rollout = rollout
+    print(f'[guidance] action guidance installed: w={w}, null={null}')
+
+
 @hydra.main(version_base=None, config_path='./config', config_name='pusht')
 def run(cfg: DictConfig):
     """Run evaluation of dinowm vs random policy."""
@@ -275,6 +351,14 @@ def run(cfg: DictConfig):
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
+        guide_w = cfg.get('guide_w', None)  # method candidate A
+        if guide_w is not None:
+            null = cfg.get('guide_null', 'stay')
+            install_action_guidance(
+                float(guide_w), process['action'], null,
+                Path(swm.data.utils.get_cache_dir(sub_folder='checkpoints'), cfg.policy, 'null_emb.pth')
+                if null == 'learned' else None,
+            )
         if cfg.get('compile', False):
             encoder_attr = (
                 'backbone' if hasattr(model, 'backbone') else 'encoder'
@@ -287,7 +371,16 @@ def run(cfg: DictConfig):
             model.predictor = torch.compile(model.predictor)
         config = swm.PlanConfig(**cfg.plan_config)
         objective = hydra.utils.instantiate(cfg.objective)
+        if cfg.get('metric_head', None):  # method C: learned task-aligned goal cost
+            from metric_cost import MetricGoalCost
+
+            objective = MetricGoalCost(cfg.metric_head, cfg.get('metric_mix', 0.0), cfg.get('metric_agg', 'last'))
         cost = swm.planning.ShootingCostEvaluator(model, objective)
+        oracle = cfg.get('oracle', None)  # diagnosis D2: simulator in place of the world model
+        if oracle:
+            from oracle_cost import OracleCost
+
+            cost = OracleCost(model, objective, oracle, process, transform['pixels'], cfg.get('oracle_workers', 14))
         solver = hydra.utils.instantiate(cfg.solver, cost=cost)
         policy = swm.policy.WorldModelPolicy(
             solver=solver, config=config, process=process, transform=transform
@@ -304,7 +397,8 @@ def run(cfg: DictConfig):
         else Path(__file__).parent
     )
     # GoalShift: one folder per condition and seed
-    results_path = results_path / 'goalshift' / f'{condition}_seed{cfg.seed}'
+    tag = f'_off{cfg.eval.goal_offset_steps}_w{cfg.get("guide_w", 1.0)}_h{cfg.plan_config.horizon}_{cfg.get("oracle", "released")}_{Path(str(cfg.get("metric_head", "none"))).stem}{cfg.get("metric_mix", "")}{cfg.get("metric_agg", "")}'
+    results_path = results_path / 'goalshift' / f'{condition}_seed{cfg.seed}{tag}'
 
     # sample the episodes and the starting indices
     episode_len = get_episodes_length(dataset, ep_indices)
@@ -416,6 +510,10 @@ def run(cfg: DictConfig):
     ]
     summary = (
         f'condition={condition} seed={cfg.seed} '
+        f'goal_offset={cfg.eval.goal_offset_steps} budget={cfg.eval.eval_budget} '
+        f'guide_w={cfg.get("guide_w", 1.0)} null={cfg.get("guide_null", "stay")} policy={cfg.policy} '
+        f'horizon={cfg.plan_config.horizon} oracle={cfg.get("oracle", "released")} '
+        f'metric={Path(str(cfg.get("metric_head", "none"))).stem} mix={cfg.get("metric_mix", 0.0)} agg={cfg.get("metric_agg", "last")} '
         f'success_rate={metrics["success_rate"]:.1f} '
         f'block_success_rate={block_success_rate:.1f} '
         f'goal_pixel_mae_mean={np.mean(goal_mae):.2f} '
