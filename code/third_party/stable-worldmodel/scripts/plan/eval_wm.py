@@ -125,6 +125,10 @@ def run(cfg: DictConfig):
             model.predictor = torch.compile(model.predictor)
         config = swm.PlanConfig(**cfg.plan_config)
         objective = hydra.utils.instantiate(cfg.objective)
+        if cfg.get('metric_head', None):  # method C: learned task-aligned goal cost (scripts/plan/metric_cost.py)
+            from metric_cost import MetricGoalCost
+
+            objective = MetricGoalCost(cfg.metric_head, cfg.get('metric_mix', 0.0), cfg.get('metric_agg', 'last'))
         cost = swm.planning.ShootingCostEvaluator(model, objective)
         solver = hydra.utils.instantiate(cfg.solver, cost=cost)
         policy = swm.policy.WorldModelPolicy(
@@ -233,6 +237,12 @@ def run(cfg: DictConfig):
 
     print(metrics)
     print(f'[eval] videos saved to {results_path.resolve()}')
+    print(  # one-line summary for the method C queues
+        f'[summary] env={cfg.world.env_name} seed={cfg.seed} goal_offset={cfg.eval.goal_offset_steps} '
+        f'budget={cfg.eval.eval_budget} horizon={cfg.plan_config.horizon} '
+        f'metric={Path(str(cfg.get("metric_head", "none"))).stem} agg={cfg.get("metric_agg", "last")} '
+        f'success_rate={metrics["success_rate"]:.1f} n={cfg.eval.num_eval}'
+    )
 
     results_path = results_path / cfg.output.filename
     results_path.parent.mkdir(parents=True, exist_ok=True)
