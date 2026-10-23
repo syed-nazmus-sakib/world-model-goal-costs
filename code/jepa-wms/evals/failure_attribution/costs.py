@@ -79,17 +79,21 @@ class ReachThenChangeOracle:
     A Metaworld reward is written as "bring the hand to the object, then bring the object to its target". This cost
     imposes that order on any goal cost `inner` (the change term: the released latent cost, or the true object cost):
       - candidates that have moved the object (|obj - obj_start| > eps) are ranked by `inner`;
-      - candidates that have not are ranked below all of them, by the hand-to-object distance (the reach term);
+      - candidates that have not are ranked below all of them, by the hand-to-object distance (the reach term),
+        which saturates below r0: every candidate with the hand within r0 of the object ties, so the search keeps its
+        spread there and can find the grasp-and-pull (a dense reach term collapsed the search onto "hold still at
+        the handle" in the first smoke episode: hand 1.4 cm from the drawer handle, drawer nudged 3-4 mm, never pulled);
       - if the goal moves no object (|obj_goal - obj_start| <= eps, e.g. reach-wall), `inner` is used unchanged.
     States (B, 41) = [39-d obs, success, obj_to_target] come from the SimUnroll that produced the encodings
     (unroll.last_states): hand = obs[:3], object = obs[4:7]. The image-based method replaces both with maps
     computed from the frozen encoder; this oracle tells whether the structure itself solves the approach phase.
+    Defaults (2026-10-23, set after that smoke episode, before the 12-episode runs): eps 2 mm, r0 2 cm.
     """
 
-    def __init__(self, inner, unroll, obj_start, obj_goal, eps: float = 0.005):
-        self.inner, self.unroll, self.eps = inner, unroll, eps
+    def __init__(self, inner, unroll, obj_start, obj_goal, eps: float = 0.002, r0: float = 0.02):
+        self.inner, self.unroll, self.eps, self.r0 = inner, unroll, eps, r0
         self.obj_start = np.asarray(obj_start, dtype=np.float64)
-        self.active = bool(np.linalg.norm(np.asarray(obj_goal, dtype=np.float64) - self.obj_start) > eps)
+        self.active = bool(np.linalg.norm(np.asarray(obj_goal, dtype=np.float64) - self.obj_start) > max(eps, 0.005))
 
     def __call__(self, encodings, actions, keepdims: bool = False):
         c = self.inner(encodings, actions, keepdims)
@@ -97,7 +101,8 @@ class ReachThenChangeOracle:
             return c
         st = np.asarray(self.unroll.last_states, dtype=np.float64)
         moved = torch.from_numpy(np.linalg.norm(st[:, 4:7] - self.obj_start, axis=1) > self.eps).to(c.device)
-        reach = torch.from_numpy(np.linalg.norm(st[:, :3] - st[:, 4:7], axis=1)).to(c.device, c.dtype)
+        reach = np.maximum(np.linalg.norm(st[:, :3] - st[:, 4:7], axis=1) - self.r0, 0.0)
+        reach = torch.from_numpy(reach).to(c.device, c.dtype)
         return torch.where(moved, c, c.max().detach() + reach)  # every non-mover ranks below every mover
 
 

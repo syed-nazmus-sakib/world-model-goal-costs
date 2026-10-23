@@ -51,7 +51,8 @@ def main():
     parser.add_argument("--cost", default="l2", help="patch aggregation of the latent cost: l2 (released), topk:K, pmean:P")
     parser.add_argument("--planners", nargs="+", default=["wm", "sim_latent", "sim_true"],
                         help="also sim_latent_reach / sim_true_reach: the same cost inside the reach-then-change oracle (costs.py)")
-    parser.add_argument("--reach_eps", type=float, default=0.005, help="object displacement (m) that counts as 'moved' in the reach oracle")
+    parser.add_argument("--reach_eps", type=float, default=0.002, help="object displacement (m) that counts as 'moved' in the reach oracle")
+    parser.add_argument("--reach_r0", type=float, default=0.02, help="hand-to-object distance (m) below which the reach term saturates")
     parser.add_argument("--goal_variant", type=int, default=0,
                         help="0: the eval's goal; k>0: same object goal, arm moved to pose k (goal_variants.py)")
     parser.add_argument("--orbit", type=str, default="",
@@ -210,7 +211,7 @@ def main():
                 if name.endswith("_reach"):
                     from evals.failure_attribution.costs import ReachThenChangeOracle
 
-                    objective = ReachThenChangeOracle(objective, unroll, init_state[4:7], goal_state[4:7], eps=args.reach_eps)
+                    objective = ReachThenChangeOracle(objective, unroll, init_state[4:7], goal_state[4:7], eps=args.reach_eps, r0=args.reach_r0)
                     out[f"{name}_active"] = objective.active
                 planner.set_objective(objective)
                 planner.local_generator.manual_seed(int(ep_seed) + 1000 * (k + 1))
@@ -270,7 +271,7 @@ def main():
     pool.close()
     save_json(os.path.join(args.out_dir, 'run_meta.json'), {"fname": os.path.abspath(args.fname), "task": task, "episodes": n_episodes,
                    "planners": args.planners, "alpha": float(cfg.planner.planning_objective.alpha), "cost": args.cost,
-                   "goal_variant": args.goal_variant, "robot_free": args.robot_free, "reach_eps": args.reach_eps,
+                   "goal_variant": args.goal_variant, "robot_free": args.robot_free, "reach_eps": args.reach_eps, "reach_r0": args.reach_r0,
                    "wm_set": args.wm_set, "wm_h": args.wm_h, "wm_mag": args.wm_mag, "wm_gate": args.wm_gate})
     print("done", flush=True)
 
