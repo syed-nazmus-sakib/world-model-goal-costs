@@ -3,6 +3,8 @@
 # and the gate; the change term is the released latent cost (sim_latent_reach) or the true object cost (sim_true_reach).
 # Controls on the same episodes: plain true object cost (sim_true); released cost alone is known 0/12 on all four tasks.
 # Rule stated before the runs: PASS if sim_latent_reach >= 6/12 on >= 2 of the 4 object tasks and reach-wall (fallback) >= 10/12.
+# Added after the smoke episode (the released cost drags the arm to the goal arm pose once the handle is nudged): the label-free
+# change term, the robot-free latent cost (robot hidden in goal and candidate renders, --robot_free), inside the same oracle.
 source $(dirname $0)/jwm_env.sh
 # usage: bash scripts/pod/run_mw_reach_oracle.sh [out=/root/out/R1]      (needs the JEPA-WM venv and the Metaworld data)
 O=${1:-/root/out/R1}; mkdir -p $O
@@ -27,4 +29,15 @@ closed() {  # task planners...
 ( closed drawer-open sim_latent_reach sim_true sim_true_reach; closed push sim_latent_reach sim_true sim_true_reach; closed reach-wall sim_latent_reach ) &
 ( closed button-press-topdown sim_latent_reach sim_true sim_true_reach; closed door-open sim_latent_reach sim_true sim_true_reach ) &
 wait
-finish "QUEUE_DONE"
+log "QUEUE_DONE (main runs)"
+rf() {  # task: robot-free latent cost as the change term + oracle reach
+  local t=$1 d=$O/$1_robotfree; mkdir -p $d; log "closed $t robotfree start"
+  timeout 7200 python -m evals.failure_attribution.run_closed --fname $C/mw_jepa-wm_$t.yaml --out_dir $d --episodes 12 \
+    --planners sim_latent_reach --robot_free --num_workers 5 >> $d.log 2>&1; rc=$?
+  python -m evals.failure_attribution.summarize_closed --run_dir $d > $d/summary.txt 2>&1
+  log "closed $t robotfree rc=$rc $(grep -E '^  sim_' $d/summary.txt | sed -E 's/ +\| success at any replan.*//' | tr -s ' ')"
+}
+( rf drawer-open; rf push ) &
+( rf button-press-topdown; rf door-open ) &
+wait
+finish "ALL_RUNS_DONE"
