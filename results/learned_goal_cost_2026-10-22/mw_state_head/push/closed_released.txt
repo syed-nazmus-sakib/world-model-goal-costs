@@ -1,0 +1,7 @@
+12 episodes | expert success 100.0%
+
+== success ladder (same start, goal, CEM budget and replanning; success = final step, as the eval)
+  sim_latent    0/12 =   0.0%  [0.0, 24.3]   | success at any replan   8.3%
+
+== first replan with success (median over successful episodes)
+  sim_latent  3.0  (n=1)
