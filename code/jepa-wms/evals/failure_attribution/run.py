@@ -127,7 +127,10 @@ class SimUnroll:
         states, frames = self.pool.rollout(self.spec, self.env_actions(act_suffix), self.mode == "latent")
         self.last_states = states  # (B, state_dim) of the candidates just rolled out, for oracle costs that need states
         if self.mode == "latent":
-            return self.encode_final(states, frames)
+            enc = self.encode_final(states, frames)
+            if len(states) > 1:  # the last population (the planner's final single mean rollout is not one): run_closed --dump_dir
+                self.last_pop = (states, enc)
+            return enc
         return torch.from_numpy(states).unsqueeze(0)  # (1, B, state_dim)
 
 

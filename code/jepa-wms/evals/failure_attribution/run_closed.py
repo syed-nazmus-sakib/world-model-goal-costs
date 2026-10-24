@@ -289,11 +289,13 @@ def main():
                         planner.objective.set_start(z, hand0, goal_hand_z=float(gh[2]), goal_hand=gh, goal_prop=gp)
                         out[f"{name}_reach_info"] = json.dumps(planner.objective.info)
                         print(f"  [{name}] reach-then-change: {planner.objective.info}", flush=True)
+                    unroll.last_pop = None
                     res = planner.plan(z, steps_left=steps_left)
                     a = res.actions
-                    if args.dump_dir and name == "sim_latent" and args.dump_cands > 0 and getattr(planner.objective, "last_enc", None) is not None:
-                        # a sample of the final population the planner compared: the states it prices, right or wrong (kind 6)
-                        enc, ls = planner.objective.last_enc, np.asarray(unroll.last_states)
+                    if args.dump_dir and name == "sim_latent" and args.dump_cands > 0 and getattr(unroll, "last_pop", None) is not None:
+                        # a sample of the last population the planner compared: the states it prices, right or wrong (kind 6)
+                        ls, enc = unroll.last_pop
+                        ls = np.asarray(ls)
                         fv, fp = flat(enc)  # (B, P, D), (B, Dp): one frame per candidate
                         t_c = dump_steps + len(denorm(a))
                         for i in np.sort(dump_rng.choice(min(len(ls), len(fv)), min(args.dump_cands, len(ls), len(fv)), replace=False)):
