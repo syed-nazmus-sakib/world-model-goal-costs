@@ -154,12 +154,24 @@ tasks with the fallback ≥ 10/12.
 - Drawer-open: the reach term costs 4 episodes against the pure object cost (the hand parks 3-5 cm from the handle); a cost of the structure, to fix by releasing the reach term sooner.
 - Per-episode strings and the smoke history: `results/learned_goal_cost_2026-10-22/mw_reach_oracle/README.md`.
 
-**Stage 2 (images only), state when pod J was terminated by its host (12:00 UTC):**
-- Robot map: a per-patch logistic head on the frozen DINOv2 features trained with render masks (robot hidden vs shown; no task labels) reaches AUC 0.998 / IoU 0.94 on held-out episodes. The self-supervised proprio-prediction version is at chance (AUC 0.48): dropped.
-- Change map: non-robot patches that differ between start and goal (median + 4 MAD). Drawer-open: 24 patches on the drawer; button: 18 patches 5 patches away from the button (arm shadows): the button's own change is too small to detect this way.
-- Reach term from images alone (nearest robot patch, then the arm's new footprint) does not bring the hand to the object: the robot base is near the objects in 2D and depth is unobserved.
-- Calibrated camera (corner2; projection validated: the projected hand lands on a robot patch in 100% of frames; lift(project(X)) = X): the hand from its own sensor, the object as the change centroid lifted to the goal's hand height, gives a 3D reach term. With the goal-hand proximity filter (change patches lifted more than 0.3 m from the goal hand are not the object; none left: use the goal hand), the cost is implemented but **not yet run**: the pod died before the smoke.
-- Still needed: one smoke, then 12 episodes on button, push, drawer-open (about $0.3 of pod time plus setup), i.e. more credit than remains.
+**Stage 2 (images only), design arrived at on pods J and K (2026-10-23/24) through one-episode smokes.** Each step below
+was a failure of the previous design, found in a smoke episode, and fixed before any 12-episode run:
+
+| # | design | what the smoke showed | change |
+|---|---|---|---|
+| 1 | robot map (per-patch logistic head on DINOv2 features, render-mask labels: held-out AUC 0.998, IoU 0.94); change map = non-robot patches differing start vs goal; reach = nearest robot patch to the change centroid on the 16x16 grid | hand drifts away: the robot base is near the objects in 2D, so the reach is saturated from the start | reach from the arm's *new* footprint (robot in the candidate, not at the start) |
+| 2 | new-footprint reach | hand approaches slowly (0.39 → 0.21 m); "moved" fires on every candidate (10% of a tiny start-goal change < render variation) | batch-relative "moved" (3x the batch median) |
+| 3 | 2D reach | still slow; 2D cannot separate forearm from hand nor see depth | calibrated camera (corner2: validated, projected hand on a robot patch in 100% of frames, lift(project(X)) = X); object = change centroid lifted to the goal hand height; reach = 3D hand-object distance |
+| 4 | 3D reach | button: the 18 change patches are arm shadows 5 patches from the button; lifted estimate 2.4 m off | keep only change patches whose lifted point lies in the robot's workspace; a detection needs >= 3 of them; otherwise the object is where the goal hand presses (+5 cm) and the change region is the patch disc there |
+| 5 | workspace filter | push: only 1 patch near the goal hand (the puck travels 27 cm; the hand must go where it *starts*) | the change cluster far from the goal hand is the object at its start |
+| 6 | start cluster | push: hand at the puck (estimate 5 cm short, lifted at hand height), nudges it; the change term cannot say "puck to target": its goal region is under the hand in the goal image and masked as robot | include the goal's contact disc in the change term → the arm copies the goal hand instead (push: hand 0.17 → 0.28 m away): reverted |
+| 7 | progress gate (10% closer to the goal on the change region) | fires for 30-80% of candidates before contact: arm shadows move with the arm (the oracle's hidden robot cast none) | dropped |
+| 8 | **robot-free-mask change term** (`reachrf`): latent distance over patches that are robot in none of start, goal, candidate; **geometric gate**: hand within 8 cm of the object estimate | button: reached in 3 replans, pressed 4.6 cm (success needs about 7); push: reached in 2 replans, pushed 7.6 cm toward the target; drawer-open: estimate 6.6 cm beside the handle (the drawer's side panel is part of the change), hand blocked by the cabinet | running on 12 episodes (pod K, 01:12 UTC) |
+
+The full Stage 2 cost (`costs.ReachThenChangeImage`, `--cost reachrf:<robot head>`): robot map → change patches → lifted to the goal
+hand height → workspace filter → object-at-start cluster (or goal-hand fallback) → 3D reach to it until the hand is within 8 cm →
+then the robot-free-mask latent distance to the goal. No task labels; the robot map is trained once from render masks (no task
+labels either); the camera is the calibrated render camera.
 
 ## What the results say
 
