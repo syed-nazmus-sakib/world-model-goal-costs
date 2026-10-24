@@ -319,12 +319,16 @@ the planner solved) 5 of 133. The next ensemble (H6) trains on expert + candidat
 frames; closed loops head + rf and head alone on button and push, head + rf on the other six. This is one round of
 iterated cost learning on the planner's visited states, with privileged labels at training time only, as before.
 
-**Result (H6, 12 episodes, exact dynamics, 2026-10-24 15:45 pod time). Head + rf: button 3/12, push 7/12, drawer-open
-10/12, plate-slide 11/12, faucet-open 2/12** (window-open and the two controls running). **Head alone, same ensemble, no
-change term: button 2/12, push 10/12.** Previous round (head + rf without planner frames): 0, 5/11, 3, 6. Every task that
-supplied planner frames went up; faucet-open, which had jitter frames but no planner frames (dumps were run on four tasks),
-went 0 → 2. Three object tasks are now at or above the 6/12 bar (push, drawer-open, plate-slide); the pre-stated rule needs
-four of seven. Training set 148,518 frames (expert 28.8k, goal 2.4k, candidates 25.2k at 1 in 3, walks 40.3k, jitter 40.7k
+**Result (H6, 12 episodes, exact dynamics, 2026-10-24, all 8 tasks done 16:57 pod time). Head + rf: button 3/12, push
+7/12, drawer-open 10/12, plate-slide 11/12, faucet-open 2/12, window-open 7/12; controls drawer-close 12/12, reach-wall
+11/12. Head alone, same ensemble, no change term: button 2/12, push 10/12.** Previous round (head + rf without planner
+frames): 0, 5/11, 3, 6. Every task that supplied planner frames went up; faucet-open and window-open had jitter frames but
+no planner frames (dumps were run on four tasks) and went 0 → 2 and 2 → 7. **Four object tasks at or above the 6/12 bar
+(push, drawer-open, plate-slide, window-open) with both controls at or above 10/12: the pre-stated rule PASSES**, the
+first cost in this project to do so. TEMPO (re-implemented temporal distance, w = 0.5), same episodes: 0/12 on all six
+object tasks, drawer-close 12/12, reach-wall 5/12 (it breaks a control the released cost solves 23/24). Pod K was backed up
+(`artifacts/lewm_explorations_raw/reach_image_2026-10-24`, head at `H6/heads/head_rtc.pt`, every closed-loop episode
+file) and stopped by the watcher at 16:57. Training set 148,518 frames (expert 28.8k, goal 2.4k, candidates 25.2k at 1 in 3, walks 40.3k, jitter 40.7k
 over 6 tasks, planner frames 384 executed + 10,752 candidates from 4 tasks × 12 training episodes); 23 min; offline ranking
 unchanged (0.86-1.00).
 
