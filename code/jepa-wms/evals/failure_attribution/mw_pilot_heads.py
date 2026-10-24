@@ -20,6 +20,7 @@ They differ only in what supervision they get (training episodes only):
              log(1 + d_task(z)) once the object has moved (> 2 mm from its start), and
              log(1 + d_task(start) + hand-to-object distance / 2 cm) before: dense in the approach phase, never below the
              start's task distance there, so the structure "reach the object, then change it" is learned, not hand-coded.
+             Tasks whose object never moves (reach-wall) keep the plain task-distance target.
              Privileged states at training time only. Trained across tasks (one head) when several --train_dirs are given.
 
 Offline test on held-out episodes, per candidate set (one start point of one episode; sets where no candidate changes
@@ -91,7 +92,11 @@ def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
     d_start = np.array([st[first[e], 40] for e in ep]) / thr
     moved = np.linalg.norm(st[:, 4:7] - obj0, axis=1) > 0.002
     hand_obj = np.linalg.norm(st[:, :3] - st[:, 4:7], axis=1)
-    y_rtc = np.where(moved, np.log1p(st[:, 40] / thr), np.log1p(d_start + hand_obj / 0.02)).astype(np.float32)
+    # tasks without an object (reach-wall: obs[4:7] is a dummy that never moves) keep the plain task-distance target;
+    # with the approach term they would learn to approach the dummy (offline ranking inverted, 2026-10-24)
+    travel = {e: float(np.linalg.norm(st[(ep == e) & (kind == 0), 4:7] - obj0[(ep == e) & (kind == 0)], axis=1).max(initial=0.0)) for e in np.unique(ep)}
+    has_object = np.array([travel[e] > 0.01 for e in ep])
+    y_rtc = np.where(moved | ~has_object, np.log1p(st[:, 40] / thr), np.log1p(d_start + hand_obj / 0.02)).astype(np.float32)
     goals_of = {e: np.nonzero((ep == e) & (kind == 1))[0] for e in np.unique(ep)}
     expert_of = {e: np.nonzero((ep == e) & (kind == 0))[0] for e in np.unique(ep)}
     labelled = np.nonzero(kind != 1)[0]
