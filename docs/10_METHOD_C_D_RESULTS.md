@@ -179,6 +179,7 @@ was a failure of the previous design, found in a smoke episode, and fixed before
 | 11 | **v3**: in the fallback (nothing but the robot's contact region changes), the second phase is the distance to the goal hand itself; 4 cm stand-off | smoke 1/3 on button: ep 0 pressed (0.008); ep 1 stopped 6-7 cm from the button, never inside the 4 cm stand-off of a point 5 cm above the goal hand, so the second phase never engaged (to do: 6 cm for the fallback case); ep 2 false detection, verification did not fire | 12 episodes on 8 tasks (03:50 UTC) |
 | 12b | v3, 12 episodes on push | **0/12**. The far cluster fires in 11 episodes, but the estimate is 5-12 cm off in 8 of them and 14-29 cm in 3, always displaced toward the start arm (shadow patches in the centroid) and toward the camera (the puck sits 4-7 cm below the goal hand, and lifting at hand height slides the point along the ray). The hand comes within 4-7 cm of the puck in 7 episodes and nudges it 1-5 cm; one episode pushed it 13 cm; the verification fallback fired 4 times, each time to the wrong place for a moving object | v3b: start-arm exclusion and strength filter clean the centroid; the far cluster is lifted at goal-hand height minus a 3 cm hover offset |
 | 12c | v3, 12 episodes on drawer-open and plate-slide | **drawer-open 1/12**: the far cluster is the whole drawer front (8-18 patches), so its centroid is 6-14 cm from the handle in every episode; the hand parks there and the drawer moves in 3 episodes only; the one success and the 3.7 cm near-miss came *after* the verification fallback sent the hand to the goal hand (the handle's open position), which dragged the drawer. **plate-slide 0/12**: every estimate 9-14 cm toward the camera: the puck sits at 1.5 cm, the goal hand at 8 cm, and 1 cm of lifting height is 1.5 cm of horizontal error with this camera; the hand nudged the puck 4-8 cm in 5 episodes. The object at its goal is never visible as a separate cluster (0 near-goal-hand change patches in all push and plate-slide episodes: it is under the hand), so no start-to-goal displacement can be measured | v3b lifts the far cluster at table height when the goal hand is below 10 cm (table objects are pushed from above) and at goal-hand height otherwise (raised handles are grasped) |
+| 12d | v3, 12 episodes on faucet-open and window-open | **faucet-open 0/12**: 8 episodes detect a far cluster at (0.1-0.28, 0.60-0.68, 0.19), 20 cm from the handle, and the hand parks there; the other 4 take the goal-hand fallback and reach the goal hand to 1.1-1.4 cm without turning the handle (the final pose alone does not make the sweeping motion; the handle never moves). **window-open 0/12**: every estimate lands at z = 0.08 (lifted at goal-hand height on a ray that meets the table first), 5-13 cm below and short of the handle; the hand ends 2-16 cm from the goal hand, the window moved in 1 episode (15 cm, 5 cm short) | localisation again; v3b's rules do not address faucet's far cluster (it passes the workspace and radius gates) |
 | 12 | v3, 12 episodes on button | **3/12** (same count as v1, different mechanism). 6 episodes used the goal-hand fallback and all 6 brought the hand within 0.8-1.6 cm of the goal hand; 3 of them pressed the button, the other 3 hit the button housing (1-2 cm lateral error: the second phase stops at its 1 cm convergence, nothing pushes further). The other 6 episodes are all the same false detection: 5-7 "change" patches at the robot's **start** position (lifted to (0.07-0.15, 0.55-0.60, 0.24) in every one of them) pass the 0.35 m radius gate and the far-from-goal-hand rule, so the cost treats the start arm's shadow / vacated region as the object; the hand parks there; the verification fired once, at replan 5 | v3b (to run after the v3 table completes, as `reachrf3`): exclude change patches inside the dilated start-robot mask; keep a far cluster only if its change strength is at least 0.7 x the robot's own appearance change (measured: start-arm shadows 0.2-0.6 x, real objects up to 1.0-1.8 x, table below); in the fallback case the second phase is lexicographic again (within 6 cm of the goal hand, rank by the robot-free latent term) |
 
 Change-patch strength relative to the robot's own appearance change (patch feature difference start vs goal, divided by the mean
@@ -242,11 +243,38 @@ The failure is not ranking but **exploitation**: the planner finds states the he
   them, at cost 0.004-0.03: "hand at goal, puck short" never occurs in expert data, so the head prices it as success.
 - Offline tables cannot see this: they rank candidates drawn from the same distribution as the training data.
 
-Fix under test (H3 queue, `mw_pilot_data --walks`, `mw_pilot_heads --n_ens`): (1) **arm-coverage walks**, kind 3 frames
-from random action sequences of the planner's own prior, continued for a whole episode (70 steps) from the start and from
-4 steps before contact, 16 per start, a frame every 10 steps; (2) an **ensemble of 3 heads**, planner cost mean + β·std
-(β = 1; β = 0 as the ablation), so that disagreement where the data is thin is priced, not exploited. Both keep the
-label-light protocol (simulator states at training time only). Rule unchanged.
+Remaining first-version tasks (for the record): drawer-open 0/12, plate-slide 1/12, faucet-open 0/12, window-open 2/12,
+drawer-close 12/12 (control intact).
+
+**Fix 1 (H3 queue, `mw_pilot_data --walks`, `mw_pilot_heads --n_ens`): (1) arm-coverage walks**, kind 3 frames from random
+action sequences of the planner's own prior, continued for a whole episode (70 steps) from the start and from 4 steps
+before contact, 16 per start, a frame every 10 steps (40,320 walk frames, 136,752 in all); (2) an **ensemble of 3 heads**,
+planner cost mean + β·std (β = 1; β = 0 as the ablation). Label-light protocol unchanged. Offline ranking unchanged
+(0.83-1.00, reach-wall fixed).
+
+**Closed loop (ensemble, β = 1), 12 episodes: button 1/12, push 3/12. Exploitation is gone; the final precision is not.**
+
+| | rtc v1 (no walks, 1 head) | ensemble + walks (β = 1) |
+|---|---|---|
+| button: episodes whose hand ends within 5 cm of the goal hand | 0 / 12 (20-45 cm) | **12 / 12** (0.9-5.4 cm) |
+| button: episodes that move the button | 0 / 12 | 9 / 12 (0.4-8.6 cm of travel; 2 fully) |
+| push: episodes whose hand ends within 5 cm of the goal hand | 8 / 12 | **12 / 12** (0.3-3.1 cm) |
+| push: puck moved | – | 12 / 12 (15-34 cm); success at some replan 9 / 12, at the end 3 / 12 |
+
+The arm now goes where it should in every episode, so the coverage + pessimism fix removed the exploitation. What is left is
+the released cost's own near-success failure, now inside the learned head: with the hand at the goal hand, the head cannot
+tell the object's state. Button ep 006 ends 1.1 cm from the goal hand with the button unpressed at cost 0.031, below the
+0.047 of ep 002's pressed final state; push ends with the hand at the goal hand and the puck 4-10 cm off at cost
+0.005-0.08. The head's proprio input and the arm-weighted patch features make it arm-dominated where the target changes
+fastest. "Hand at the goal, object not there" exists in the walks but is rare next to the 95% of frames where the hand
+position predicts the target well.
+
+**Fix 2 (HR queue, `costs.HeadChangeObjective`, `--cost headrf:<head>:<robot mask>:β:λ`): add the Stage 1 change term.**
+cost = head(z) + λ · rf(z) / rf(z₀), where rf is the squared feature difference to the goal over the patches that show the
+robot in neither the start, the goal nor the candidate frame (the image robot mask), divided by the same quantity at the
+episode start. The head dominates the approach (0.3-8 against λ ≈ 0.5), the change term decides where the head is flat
+(< 0.1 near the goal hand; the term runs from ~1 to ~0.3). No detection, no localisation (the parts of the image pipeline
+that failed), no switch. Running on button and push first, then the other 6 tasks. Rule unchanged.
 
 ## What the results say
 
@@ -267,7 +295,7 @@ label-light protocol (simulator states at training time only). Rule unchanged.
    - Yet every cost fails from the start pose (0/12). From the start pose no candidate within the horizon touches the object.
    - So the cost far from the object, and the search, decide these tasks, not the ranking near success.
 6. **Min-over-plan is a cheap general fix** (+27 TwoRoom, +14.5 PushT, +3.5 Cube with the released cost). It is a baseline, not a contribution.
-7. **A learned cost that ranks perfectly offline is exploited in closed loop when its data does not cover the planner's search** (rtc head: offline 0.93-1.00, closed loop button 0/12, push 3/12). Coverage of arm poses and pessimism over an ensemble are the two levers under test; the oracle structure (Stage 1) shows what the learned cost has to reproduce.
+7. **A learned cost that ranks perfectly offline is exploited in closed loop when its data does not cover the planner's search** (rtc head: offline 0.93-1.00, closed loop button 0/12, push 3/12). Arm-coverage walks + an ensemble with pessimism remove the exploitation: the hand reaches the goal hand in 24/24 button and push episodes (from 8/24). Success stays at 1/12 and 3/12 because the head, like the released cost, cannot resolve the object's state once the arm is there: the approach failure is solved by learning, the near-success failure needs the robot-free change term (under test as head + λ·rf).
 8. **The reach-then-change structure is specific to the approach failure.** On PushT, where the pusher starts at the block, it changes nothing (36% vs 40%; 50% vs 48% with the true cost). On Metaworld, where the arm must travel, it takes button from 0/12 to 12/12 with the oracle terms.
 
 ## Related work checked (verified 2026-10-22)
