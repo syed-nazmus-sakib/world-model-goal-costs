@@ -175,6 +175,28 @@ hand height → workspace filter → object-at-start cluster (or goal-hand fallb
 then the robot-free-mask latent distance to the goal. No task labels; the robot map is trained once from render masks (no task
 labels either); the camera is the calibrated render camera.
 
+## Approach-aware learned head (rtc), 2026-10-24: one head for 8 tasks
+
+Target: hand-to-object distance until the object moves, then the task's success distance (simulator labels at training time
+only); the state head (plain success distance) trained on the same data is the ablation; 24 training episodes per task,
+test on the 12 closed-loop episodes. Offline (ordering accuracy on candidate sets where the true cost varies; eval goal /
+arm-moved goal; top-1 = the selected candidate is a success, "best" = any candidate is):
+
+| task | released | rtc | state | top-1 released / rtc / best |
+|---|---|---|---|---|
+| button-press-topdown | 0.992 / 0.857 | 1.000 / 0.995 | 1.000 / 1.000 | 1.00 / 1.00 / 1.00 |
+| push | 0.888 / 0.548 | 0.930 / 0.924 | 0.917 / 0.908 | 0.22 / 0.38 / 0.38 |
+| drawer-open | 0.958 / – | 0.924 / – | 0.961 / – | 0.92 / 0.92 / 0.92 |
+| plate-slide | 0.795 / 0.661 | 0.997 / 0.997 | 0.999 / 0.999 | 0.06 / 0.08 / 0.14 |
+| faucet-open | 0.918 / 0.609 | 0.998 / 0.996 | 0.918 / 0.884 | 0.61 / 0.65 / 0.65 |
+| window-open | 0.992 / 0.465 | 1.000 / 0.996 | 1.000 / 1.000 | 0.83 / 0.83 / 1.00 |
+| drawer-close | 0.851 / 0.657 | 0.824 / 0.832 | 0.947 / 0.942 | 0.21 / 0.75 / 0.83 |
+| reach-wall | 0.853 / 0.459 | **0.119 / 0.047** (inverted) | 1.000 / 0.999 | 0 / 0 / 0 |
+
+Both heads rank near-perfectly on the object tasks and are invariant to the goal's arm pose. The rtc head is inverted on
+reach-wall: with no object, its "object" is a dummy that never moves, so the approach term pointed at the dummy. Fixed
+(object-free tasks keep the plain target; `rtc2`, retraining). Closed loop (12 episodes) of both versions: running.
+
 ## What the results say
 
 1. **The learned cost helps where the released distance contradicts task progress in a way the data shows.**
