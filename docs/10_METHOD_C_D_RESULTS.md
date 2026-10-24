@@ -154,6 +154,13 @@ tasks with the fallback ≥ 10/12.
 - Drawer-open: the reach term costs 4 episodes against the pure object cost (the hand parks 3-5 cm from the handle); a cost of the structure, to fix by releasing the reach term sooner.
 - Per-episode strings and the smoke history: `results/learned_goal_cost_2026-10-22/mw_reach_oracle/README.md`.
 
+**Stage 1 on LeWM PushT (structure test, 50 goals, offset 75, exact dynamics; `oracle_cost.py` modes, pod K 2026-10-24).**
+Pre-stated rule: the reach variant must beat its base by 10 points, or released + min (40%). Result: a **fail**, and a
+scoping result. Released + reach 36% (block 36%); true block cost 48% (block 54%); true + reach 50% (block 58%). The
+pusher starts next to the T-block in PushT and the released cost has no approach-phase failure there, so a reach term has
+nothing to fix; the structure helps where the arm must first travel to the object (Metaworld), which is where the
+diagnosis located the failure. PushT stays as the "where it does not apply" control.
+
 **Stage 2 (images only), design arrived at on pods J and K (2026-10-23/24) through one-episode smokes.** Each step below
 was a failure of the previous design, found in a smoke episode, and fixed before any 12-episode run:
 
@@ -169,7 +176,26 @@ was a failure of the previous design, found in a smoke episode, and fixed before
 | 8 | **robot-free-mask change term** (`reachrf`): latent distance over patches that are robot in none of start, goal, candidate; **geometric gate**: hand within 8 cm of the object estimate | button: reached in 3 replans, pressed 4.6 cm (success needs about 7); push: reached in 2 replans, pushed 7.6 cm toward the target; drawer-open: estimate 6.6 cm beside the handle (the drawer's side panel is part of the change), hand blocked by the cabinet | 12 episodes (8 cm stand-off): button 0/12, push 0/12 |
 | 9 | stand-off 4 cm (the hand must end within one planning step of the object) | **button 3/12**: the 3 successes are exactly the episodes where the change detector found < 3 workspace patches and the goal-hand fallback was used (estimate 1 cm off); the 9 failures all had 3-7 "change" patches (arm shadows) and a target 0.24-0.53 m off. **push 0/12**: estimate 5-18 cm off (lifted at hand height, centroid midway along the puck's path); the puck moved 3-13 cm toward the target in every episode | first image-only successes on a Metaworld object task; the detector, not the cost, is the failure |
 | 10 | v2 (`reachrf2`): a detected cluster is trusted only within 0.35 m of the goal hand (6 of the 9 false button targets were farther); closed-loop verification: hand at the target for two replans with no change toward the goal → fall back to the goal hand | smoke 0/3 on button, including the two episodes v1 solved: trajectories identical until the last replans, then the latent term on the contact disc fails to separate "pressed" from "touching" | geometric second phase for the fallback case (v3) |
-| 11 | **v3**: in the fallback (nothing but the robot's contact region changes), the second phase is the distance to the goal hand itself; 4 cm stand-off | smoke 1/3 on button: ep 0 pressed (0.008); ep 1 stopped 6-7 cm from the button, never inside the 4 cm stand-off of a point 5 cm above the goal hand, so the second phase never engaged (to do: 6 cm for the fallback case); ep 2 false detection, verification did not fire | 12 episodes on 8 tasks running (03:50 UTC) |
+| 11 | **v3**: in the fallback (nothing but the robot's contact region changes), the second phase is the distance to the goal hand itself; 4 cm stand-off | smoke 1/3 on button: ep 0 pressed (0.008); ep 1 stopped 6-7 cm from the button, never inside the 4 cm stand-off of a point 5 cm above the goal hand, so the second phase never engaged (to do: 6 cm for the fallback case); ep 2 false detection, verification did not fire | 12 episodes on 8 tasks (03:50 UTC) |
+| 12 | v3, 12 episodes on button | **3/12** (same count as v1, different mechanism). 6 episodes used the goal-hand fallback and all 6 brought the hand within 0.8-1.6 cm of the goal hand; 3 of them pressed the button, the other 3 hit the button housing (1-2 cm lateral error: the second phase stops at its 1 cm convergence, nothing pushes further). The other 6 episodes are all the same false detection: 5-7 "change" patches at the robot's **start** position (lifted to (0.07-0.15, 0.55-0.60, 0.24) in every one of them) pass the 0.35 m radius gate and the far-from-goal-hand rule, so the cost treats the start arm's shadow / vacated region as the object; the hand parks there; the verification fired once, at replan 5 | v3b (to run after the v3 table completes, as `reachrf3`): exclude change patches inside the dilated start-robot mask; keep a far cluster only if its change strength is at least 0.7 x the robot's own appearance change (measured: start-arm shadows 0.2-0.6 x, real objects up to 1.0-1.8 x, table below); in the fallback case the second phase is lexicographic again (within 6 cm of the goal hand, rank by the robot-free latent term) |
+
+Change-patch strength relative to the robot's own appearance change (patch feature difference start vs goal, divided by the mean
+difference over the goal's robot patches; non-robot patches in the workspace; 12 test episodes per task, `podk_change_mag.py`):
+
+| task | object travel | workspace change patches / episode | median | p10 | p90 | max |
+|---|---|---|---|---|---|---|
+| button-press-topdown | 0.09 m | 3.8 | 0.24 | 0.16 | 0.58 | 1.03 |
+| push | 0.24 m | 5.8 | 0.56 | 0.23 | 1.04 | 1.17 |
+| drawer-open | 0.19 m | 13.2 | 0.35 | 0.19 | 0.96 | 1.28 |
+| plate-slide | 0.28 m | 7.8 | 0.88 | 0.33 | 1.55 | 1.81 |
+| faucet-open | 0.25 m | 3.6 | 0.47 | 0.29 | 0.89 | 1.03 |
+| window-open | 0.20 m | 11.8 | 0.37 | 0.22 | 0.73 | 1.40 |
+| drawer-close | 0.15 m | 15.6 | 0.20 | 0.10 | 0.86 | 1.18 |
+| reach-wall (no object) | 0.00 m | 4.8 | 0.36 | 0.25 | 0.59 | 0.79 |
+
+reach-wall has no object, so its 4.8 patches per episode (median 0.36, max 0.79) are the shadow baseline; the object tasks' upper
+tails (0.9-1.8) are the objects. A relative threshold near 0.7 keeps the large objects (push, plate-slide, drawer, window) and
+drops the small ones (button, faucet) into the goal-hand fallback, which is the right place for them.
 
 **Bookkeeping error, 2026-10-24 (recorded for honesty):** the 4 cm stand-off was patched on the pod but not in the repo copy; two
 later uploads of the repo copy (adding the TEMPO objective and v2) silently restored 8 cm on the pod. Image-cost runs that
@@ -201,7 +227,24 @@ arm-moved goal; top-1 = the selected candidate is a success, "best" = any candid
 
 Both heads rank near-perfectly on the object tasks and are invariant to the goal's arm pose. The rtc head is inverted on
 reach-wall: with no object, its "object" is a dummy that never moves, so the approach term pointed at the dummy. Fixed
-(object-free tasks keep the plain target; `rtc2`, retraining). Closed loop (12 episodes) of both versions: running.
+(object-free tasks keep the plain target; `rtc2`, retraining).
+
+**Closed loop, 12 episodes, exact dynamics (pod K, 2026-10-24): button 0/12, push 3/12.** The pre-stated rule
+(≥ 6/12 on ≥ 4 of 7 object tasks) is already out of reach for these two tasks; the remaining six are running for the record.
+The failure is not ranking but **exploitation**: the planner finds states the head never saw and prices them low.
+
+- Button: in all 12 episodes the hand ends 20-45 cm from the button while the head's cost falls (e.g. 1.21 → 0.10); the hand
+  drifts to the right of the button (x ≈ +0.27 instead of 0.09) or stays low (z ≈ 0.05). Training candidates start on the
+  expert path and last one planning horizon (30 steps), so arm poses more than ~0.3 m off the path have no labels.
+- Push: in 8 of 12 episodes the hand reaches the goal hand position to 1-2 cm, but the puck lags 6-10 cm behind in 5 of
+  them, at cost 0.004-0.03: "hand at goal, puck short" never occurs in expert data, so the head prices it as success.
+- Offline tables cannot see this: they rank candidates drawn from the same distribution as the training data.
+
+Fix under test (H3 queue, `mw_pilot_data --walks`, `mw_pilot_heads --n_ens`): (1) **arm-coverage walks**, kind 3 frames
+from random action sequences of the planner's own prior, continued for a whole episode (70 steps) from the start and from
+4 steps before contact, 16 per start, a frame every 10 steps; (2) an **ensemble of 3 heads**, planner cost mean + β·std
+(β = 1; β = 0 as the ablation), so that disagreement where the data is thin is priced, not exploited. Both keep the
+label-light protocol (simulator states at training time only). Rule unchanged.
 
 ## What the results say
 
@@ -222,6 +265,8 @@ reach-wall: with no object, its "object" is a dummy that never moves, so the app
    - Yet every cost fails from the start pose (0/12). From the start pose no candidate within the horizon touches the object.
    - So the cost far from the object, and the search, decide these tasks, not the ranking near success.
 6. **Min-over-plan is a cheap general fix** (+27 TwoRoom, +14.5 PushT, +3.5 Cube with the released cost). It is a baseline, not a contribution.
+7. **A learned cost that ranks perfectly offline is exploited in closed loop when its data does not cover the planner's search** (rtc head: offline 0.93-1.00, closed loop button 0/12, push 3/12). Coverage of arm poses and pessimism over an ensemble are the two levers under test; the oracle structure (Stage 1) shows what the learned cost has to reproduce.
+8. **The reach-then-change structure is specific to the approach failure.** On PushT, where the pusher starts at the block, it changes nothing (36% vs 40%; 50% vs 48% with the true cost). On Metaworld, where the arm must travel, it takes button from 0/12 to 12/12 with the oracle terms.
 
 ## Related work checked (verified 2026-10-22)
 
