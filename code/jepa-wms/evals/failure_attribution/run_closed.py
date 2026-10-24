@@ -42,6 +42,11 @@ from evals.failure_attribution.run import CEMProgress, SimUnroll, TrueCostObject
 from evals.failure_attribution.sim_worker import SimPool
 
 
+
+def frame_of(td):
+    """Last RGB frame of an observation TensorDict as (H, W, 3) uint8."""
+    return np.asarray(td["visual"])[-1].transpose(1, 2, 0).copy()
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fname", required=True)
@@ -71,6 +76,7 @@ def main():
                              "for the next head (mw_merge_planner_frames.py merges them with the expert frames of the pilot data)")
     parser.add_argument("--dump_cands", type=int, default=32,
                         help="with --dump_dir: also save this many of the planner's final-population candidates per replan (kind 6)")
+    parser.add_argument("--save_frames", action="store_true", help="store the start, goal and per-replan RGB frames in the episode file (figures)")
     parser.add_argument("--robot_free", action="store_true",
                         help="oracle: goal and simulator candidate frames rendered without the robot (sim planners only)")
     args = parser.parse_args()
@@ -237,13 +243,15 @@ def main():
             "rand_vec": snap0["mw"]["rand_vec"],
             **goal_info,
         }
+        if args.save_frames:
+            out["start_frame"], out["goal_frame"] = frame_of(init_obs), frame_of(goal_obs)
         print(f"ep {ep:03d} start ({ep + 1}/{n_episodes}) {task}: expert success {bool(expert_success)}", flush=True)
         # the world model runs first, with the agent's generators untouched, as in the released eval
         gen_state = None
         for k, name in enumerate(args.planners):
             restore_env(env, snap0)
             td = init_obs
-            replans, chunk_success, cem_final, hand, obj = 0, [], [], [], []
+            replans, chunk_success, cem_final, hand, obj, frames = 0, [], [], [], [], []
             if name != "wm":
                 planner, unroll = oracles[name]
                 objective = agent.objective if name.startswith("sim_latent") else TrueCostObjective(adapter, goal_state, device)
@@ -258,6 +266,8 @@ def main():
             dump_rng = np.random.default_rng(ep)
             while True:
                 steps_left = max((env.steps_left() + 1) * model.action_skip // cfg.frameskip, 1)
+                if args.save_frames:
+                    frames.append(frame_of(td))
                 progress[name].start(f"ep {ep:03d} [{name}] replan {replans}")
                 if name == "wm":
                     if replans == 0 and isinstance(agent.objective, HeadChangeObjective):  # the change term needs the start frame
@@ -316,6 +326,9 @@ def main():
                 replans += 1
                 if dones[-1]:
                     break
+            if args.save_frames:
+                frames.append(frame_of(td))
+                out[f"{name}_frames"] = np.stack(frames)
             if args.dump_dir and name == "sim_latent" and dump["vis"]:  # the final frame too (the exploited end state), then save
                 zf = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
                 fv, fp = flat(zf)
