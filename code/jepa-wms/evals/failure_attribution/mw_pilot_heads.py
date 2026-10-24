@@ -55,25 +55,30 @@ def load(dirs, tasks=None):
     """One or several pilot-data dirs (aligned with task names) -> dict; ep is unique across dirs, thr is per frame."""
     dirs = [dirs] if isinstance(dirs, str) else list(dirs)
     tasks = [tasks] if isinstance(tasks, str) else (list(tasks) if tasks else [None] * len(dirs))
-    out = {k: [] for k in ("vis", "prop", "state", "kind", "t", "var", "start", "ep", "thr", "task")}
+    # two passes: count frames from the small 'kind' arrays, then fill preallocated arrays (np.concatenate on the patch
+    # features doubled the peak memory: 28 GB of features + copy exceeded the pod's 62 GB container limit, 2026-10-24)
+    files = []
     n_ep = 0
     for di, (d, task) in enumerate(zip(dirs, tasks)):
-        thr = SUCCESS_THRESHOLD.get(task, 0.05)
-        files = sorted(glob.glob(os.path.join(d, "ep_*.npz")))
-        for i, f in enumerate(files):
-            z = np.load(f)
-            n = len(z["kind"])
-            for k in out:
-                if k == "ep":
-                    out[k].append(np.full(n, n_ep + i))
-                elif k == "thr":
-                    out[k].append(np.full(n, thr, dtype=np.float32))
-                elif k == "task":
-                    out[k].append(np.full(n, di))
-                else:
-                    out[k].append(z[k])
-        n_ep += len(files)
-    return {k: np.concatenate(v) for k, v in out.items()}
+        fs = sorted(glob.glob(os.path.join(d, "ep_*.npz")))
+        files += [(f, n_ep + i, SUCCESS_THRESHOLD.get(task, 0.05), di) for i, f in enumerate(fs)]
+        n_ep += len(fs)
+    counts = [len(np.load(f)["kind"]) for f, _, _, _ in files]
+    N = int(sum(counts))
+    z0 = np.load(files[0][0])
+    out = {"vis": np.empty((N,) + z0["vis"].shape[1:], z0["vis"].dtype), "prop": np.empty((N,) + z0["prop"].shape[1:], z0["prop"].dtype),
+           "state": np.empty((N,) + z0["state"].shape[1:], z0["state"].dtype), "kind": np.empty(N, z0["kind"].dtype),
+           "t": np.empty(N, z0["t"].dtype), "var": np.empty(N, z0["var"].dtype), "start": np.empty(N, z0["start"].dtype),
+           "ep": np.empty(N, np.int64), "thr": np.empty(N, np.float32), "task": np.empty(N, np.int64)}
+    s = 0
+    for (f, e, thr, di), n in zip(files, counts):
+        z = np.load(f)
+        sl = slice(s, s + n)
+        for k in ("vis", "prop", "state", "kind", "t", "var", "start"):
+            out[k][sl] = z[k]
+        out["ep"][sl], out["thr"][sl], out["task"][sl] = e, thr, di
+        s += n
+    return out
 
 
 def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev, n_ens=1):
