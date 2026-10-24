@@ -64,10 +64,15 @@ def true_distance(goal, cur):
 
 
 class OracleCost(ShootingCostEvaluator):
-    def __init__(self, model, objective, mode, process, pixel_transform, workers=14):
+    def __init__(self, model, objective, mode, process, pixel_transform, workers=14, reach_r0=40.0, reach_eps=2.0):
         super().__init__(model, objective)
-        assert mode in ('sim_latent', 'sim_true')
-        self.mode = mode
+        assert mode in ('sim_latent', 'sim_true', 'sim_latent_reach', 'sim_true_reach')
+        # *_reach (2026-10-24): the reach-then-change oracle of the Metaworld study on PushT. Candidates that moved the block
+        # (> reach_eps px from its current position) are ranked by the inner cost; the others rank below all of them, by the
+        # agent-to-block distance saturating below reach_r0 px (agent radius 15 + half the T's bar).
+        self.reach = mode.endswith('_reach')
+        self.mode = mode.replace('_reach', '')
+        self.reach_r0, self.reach_eps = float(reach_r0), float(reach_eps)
         self.process = process
         self.pixel_transform = pixel_transform
         self.workers = workers
@@ -97,9 +102,18 @@ class OracleCost(ShootingCostEvaluator):
         chunks = np.array_split(np.arange(S), self.workers)
         res = self.pool.map(_rollout, [(state, goal, raw[c], render) for c in chunks if len(c)])
         finals = np.concatenate([r[0] for r in res])
+
+        def wrap(cost):  # reach-then-change on the inner cost (torch (S,))
+            if not self.reach:
+                return cost
+            moved = torch.as_tensor(np.linalg.norm(finals[:, 2:4] - state[2:4], axis=1) > self.reach_eps, device=cost.device)
+            reach = np.maximum(np.linalg.norm(finals[:, :2] - finals[:, 2:4], axis=1) - self.reach_r0, 0.0)
+            reach = torch.as_tensor(reach, dtype=cost.dtype, device=cost.device)
+            return torch.where(moved, cost, cost.max().detach() + reach)
+
         if self.mode == 'sim_true':
-            cost = true_distance(goal, finals)
-            return torch.as_tensor(cost, dtype=torch.float32, device=action_candidates.device)[None]
+            cost = torch.as_tensor(true_distance(goal, finals), dtype=torch.float32, device=action_candidates.device)
+            return wrap(cost)[None]
         frames = np.concatenate([r[1] for r in res])  # (S, 224, 224, 3) uint8
         px = torch.stack(
             [self.pixel_transform(tv_tensors.Image(torch.from_numpy(f).permute(2, 0, 1))) for f in frames]
@@ -112,7 +126,7 @@ class OracleCost(ShootingCostEvaluator):
         with torch.no_grad():
             emb = self.model.encode({'pixels': px.to(dev, next(self.model.parameters()).dtype)[:, None]})['emb'][:, -1]
         cost = (emb.float() - g.float()).pow(2).sum(-1)
-        return cost[None].to(action_candidates.device)
+        return wrap(cost)[None].to(action_candidates.device)
 
 
 def check_fidelity(process, state, goal, raw_actions, real_final):
