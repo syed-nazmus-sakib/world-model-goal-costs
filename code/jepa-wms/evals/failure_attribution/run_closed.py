@@ -183,6 +183,12 @@ def main():
                                                    unroll=oracles["sim_latent"][1] if "sim_latent" in oracles else None,
                                                    r0=args.reach_r0_img, rf=args.cost.startswith("reachrf:"))
             agent.planner.set_objective(agent.objective)
+        elif args.cost.startswith("tempo:"):  # TEMPO baseline: tempo:<map.pt>[:w] (costs.TempoMixObjective)
+            from evals.failure_attribution.costs import TempoMixObjective
+
+            parts = args.cost.split(":")
+            agent.objective = TempoMixObjective(cfg, target_enc=agent.goal_state_enc, map_path=parts[1], w=float(parts[2]) if len(parts) > 2 else 0.5)
+            agent.planner.set_objective(agent.objective)
         elif args.cost.startswith("head:"):  # method C: learned goal cost (evals/failure_attribution/mw_head_train.py)
             from evals.failure_attribution.costs import LearnedHeadMPCObjective
 

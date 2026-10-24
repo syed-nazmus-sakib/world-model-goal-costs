@@ -282,6 +282,37 @@ class ReachThenChangeImage:
         return torch.where(moved, change_term, change_term.max().detach() + reach)
 
 
+class TempoMixObjective:
+    """TEMPO baseline (arXiv 2610.04988) inside our planner: J = (1 - w) * own + w * d_H^2 * ||F(z) - F(G)||^2, with the
+    released patch cost as `own`, F from mw_tempo_train.py on [patch-mean visual, proprio] and d_H^2 from its checkpoint.
+    w = 0 is the released planner; w = 1 the pure temporal map."""
+
+    def __init__(self, cfg, target_enc: TensorDict, map_path: str, w: float = 0.5, **kwargs):
+        from evals.failure_attribution.mw_tempo_train import TemporalMap
+        from evals.simu_env_planning.planning.planning.objectives import ReprTargetDistMPCObjective
+
+        ck = torch.load(map_path, map_location="cpu")
+        self.fmap = TemporalMap(ck["d_in"], kappa=ck["kappa"]).to(target_enc["visual"].device).eval().requires_grad_(False)
+        self.fmap.load_state_dict(ck["state_dict"])
+        self.w, self.scale = float(w), float(ck["d_H2"])
+        self.own = ReprTargetDistMPCObjective(cfg, target_enc=target_enc, alpha=cfg.planner.planning_objective.alpha)
+        self.fg = self.embed(target_enc)[0]
+
+    @torch.no_grad()
+    def embed(self, enc):
+        vis, prop = enc["visual"], enc["proprio"]
+        n = int(np.prod(vis.shape[:-4]))
+        x = torch.cat([vis.reshape(n, -1, vis.shape[-1]).float().mean(1), prop.reshape(n, -1).float()], -1)
+        return self.fmap(x)
+
+    def __call__(self, encodings, actions, keepdims: bool = False):
+        own = self.own(encodings, actions, keepdims)
+        if keepdims:
+            return own
+        tmp = (self.embed(encodings) - self.fg).pow(2).sum(-1)
+        return (1.0 - self.w) * own + self.w * self.scale * tmp
+
+
 class LearnedHeadMPCObjective:
     """Method C: squared distance between learned embeddings of the candidate and the goal (see mw_head_train.py)."""
 

@@ -57,4 +57,5 @@ Results and findings: `docs/10_METHOD_C_D_RESULTS.md`.
 | `pod/run_mw_reach_oracle.sh` | reach-then-change Stage 1: oracle reach term with the released, true and robot-free change terms, 4 tasks + reach-wall |
 | `pod/run_mw_reach_image.sh` | reach-then-change Stage 2: robot-mask frames, robot map, smoke, 12-episode closed loop from images only; door-open oracles with the fixed true cost |
 | `pod/run_mw_rtc_head.sh` | approach-aware learned cost head (rtc target) across 8 Metaworld tasks: data, one head, offline tables, closed loop |
+| `pod/run_mw_tempo.sh` | TEMPO baseline (temporal map on our frozen encodings, mixed cost w = 0.5 and w = 1) on the same 8 tasks and episodes |
 | `pod/backup_and_stop.sh <pod_id> <host> <port> <remote_out> <name>` | laptop side: wait for `ALL_DONE`, copy results home and into `artifacts/`, then stop the pod (key from `.env`, never printed) |
