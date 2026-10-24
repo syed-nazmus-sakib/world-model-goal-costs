@@ -485,8 +485,10 @@ class HeadChangeObjective:
         h = self.head(encodings, actions, keepdims)
         if keepdims or self.robot0 is None:
             return h
-        z = ReachThenChangeImage._flat(encodings)
-        if len(z) != h.shape[-1]:  # more than one frame per rollout: the head alone (sim_latent encodes the final frame only)
+        vis = encodings["visual"]
+        last = vis[-1] if vis.dim() == 6 else vis  # (T, B, V, H, W, D) from the predictor: the change term on the final frame
+        z = last.reshape(last.shape[0], -1, last.shape[-1]).float()
+        if len(z) != h.shape[-1]:
             return h
         r = self.rf(z)
         if not self._dbg:

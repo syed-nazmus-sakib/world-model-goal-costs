@@ -36,6 +36,7 @@ import torch
 from einops import rearrange
 
 from evals.failure_attribution.adapters import get_adapter
+from evals.failure_attribution.costs import HeadChangeObjective
 from evals.failure_attribution.mw_sim import capture, capture_env, restore_env
 from evals.failure_attribution.run import CEMProgress, SimUnroll, TrueCostObjective, build, load_args
 from evals.failure_attribution.sim_worker import SimPool
@@ -245,6 +246,8 @@ def main():
                 steps_left = max((env.steps_left() + 1) * model.action_skip // cfg.frameskip, 1)
                 progress[name].start(f"ep {ep:03d} [{name}] replan {replans}")
                 if name == "wm":
+                    if replans == 0 and isinstance(agent.objective, HeadChangeObjective):  # the change term needs the start frame
+                        agent.objective.set_start(model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True))
                     a = agent.act(prepare_obs(obs_type, td), steps_left=steps_left)
                     cem_final.append(float(agent._prev_losses.squeeze(-1)[-1]))
                 else:
