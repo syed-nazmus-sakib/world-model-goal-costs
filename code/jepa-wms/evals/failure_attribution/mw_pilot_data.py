@@ -80,8 +80,10 @@ def main():
     parser.add_argument("--walk_every", type=int, default=2, help="a walk frame every this many chunks")
     parser.add_argument("--jitter", type=int, default=0,
                         help="near-goal coverage (kind 4): random action sequences per start point along the expert path after contact (0: none)")
-    parser.add_argument("--jitter_chunks", type=int, default=2, help="jitter length in planner chunks; a frame after every chunk")
-    parser.add_argument("--jitter_starts", type=int, default=6, help="start points from 2 steps before contact to the end of the path")
+    parser.add_argument("--jitter_chunks", type=int, default=3, help="jitter length in planner chunks; a frame after every chunk")
+    parser.add_argument("--jitter_starts", type=int, default=7, help="start points: 3 before contact (12, 8, 4 steps), the rest to the end")
+    parser.add_argument("--jitter_drift", type=float, default=0.4, help="constant per-sequence drift (normalized units) on the xyz entries")
+    parser.add_argument("--jitter_grip", type=float, default=1.5, help="constant per-sequence open-or-close command on the gripper entries")
     args = parser.parse_args()
     if args.robot_mask:
         from evals.failure_attribution.cost_share_mw import patch_mask
@@ -201,13 +203,24 @@ def main():
             # states between 2 steps before contact and the end of the path. The hand stays near the goal pose while the gripper,
             # the height and the object state vary: the terminal configurations the planner exploited with the walks-only head
             # (button: hand at the goal pose, gripper open around the button, button unpressed, priced as success)
+            # Per-step N(0, 1) actions from post-contact states left the gripper where the expert had it (button: closed, pressed
+            # in 83% of frames, never the open gripper around an unpressed button), so each sequence carries a constant drift: small
+            # in xyz (jitter_drift), and on the gripper entries a fixed open-or-close command (±jitter_grip), from 3 pre-contact
+            # starts (12, 8, 4 steps before contact) and the rest spread over the post-contact path.
             if args.jitter > 0:
                 T_end = len(snaps) - 1
-                base = max(0, contact - 2) if contact is not None else T_end // 2
-                j_starts = sorted({int(round(x)) for x in np.linspace(base, T_end, args.jitter_starts)})
+                if contact is None:
+                    j_starts = sorted({int(round(x)) for x in np.linspace(T_end // 2, T_end, args.jitter_starts)})
+                else:
+                    pre = [max(0, contact - k) for k in (12, 8, 4)]
+                    post = [int(round(x)) for x in np.linspace(contact, T_end, max(1, args.jitter_starts - 3))]
+                    j_starts = sorted(set(pre + post))
                 Kj, Hj, d = args.jitter, args.jitter_chunks, model.action_dim
+                grip_idx = torch.arange(3, d, 4, device=device)  # gripper entries of the (frameskip, 4) action layout
                 for si, s in enumerate(j_starts):
-                    seq = torch.randn(Hj, Kj, d, device=device)
+                    drift = args.jitter_drift * torch.randn(1, Kj, d, device=device)
+                    drift[..., grip_idx] = args.jitter_grip * (torch.randint(0, 2, (1, Kj, 1), device=device).float() * 2 - 1)
+                    seq = 0.4 * torch.randn(Hj, Kj, d, device=device) + drift
                     for n in range(1, Hj + 1):
                         states, frames = pool.rollout((task, snaps[s], False), unroll.env_actions(seq[:n]), True)
                         add(flat(unroll.encode_final(states, frames)), states, 4, s + n * fs, -1, si)
