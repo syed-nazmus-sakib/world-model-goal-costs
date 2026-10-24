@@ -428,3 +428,69 @@ class LearnedHeadMPCObjective:
         if not keepdims:
             return diff.sum(0) if self.sum_all_diffs else diff[-1]
         return diff.cumsum(0).flip(0) if self.sum_all_diffs else diff
+
+
+class HeadChangeObjective:
+    """Approach-aware head + robot-free change term (2026-10-24, from the H3 closed loops).
+
+    The ensemble rtc head (walks + pessimism) brought the hand to the object in all 24 button and push episodes but, like the
+    released cost, is arm-dominated once there: button b1 ep 006 ends 1 cm from the goal hand with the button unpressed at
+    cost 0.031, below the 0.047 of a pressed state (ep 002); push ends with the hand at the goal hand and the puck 5-10 cm
+    off. The change term of the reach-then-change oracle (Stage 1: button 12/12, push 7/12 with oracle reach) resolves the
+    object state: squared feature difference to the goal over the patches that show the robot in neither the start, the goal
+    nor the candidate frame (PatchRobotHead mask), divided by the same quantity at the episode start (same mask), so it runs
+    from ~1 (nothing changed) to ~0 (goal appearance).
+
+        cost(z) = head(z) + lam * rf(z) / rf(z0)
+
+    The head dominates the approach phase (0.3-8 against lam * ~1) and the change term decides where the head is flat (< 0.1
+    near the goal hand). No detection, no localisation and no switch: the two terms are simply added."""
+
+    def __init__(self, cfg, target_enc: TensorDict, head_path: str, robot_path: str, beta: float = 1.0, lam: float = 0.5, **kwargs):
+        from evals.failure_attribution.mw_robot_map import PatchRobotHead
+
+        self.head = LearnedHeadMPCObjective(cfg, target_enc, head_path, beta=beta)
+        ck = torch.load(robot_path, map_location="cpu")
+        self.rhead = PatchRobotHead(ck["d_in"], ck["mode"])
+        self.rhead.load_state_dict(ck["state_dict"])
+        self.device = target_enc["visual"].device
+        self.rhead = self.rhead.to(self.device).eval().requires_grad_(False)
+        self.lam = float(lam)
+        self.g = ReachThenChangeImage._flat(target_enc)[0]  # (P, D)
+        self.rg = self.rhead.robot_prob(self.g[None])[0] > 0.5
+        self.z0, self.robot0, self.info, self._dbg = None, None, {}, False
+
+    def set_camera(self, *args, **kwargs):  # no geometry here (run_closed calls it before set_start)
+        pass
+
+    @torch.no_grad()
+    def set_start(self, z0_enc, hand0=None, **kwargs):
+        self.z0 = ReachThenChangeImage._flat(z0_enc)[0]
+        self.robot0 = self.rhead.robot_prob(self.z0[None])[0] > 0.5
+        m = ~(self.rg | self.robot0)
+        self.info = {"n_robot_start": int(self.robot0.sum()), "n_robot_goal": int(self.rg.sum()),
+                     "rf0": float((self.z0 - self.g).pow(2).sum(-1)[m].mean()) if m.any() else 0.0, "lam": self.lam}
+        self._dbg = False
+
+    @torch.no_grad()
+    def rf(self, z):
+        """(B, P, D) -> (B,): robot-free squared difference to the goal, relative to the start under the same mask"""
+        robot = self.rhead.robot_prob(z) > 0.5
+        m = ((~robot) & (~self.rg[None]) & (~self.robot0[None])).float()
+        cur = ((z - self.g[None]).pow(2).sum(-1) * m).sum(-1) / m.sum(-1).clamp_min(1.0)
+        ref = ((self.z0 - self.g)[None].pow(2).sum(-1) * m).sum(-1) / m.sum(-1).clamp_min(1.0)
+        return cur / ref.clamp_min(1e-8)
+
+    def __call__(self, encodings, actions, keepdims: bool = False):
+        h = self.head(encodings, actions, keepdims)
+        if keepdims or self.robot0 is None:
+            return h
+        z = ReachThenChangeImage._flat(encodings)
+        if len(z) != h.shape[-1]:  # more than one frame per rollout: the head alone (sim_latent encodes the final frame only)
+            return h
+        r = self.rf(z)
+        if not self._dbg:
+            self._dbg = True
+            print(f"  [head+rf] B={len(z)} head min={float(h.min()):.3g} med={float(h.median()):.3g} max={float(h.max()):.3g} | "
+                  f"rf min={float(r.min()):.3g} med={float(r.median()):.3g} max={float(r.max()):.3g}", flush=True)
+        return h + self.lam * r

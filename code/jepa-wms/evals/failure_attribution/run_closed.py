@@ -192,6 +192,13 @@ def main():
             parts = args.cost.split(":")
             agent.objective = TempoMixObjective(cfg, target_enc=agent.goal_state_enc, map_path=parts[1], w=float(parts[2]) if len(parts) > 2 else 0.5)
             agent.planner.set_objective(agent.objective)
+        elif args.cost.startswith("headrf:"):  # head + robot-free change term: headrf:<head.pt>:<robot.pt>[:beta[:lam]] (costs.HeadChangeObjective)
+            from evals.failure_attribution.costs import HeadChangeObjective
+
+            parts = args.cost.split(":")
+            agent.objective = HeadChangeObjective(cfg, target_enc=agent.goal_state_enc, head_path=parts[1], robot_path=parts[2],
+                                                  beta=float(parts[3]) if len(parts) > 3 else 1.0, lam=float(parts[4]) if len(parts) > 4 else 0.5)
+            agent.planner.set_objective(agent.objective)
         elif args.cost.startswith("head:"):  # learned goal cost head:<pt>[:beta] (mw_head_train.py / mw_pilot_heads.py)
             from evals.failure_attribution.costs import LearnedHeadMPCObjective
 
