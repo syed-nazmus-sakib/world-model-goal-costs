@@ -299,8 +299,24 @@ and 2 steps before contact and along the post-contact path: 10 short action sequ
 open-or-close gripper command (2 chunks hovering, then 3 chunks of xyz drift, a frame after each), so that gripper, height
 and object state vary at the goal pose and the exploited configurations get labels. The 3-member ensemble is retrained on
 expert + candidates (1 in 3) + walks + jitter; closed loops head + rf and head alone on button, push, drawer-open,
-plate-slide, then head + rf on the other four. Two earlier jitter designs (per-step noise from post-contact states;
-one-phase drift) produced no open-gripper-unpressed frame on button and were discarded before training. Rule unchanged.
+plate-slide, then head + rf on the other four. Rule unchanged.
+
+Six jitter designs were checked on the first training episode before any training (per-step noise from post-contact states;
+one-phase random drift; two-phase hold-then-drift; aimed at the goal hand from pre-contact states, 1 cm lateral spread, longer
+descent; aimed from the episode start at full speed). None reproduced the button exploit (0-8 of ~200 near-goal frames with
+the button unpressed): a top-down descent presses the plunger even with the fingers fully open, and the straight line from
+the episode start is blocked by the button box 14 cm short. **The planner itself arrives at the goal height laterally**, so
+the plunger ends between the open fingers. Hand-designed perturbations do not find the planner's blind spots; the planner
+does.
+
+**Fix 3b (H5 → H6 queues, `run_closed --ep_start 100 --dump_dir`, `mw_merge_planner_frames.py`): the planner's own frames.**
+The deployed cost (ensemble head + rf) is run on the 12 *training* episodes of button and push (exact dynamics); at every
+replan the executed frame (kind 5) and 32 of the final CEM population (kind 6, the states the cost actually prices) are saved
+with their simulator labels and merged with the expert and goal frames of the same pilot episodes. On the first push
+training episode 181 of 181 near-goal candidates are "hand at the goal hand, puck off"; on the first button episode (which
+the planner solved) 5 of 133. The next ensemble (H6) trains on expert + candidates (1 in 3) + walks + aimed jitter + planner
+frames; closed loops head + rf and head alone on button and push, head + rf on the other six. This is one round of
+iterated cost learning on the planner's visited states, with privileged labels at training time only, as before.
 
 ## What the results say
 
