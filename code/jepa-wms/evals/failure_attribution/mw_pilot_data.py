@@ -80,7 +80,7 @@ def main():
     parser.add_argument("--walk_every", type=int, default=2, help="a walk frame every this many chunks")
     parser.add_argument("--jitter", type=int, default=0,
                         help="near-goal coverage (kind 4): random action sequences per start point along the expert path after contact (0: none)")
-    parser.add_argument("--jitter_chunks", type=int, default=10, help="longest aimed sequence in planner chunks (shorter when the goal is near)")
+    parser.add_argument("--jitter_chunks", type=int, default=14, help="longest aimed sequence in planner chunks (shorter when the goal is near)")
     parser.add_argument("--jitter_starts", type=int, default=8,
                         help="start points: the episode start, 24/12/6/2 steps before contact, the rest spread over the post-contact path")
     parser.add_argument("--jitter_hold", type=int, default=2, help="chunks of gripper command with the hand hovering before the drift")
@@ -236,8 +236,12 @@ def main():
                     offs[:, 2] = 0.0
                     offs[: max(1, Kj // 3)] = 0.0
                     dist = float(np.linalg.norm(gh_env - hand_s))
-                    Hj = int(np.clip(np.ceil(dist / (fs * 0.0085)), 2, args.jitter_chunks))  # chunks to arrive at ~0.85 cm per step
-                    vel = np.clip((gh_env[None] + offs - hand_s[None]) / (Hj * fs * 0.01), -1.0, 1.0)  # env units: 1 cm per step
+                    # the mocap arm realises about half of a 1 cm/step command on long moves (0.37-0.5 cm/step measured), so the
+                    # sequence is planned at 0.5 cm/step and the command is scaled to full speed on its largest component
+                    Hj = int(np.clip(np.ceil(dist / (fs * 0.005)), 2, args.jitter_chunks))
+                    delta = gh_env[None] + offs - hand_s[None]
+                    vel = delta / np.maximum(np.abs(delta).max(1, keepdims=True), 1e-6)  # env units, largest component = 1 cm per step
+                    vel = vel * np.minimum(1.0, np.abs(delta).max(1, keepdims=True) / (Hj * fs * 0.005))
                     grip_env = rng_j.integers(0, 2, Kj) * 2.0 - 1.0  # open (-1) or close (+1), constant per sequence
                     Hd = Hj + 1  # one chunk beyond the arrival: keeps pushing toward the target
                     env_seq = np.zeros((Ha * fs + Hd * fs, Kj, 4), np.float32)
