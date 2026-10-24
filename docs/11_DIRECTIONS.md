@@ -36,10 +36,12 @@ and the same supervision as the competing paper.
 | # | Direction | Status | Next step | Decision rule |
 |---|---|---|---|---|
 | 1 | State head on all 9 Metaworld tasks (closed loop) | **done: FAIL** (wins 1 of 8, reach-wall 23/24 → 7/12; docs/10) | keep as evidence that ranking is not the bottleneck on Metaworld | was: ≥ 3/12 better on ≥ 4 of 8 object tasks, controls ≥ 10/12 |
-| 2 | Baselines for the paper | to do | TEMPO released code; released + min; *Supervise What Decides Success* if code exists | report all on the same goals |
+| 2 | Baselines for the paper | **TEMPO re-implemented on our Metaworld encodings** (`mw_tempo_train.py`, `--cost tempo:<map>:<w>`, w = 0.5 and 1; offline map only), running 2026-10-24 on the same 8 tasks and episodes; released + min done | run; later TEMPO's own code on LeWM Cube / PushT | report all on the same goals |
 | 3 | **Reach-then-change cost** (approach phase; docs/10 last section) | **Stage 1 PASSED** (2026-10-23): robot-free change term + oracle reach: button 12/12, push 7/12, drawer-open 6/12, fallback 12/12 (released 0/12). Stage 2 (images only) reached through 11 smoke iterations (table in docs/10): button pressed 4.6 cm and push pushed 7.6 cm in single episodes; 12-episode runs on 8 tasks started 2026-10-24 01:12 UTC on pod K | run the Stage 2 smoke and 12 episodes on button / push / drawer-open; fix drawer-open's reach release | Stage 2 PASS: ≥ 4/12 on ≥ 2 tasks |
-| 4 | Fewer labels | open | state head with 10% / 1% of labelled frames, rest time-only | within 2/12 of the full state head |
-| 5 | Paired statistics | to do | save per-episode success, McNemar / bootstrap over goals | – |
+| 4 | **Approach-aware learned head (rtc)**: one head across 8 tasks, target = hand-to-object distance until the object moves, then the success distance (labels at training time only) | running 2026-10-24 (`run_mw_rtc_head.sh`) | closed loop 8 tasks; state head as the ablation | PASS: ≥ 6/12 on ≥ 4 of 7 object tasks, controls ≥ 10/12 |
+| 5 | Does the structure hold outside Metaworld? LeWM PushT with the reach-then-change oracle (`oracle_cost.py` modes `sim_latent_reach`, `sim_true_reach`) | running 2026-10-24, offset 75, 50 goals | compare with released 20%, released + min 40%, sim_true | ≥ 10 points over sim_true or over released + min |
+| 6 | Fewer labels | open | rtc head with 10% / 1% of labelled frames | within 2/12 of the full head |
+| 7 | Paired statistics | to do | save per-episode success, McNemar / bootstrap over goals | – |
 
 ## 3. Closed directions (do not reopen without new evidence)
 
