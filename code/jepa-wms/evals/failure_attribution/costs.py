@@ -305,10 +305,15 @@ class ReachThenChangeImage:
         if self.obj3d is not None:  # calibrated camera: 3D distance from the hand (own sensor) to the lifted change centroid
             hand = torch.from_numpy(np.asarray(self.unroll.last_states)[:len(z), :3]).to(self.device).float()
             raw = (hand - self.obj3d).norm(dim=-1)
-            rn = 0.08 if self.rf else 0.06  # localization error of the lift plus the hand's stand-off at the object
+            rn = 0.04 if self.rf else 0.06  # stand-off at the object estimate (4 cm: within one planning step of the object)
             reach = (raw - rn).clamp_min(0.0)
             near = raw < rn  # the hand is at the object: the change term decides from here on
             moved = near if self.rf else (moved | near)  # image progress gates are fooled by arm shadows: rf uses geometry only
+            if self.disc and self.verify_replans > 0 and getattr(self, "gh", None) is not None:
+                # v3: in the goal-hand fallback nothing but the robot's contact region changes between start and goal, so the goal
+                # hand pose is the task; the second phase is the distance to it (the latent term on the contact disc barely
+                # separates "pressed" from "touching": v2 smoke 0/3 on button after reaching it)
+                change_term = (hand - torch.from_numpy(self.gh).to(self.device).float()).norm(dim=-1)
         else:  # image only: the arm's new footprint on the patch grid
             dist = (self.grid[None] - self.cent).norm(dim=-1).expand(len(z), -1)
             reach = torch.where(new, dist, torch.full_like(dist, float(self.grid.shape[0]))).min(-1).values
