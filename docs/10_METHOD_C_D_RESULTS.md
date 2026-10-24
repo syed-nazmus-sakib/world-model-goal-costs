@@ -280,7 +280,27 @@ cost = head(z) + λ · rf(z) / rf(z₀), where rf is the squared feature differe
 robot in neither the start, the goal nor the candidate frame (the image robot mask), divided by the same quantity at the
 episode start. The head dominates the approach (0.3-8 against λ ≈ 0.5), the change term decides where the head is flat
 (< 0.1 near the goal hand; the term runs from ~1 to ~0.3). No detection, no localisation (the parts of the image pipeline
-that failed), no switch. Running on button and push first, then the other 6 tasks. Rule unchanged.
+that failed), no switch. Offline on held-out episodes the premise holds: near the goal the change term is 0.07-0.12 for
+pressed states and 0.36-0.56 for unpressed ones (head 0.05 against 1.4-4.8 on the same, in-distribution, candidates).
+
+**Result (12 episodes): button 0/12, push 5/11** (the 12th push episode hit the 2 h limit with five loops sharing the GPU;
+ensemble alone 3/12). On push the change term does what it should: with the hand at the goal hand in every episode, the
+puck ends within the 5 cm threshold in 5 of 11 and at 5-6 cm in 2 more. On button it changes nothing, for a reason the
+Stage 1 oracle could not show. In all 12 episodes the hand reaches the goal pose (0.6-3.9 cm) with the **gripper open
+(0.43-0.80, against 0.30 at the goal)**: the fingers straddle the button and the hand descends to the goal height without
+pressing it (button top 6 cm above the hand). Hidden under the arm, the button is in no robot-free patch, so the change
+term has nothing to see it with: final cost 0.036 for an unpressed state and 0.036 for a nearly pressed one. The oracle's
+robot-free renders saw through the arm; the image mask cannot. The head has the gripper opening as an input but never saw
+an open gripper at the goal pose over an unpressed button: that configuration is neither on the expert path nor among the
+walk frames (walks start 4 steps before contact and are sampled every 10 steps).
+
+**Fix 3 (H4 queue, `mw_pilot_data --jitter`): near-goal coverage.** Kind 4 frames from the expert's own states 10, 6, 4
+and 2 steps before contact and along the post-contact path: 10 short action sequences per start, each with a constant
+open-or-close gripper command (2 chunks hovering, then 3 chunks of xyz drift, a frame after each), so that gripper, height
+and object state vary at the goal pose and the exploited configurations get labels. The 3-member ensemble is retrained on
+expert + candidates (1 in 3) + walks + jitter; closed loops head + rf and head alone on button, push, drawer-open,
+plate-slide, then head + rf on the other four. Two earlier jitter designs (per-step noise from post-contact states;
+one-phase drift) produced no open-gripper-unpressed frame on button and were discarded before training. Rule unchanged.
 
 ## What the results say
 
