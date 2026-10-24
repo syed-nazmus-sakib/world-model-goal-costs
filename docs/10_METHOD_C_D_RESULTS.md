@@ -319,6 +319,25 @@ the planner solved) 5 of 133. The next ensemble (H6) trains on expert + candidat
 frames; closed loops head + rf and head alone on button and push, head + rf on the other six. This is one round of
 iterated cost learning on the planner's visited states, with privileged labels at training time only, as before.
 
+**Result (H6, 12 episodes, exact dynamics, 2026-10-24 15:45 pod time). Head + rf: button 3/12, push 7/12, drawer-open
+10/12, plate-slide 11/12, faucet-open 2/12** (window-open and the two controls running). **Head alone, same ensemble, no
+change term: button 2/12, push 10/12.** Previous round (head + rf without planner frames): 0, 5/11, 3, 6. Every task that
+supplied planner frames went up; faucet-open, which had jitter frames but no planner frames (dumps were run on four tasks),
+went 0 → 2. Three object tasks are now at or above the 6/12 bar (push, drawer-open, plate-slide); the pre-stated rule needs
+four of seven. Training set 148,518 frames (expert 28.8k, goal 2.4k, candidates 25.2k at 1 in 3, walks 40.3k, jitter 40.7k
+over 6 tasks, planner frames 384 executed + 10,752 candidates from 4 tasks × 12 training episodes); 23 min; offline ranking
+unchanged (0.86-1.00).
+
+- Button: the three successes all end with the gripper closed (0.32-0.34 against 0.30 at the goal); the nine failures end
+  with it open (0.34-0.82) at final cost 0.17-1.0, against 0.006-0.13 for the successes. The cost now prices the exploited
+  configuration above the pressed one, which it did not before (0.036 for both); the search still ends there in nine
+  episodes, four of them 3.2-3.6 cm from the target. A second planner-frame round on the new cost is the obvious next step.
+- Push: head alone 10/12 against head + rf 7/12. With the planner's "hand at goal, puck off" frames in the data the head
+  resolves the terminal state by itself, and the change term (λ = 0.5, fixed before the run) now costs episodes; the
+  difference is within noise at n = 12 but makes λ the first ablation to run.
+- Drawer-open 3 → 10 and plate-slide 6 → 11 with the same change term as before: the planner frames gave the head labels
+  for "handle pulled 13-16 cm, 3-7 cm short", which the walks did not contain.
+
 ## What the results say
 
 1. **The learned cost helps where the released distance contradicts task progress in a way the data shows.**
