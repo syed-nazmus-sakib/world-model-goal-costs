@@ -16,6 +16,11 @@ They differ only in what supervision they get (training episodes only):
   evid       weak task evidence: a budget of --n_pos success frames and --n_neg near-miss frames
              (1 < obj_to_target / threshold < 3); success frames pulled onto f(g), near misses pushed beyond a margin.
   evid_time  both losses (Method D: "what counts as done" from evidence, "how to get there" from time).
+  rtc        approach-aware (2026-10-24, from the Stage 1 oracle result): ||f(z) - f(g)|| regresses
+             log(1 + d_task(z)) once the object has moved (> 2 mm from its start), and
+             log(1 + d_task(start) + hand-to-object distance / 2 cm) before: dense in the approach phase, never below the
+             start's task distance there, so the structure "reach the object, then change it" is learned, not hand-coded.
+             Privileged states at training time only. Trained across tasks (one head) when several --train_dirs are given.
 
 Offline test on held-out episodes, per candidate set (one start point of one episode; sets where no candidate changes
 the true cost are skipped):
@@ -45,12 +50,28 @@ from evals.failure_attribution.mw_head_train import PatchHead
 from evals.failure_attribution.mw_sim import SUCCESS_THRESHOLD
 
 
-def load(d):
-    out = {k: [] for k in ("vis", "prop", "state", "kind", "t", "var", "start", "ep")}
-    for i, f in enumerate(sorted(glob.glob(os.path.join(d, "ep_*.npz")))):
-        z = np.load(f)
-        for k in out:
-            out[k].append(np.full(len(z["kind"]), i) if k == "ep" else z[k])
+def load(dirs, tasks=None):
+    """One or several pilot-data dirs (aligned with task names) -> dict; ep is unique across dirs, thr is per frame."""
+    dirs = [dirs] if isinstance(dirs, str) else list(dirs)
+    tasks = [tasks] if isinstance(tasks, str) else (list(tasks) if tasks else [None] * len(dirs))
+    out = {k: [] for k in ("vis", "prop", "state", "kind", "t", "var", "start", "ep", "thr", "task")}
+    n_ep = 0
+    for di, (d, task) in enumerate(zip(dirs, tasks)):
+        thr = SUCCESS_THRESHOLD.get(task, 0.05)
+        files = sorted(glob.glob(os.path.join(d, "ep_*.npz")))
+        for i, f in enumerate(files):
+            z = np.load(f)
+            n = len(z["kind"])
+            for k in out:
+                if k == "ep":
+                    out[k].append(np.full(n, n_ep + i))
+                elif k == "thr":
+                    out[k].append(np.full(n, thr, dtype=np.float32))
+                elif k == "task":
+                    out[k].append(np.full(n, di))
+                else:
+                    out[k].append(z[k])
+        n_ep += len(files)
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
@@ -60,7 +81,16 @@ def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
     vis = torch.from_numpy(D["vis"]).to(dev)
     prop = torch.from_numpy(D["prop"]).to(dev)
     ep, kind, t, st = D["ep"], D["kind"], D["t"], D["state"]
+    thr = D["thr"] if "thr" in D else np.full(len(st), thr, dtype=np.float32)
     y_succ = np.log1p(st[:, 40] / thr).astype(np.float32)
+    # approach-aware target: before the object moves, start task distance + hand-to-object distance (2 cm units)
+    first = {e: np.nonzero((ep == e) & (kind == 0))[0] for e in np.unique(ep)}
+    first = {e: ix[np.argmin(t[ix])] for e, ix in first.items() if len(ix)}
+    obj0 = np.stack([st[first[e], 4:7] for e in ep])
+    d_start = np.array([st[first[e], 40] for e in ep]) / thr
+    moved = np.linalg.norm(st[:, 4:7] - obj0, axis=1) > 0.002
+    hand_obj = np.linalg.norm(st[:, :3] - st[:, 4:7], axis=1)
+    y_rtc = np.where(moved, np.log1p(st[:, 40] / thr), np.log1p(d_start + hand_obj / 0.02)).astype(np.float32)
     goals_of = {e: np.nonzero((ep == e) & (kind == 1))[0] for e in np.unique(ep)}
     expert_of = {e: np.nonzero((ep == e) & (kind == 0))[0] for e in np.unique(ep)}
     labelled = np.nonzero(kind != 1)[0]
@@ -85,9 +115,10 @@ def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
 
     for step in range(steps):
         loss = 0.0
-        if mode == "state":
+        if mode in ("state", "rtc"):
             a = rng.choice(labelled, size=B)
-            loss = F.smooth_l1_loss(dist(a, goal_for(a)), torch.from_numpy(y_succ[a]).to(dev))
+            y = y_succ if mode == "state" else y_rtc
+            loss = F.smooth_l1_loss(dist(a, goal_for(a)), torch.from_numpy(y[a]).to(dev))
         if mode in ("time", "evid_time"):
             e = rng.choice(list(expert_of), size=B)
             a, g, gap = [], [], []
@@ -188,11 +219,11 @@ def evaluate(T, cost_fns, thr):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--train_dir", required=True)
-    ap.add_argument("--test_dir", required=True)
-    ap.add_argument("--task", required=True)
+    ap.add_argument("--train_dir", nargs="+", required=True, help="one or several pilot-data dirs (one head for all)")
+    ap.add_argument("--test_dir", nargs="+", required=True, help="aligned with --task; offline tables per task")
+    ap.add_argument("--task", nargs="+", required=True, help="dataset task names (mw-...), aligned with --train_dir")
     ap.add_argument("--out_dir", required=True)
-    ap.add_argument("--modes", default="state,time,evid,evid_time")
+    ap.add_argument("--modes", default="rtc,state")
     ap.add_argument("--steps", type=int, default=6000)
     ap.add_argument("--n_pos", type=int, default=64)
     ap.add_argument("--n_neg", type=int, default=64)
@@ -201,12 +232,10 @@ def main():
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
     dev = "cuda"
-    thr = SUCCESS_THRESHOLD.get(args.task, 0.05)
-    D, T = load(args.train_dir), load(args.test_dir)
-    print(f"train {len(D['kind'])} frames / {len(np.unique(D['ep']))} eps, test {len(T['kind'])} / {len(np.unique(T['ep']))}; "
+    thr = SUCCESS_THRESHOLD.get(args.task[0], 0.05)
+    D = load(args.train_dir, args.task)
+    print(f"train {len(D['kind'])} frames / {len(np.unique(D['ep']))} eps from {len(args.train_dir)} task(s); "
           f"train success frames {int((D['state'][:, 39] > 0.5).sum())}", flush=True)
-    cost_fns = {"released_a0": lambda gi: released(T["vis"], T["prop"], gi, 0.0, dev),
-                "released_a0.1": lambda gi: released(T["vis"], T["prop"], gi, 0.1, dev)}
     heads, info = {}, {}
     if args.c_head:
         ck = torch.load(args.c_head, map_location="cpu")
@@ -220,19 +249,28 @@ def main():
                     "d_prop": D["prop"].shape[1], "mode": mode, "task": args.task, "info": info[mode]},
                    os.path.join(args.out_dir, f"head_{mode}.pt"))
         print(mode, json.dumps(info[mode]), flush=True)
-    for name, h in heads.items():
-        E = embed(h, T["vis"], T["prop"], dev)
-        cost_fns[name] = (lambda E: lambda gi: (E - E[gi]).pow(2).sum(-1).cpu().numpy())(E)
-    res = evaluate(T, cost_fns, thr)
-    json.dump({"task": args.task, "args": vars(args), "train_info": info, "results": res}, open(os.path.join(args.out_dir, "offline.json"), "w"), indent=1)
-    print(f"{'cost':<14}{'goal':<10}{'sets':>5}{'acc':>7}{'rho':>7}{'regret':>8}{'top1':>6}{'any':>6}{'decoy':>7}")
-    for name, r in res.items():
-        for gk in ("eval_goal", "arm_moved"):
-            if gk in r:
-                m = r[gk]
-                dec = r["decoy"]["pref_success"] if gk == "eval_goal" else None
-                print(f"{name:<14}{gk:<10}{m['n_sets']:>5}{m['acc']:>7.3f}{m['spearman']:>7.3f}{m['regret']:>8.2f}{m['top1']:>6.2f}"
-                      f"{m['any']:>6.2f}{(f'{dec:.2f}' if dec is not None else '-'):>7}")
+    all_res = {}
+    for test_dir, task in zip(args.test_dir, args.task):
+        T = load(test_dir, task)
+        thr = SUCCESS_THRESHOLD.get(task, 0.05)
+        cost_fns = {"released_a0": lambda gi, T=T: released(T["vis"], T["prop"], gi, 0.0, dev),
+                    "released_a0.1": lambda gi, T=T: released(T["vis"], T["prop"], gi, 0.1, dev)}
+        for name, h in heads.items():
+            E = embed(h, T["vis"], T["prop"], dev)
+            cost_fns[name] = (lambda E: lambda gi: (E - E[gi]).pow(2).sum(-1).cpu().numpy())(E)
+        res = evaluate(T, cost_fns, thr)
+        all_res[task] = res
+        print(f"== {task}: test {len(T['kind'])} frames / {len(np.unique(T['ep']))} eps")
+        print(f"{'cost':<14}{'goal':<10}{'sets':>5}{'acc':>7}{'rho':>7}{'regret':>8}{'top1':>6}{'any':>6}{'decoy':>7}")
+        for name, r in res.items():
+            for gk in ("eval_goal", "arm_moved"):
+                if gk in r:
+                    m = r[gk]
+                    dec = r["decoy"]["pref_success"] if gk == "eval_goal" else None
+                    print(f"{name:<14}{gk:<10}{m['n_sets']:>5}{m['acc']:>7.3f}{m['spearman']:>7.3f}{m['regret']:>8.2f}{m['top1']:>6.2f}"
+                          f"{m['any']:>6.2f}{(f'{dec:.2f}' if dec is not None else '-'):>7}")
+    json.dump({"tasks": args.task, "args": vars(args), "train_info": info, "results": all_res},
+              open(os.path.join(args.out_dir, "offline.json"), "w"), indent=1)
 
 
 if __name__ == "__main__":
