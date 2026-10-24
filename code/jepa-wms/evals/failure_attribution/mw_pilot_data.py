@@ -80,9 +80,11 @@ def main():
     parser.add_argument("--walk_every", type=int, default=2, help="a walk frame every this many chunks")
     parser.add_argument("--jitter", type=int, default=0,
                         help="near-goal coverage (kind 4): random action sequences per start point along the expert path after contact (0: none)")
-    parser.add_argument("--jitter_chunks", type=int, default=3, help="jitter length in planner chunks; a frame after every chunk")
-    parser.add_argument("--jitter_starts", type=int, default=7, help="start points: 3 before contact (12, 8, 4 steps), the rest to the end")
-    parser.add_argument("--jitter_drift", type=float, default=0.4, help="constant per-sequence drift (normalized units) on the xyz entries")
+    parser.add_argument("--jitter_chunks", type=int, default=10, help="longest aimed sequence in planner chunks (shorter when the goal is near)")
+    parser.add_argument("--jitter_starts", type=int, default=8,
+                        help="start points: the episode start, 24/12/6/2 steps before contact, the rest spread over the post-contact path")
+    parser.add_argument("--jitter_hold", type=int, default=2, help="chunks of gripper command with the hand hovering before the drift")
+    parser.add_argument("--jitter_drift", type=float, default=0.6, help="constant per-sequence drift (normalized units) on the xyz entries")
     parser.add_argument("--jitter_grip", type=float, default=1.5, help="constant per-sequence open-or-close command on the gripper entries")
     args = parser.parse_args()
     if args.robot_mask:
@@ -207,21 +209,44 @@ def main():
             # in 83% of frames, never the open gripper around an unpressed button), so each sequence carries a constant drift: small
             # in xyz (jitter_drift), and on the gripper entries a fixed open-or-close command (±jitter_grip), from 3 pre-contact
             # starts (12, 8, 4 steps before contact) and the rest spread over the post-contact path.
+            # Two phases per sequence (the one-phase drift still pressed the button whenever the hand reached the goal height: the
+            # gripper had not opened by then): `jitter_hold` chunks of gripper command with the hand hovering, then `jitter_chunks`
+            # chunks of xyz drift with the same gripper command, so an open gripper can descend around the button.
+            # Aimed sequences (2026-10-24, three designs discarded before training): from the episode start and from states along
+            # the expert path, a constant env-space velocity straight to the goal hand position (plus N(0, 1 cm) lateral offset),
+            # i.e. the planner's own straight-line path, with each gripper command held constant (open or close). Random drifts
+            # and top-down descents from the expert's pre-contact states never produced the exploited configuration (button:
+            # the planner arrives at the goal height *laterally*, so the unpressed plunger sits between the open fingers; a
+            # descent from above presses it even with the fingers open). Frames: one mid-way and the last four chunks (arrival,
+            # one chunk beyond it), so the near-goal configurations get their labels.
             if args.jitter > 0:
                 T_end = len(snaps) - 1
                 if contact is None:
-                    j_starts = sorted({int(round(x)) for x in np.linspace(T_end // 2, T_end, args.jitter_starts)})
+                    j_starts = sorted({int(round(x)) for x in np.linspace(0, T_end, args.jitter_starts)})
                 else:
-                    pre = [max(0, contact - k) for k in (12, 8, 4)]
-                    post = [int(round(x)) for x in np.linspace(contact, T_end, max(1, args.jitter_starts - 3))]
+                    pre = [0] + [max(0, contact - k) for k in (24, 12, 6, 2)]
+                    post = [int(round(x)) for x in np.linspace(contact, T_end, max(1, args.jitter_starts - 5))]
                     j_starts = sorted(set(pre + post))
-                Kj, Hj, d = args.jitter, args.jitter_chunks, model.action_dim
-                grip_idx = torch.arange(3, d, 4, device=device)  # gripper entries of the (frameskip, 4) action layout
+                Kj, Ha, d = args.jitter, args.jitter_hold, model.action_dim
+                gh_env = np.asarray(goal_states[0][:3], dtype=np.float64)  # the expert's final hand position (goal proprio)
+                rng_j = np.random.default_rng(1000 + ep)
                 for si, s in enumerate(j_starts):
-                    drift = args.jitter_drift * torch.randn(1, Kj, d, device=device)
-                    drift[..., grip_idx] = args.jitter_grip * (torch.randint(0, 2, (1, Kj, 1), device=device).float() * 2 - 1)
-                    seq = 0.4 * torch.randn(Hj, Kj, d, device=device) + drift
-                    for n in range(1, Hj + 1):
+                    hand_s = ex_states[int(np.argmin(np.abs(np.asarray(ex_t) - s))), :3].astype(np.float64)
+                    offs = rng_j.normal(0.0, 0.01, (Kj, 3))  # 1 cm lateral spread; a third of the sequences exactly centred
+                    offs[:, 2] = 0.0
+                    offs[: max(1, Kj // 3)] = 0.0
+                    dist = float(np.linalg.norm(gh_env - hand_s))
+                    Hj = int(np.clip(np.ceil(dist / (fs * 0.0085)), 2, args.jitter_chunks))  # chunks to arrive at ~0.85 cm per step
+                    vel = np.clip((gh_env[None] + offs - hand_s[None]) / (Hj * fs * 0.01), -1.0, 1.0)  # env units: 1 cm per step
+                    grip_env = rng_j.integers(0, 2, Kj) * 2.0 - 1.0  # open (-1) or close (+1), constant per sequence
+                    Hd = Hj + 1  # one chunk beyond the arrival: keeps pushing toward the target
+                    env_seq = np.zeros((Ha * fs + Hd * fs, Kj, 4), np.float32)
+                    env_seq[..., 3] = grip_env[None]
+                    env_seq[Ha * fs :, :, :3] = vel[None]
+                    norm = agent.preprocessor.normalize_actions(torch.from_numpy(env_seq.reshape(-1, 4))).reshape(Ha + Hd, fs, Kj, 4)
+                    seq = norm.permute(0, 2, 1, 3).reshape(Ha + Hd, Kj, d).to(device).float() + 0.3 * torch.randn(Ha + Hd, Kj, d, device=device)
+                    frames_at = sorted({Ha + Hd // 2} | {Ha + k for k in range(max(1, Hd - 3), Hd + 1)})
+                    for n in frames_at:
                         states, frames = pool.rollout((task, snaps[s], False), unroll.env_actions(seq[:n]), True)
                         add(flat(unroll.encode_final(states, frames)), states, 4, s + n * fs, -1, si)
 
