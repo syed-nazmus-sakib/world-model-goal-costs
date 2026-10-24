@@ -146,7 +146,9 @@ class ReachThenChangeImage:
         # (start-arm shadows measure 0.2-0.6 x, objects 0.9-1.8 x); (c) in the goal-hand fallback the stand-off is 6 cm and the
         # second phase is the distance to the goal proprio (hand and gripper), so the gripper closes like the expert's.
         self.v3b = bool(kwargs.get("v3b", False))
-        self.rel_min = float(kwargs.get("rel_min", 0.7))
+        self.rel_min = float(kwargs.get("rel_min", 0.5))  # 0.5: keeps faucet's top patches (p90 0.89), ~1 shadow patch in 5 passes
+        self.hover = float(kwargs.get("hover", 0.03))  # (d) the hand hovers above an object it moves: the far cluster is lifted
+        # at goal-hand height minus this (v3 push: lifting at hand height put every estimate 5-12 cm toward the camera)
         self.gp = None
         self._at_target, self._fallback_done = 0, False
         self.released = ReprTargetDistMPCObjective(cfg, target_enc=target_enc, alpha=cfg.planner.planning_objective.alpha)
@@ -244,6 +246,9 @@ class ReachThenChangeImage:
                     far = inb & (np.linalg.norm(pts - gh, axis=1) > 0.10) if gh is not None else np.zeros_like(inb)
                     # an object that travels leaves a change cluster away from the goal hand: that is where it is now
                     obj = pts[far].mean(0) if far.sum() >= 3 else pts[inb].mean(0)
+                    if self.v3b and far.sum() >= 3:  # (d) lift the object at its own height: the goal hand hovers above it
+                        obj = np.stack([self.lift(rc, float(goal_hand_z) - self.hover) for rc in self.grid[idx[torch.from_numpy(far).to(idx.device)]].cpu().numpy()]).mean(0)
+                        self.info["far_cluster_lift_z"] = round(float(goal_hand_z) - self.hover, 3)
                     self.info["n_change_far_from_goal_hand"] = int(far.sum())
                     self.info["n_change_region"] = int(change.sum())
                     self.eps_c = 0.1 * (z0[change] - self.g[change]).pow(2).sum(-1).mean()
