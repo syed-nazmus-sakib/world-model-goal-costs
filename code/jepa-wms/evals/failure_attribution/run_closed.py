@@ -191,10 +191,12 @@ def main():
             parts = args.cost.split(":")
             agent.objective = TempoMixObjective(cfg, target_enc=agent.goal_state_enc, map_path=parts[1], w=float(parts[2]) if len(parts) > 2 else 0.5)
             agent.planner.set_objective(agent.objective)
-        elif args.cost.startswith("head:"):  # method C: learned goal cost (evals/failure_attribution/mw_head_train.py)
+        elif args.cost.startswith("head:"):  # learned goal cost head:<pt>[:beta] (mw_head_train.py / mw_pilot_heads.py)
             from evals.failure_attribution.costs import LearnedHeadMPCObjective
 
-            agent.objective = LearnedHeadMPCObjective(cfg, target_enc=agent.goal_state_enc, head_path=args.cost[5:])
+            parts = args.cost.split(":")
+            agent.objective = LearnedHeadMPCObjective(cfg, target_enc=agent.goal_state_enc, head_path=parts[1],
+                                                      beta=float(parts[2]) if len(parts) > 2 else 0.0)
             agent.planner.set_objective(agent.objective)
         elif args.cost != "l2":  # area-invariant aggregation (evals/failure_attribution/costs.py), same alpha
             from evals.failure_attribution.costs import PatchAggMPCObjective

@@ -76,7 +76,10 @@ def load(dirs, tasks=None):
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
-def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
+def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev, n_ens=1):
+    """Returns an nn.ModuleList of n_ens PatchHeads (different inits, per-member bootstrap masks on shared batches) and info.
+    With n_ens > 1 the planner can use mean + beta * std of the member costs (costs.LearnedHeadMPCObjective), so that
+    candidates outside the training distribution, where members disagree, are not exploited."""
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
     # features stay on the CPU (8 tasks x 24 episodes of patch features are about 19 GB); each batch moves to the GPU
@@ -105,27 +108,34 @@ def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
     neg_pool = labelled[(ratio[labelled] > 1) & (ratio[labelled] < 3) & (st[labelled, 39] < 0.5)]
     pos = rng.choice(pos_pool, size=min(n_pos, len(pos_pool)), replace=False) if len(pos_pool) else np.zeros(0, int)
     neg = rng.choice(neg_pool, size=min(n_neg, len(neg_pool)), replace=False) if len(neg_pool) else np.zeros(0, int)
-    head = PatchHead(vis.shape[1], vis.shape[2], prop.shape[1]).to(dev)
+    head = torch.nn.ModuleList([PatchHead(vis.shape[1], vis.shape[2], prop.shape[1]) for _ in range(n_ens)]).to(dev)
     opt = torch.optim.AdamW(head.parameters(), lr=3e-4, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-4, total_steps=steps, pct_start=0.05)
     B = 256
 
-    def f(i):
+    def f(i):  # (E, N, d)
         i = torch.as_tensor(np.asarray(i))
-        return head(vis[i].to(dev).float(), prop[i].to(dev).float())
+        v, p = vis[i].to(dev).float(), prop[i].to(dev).float()
+        return torch.stack([h(v, p) for h in head])
 
-    def dist(a, g):
+    def dist(a, g):  # (E, N)
         return (f(a) - f(g)).pow(2).sum(-1).add(1e-8).sqrt()
 
     def goal_for(a):
         return np.array([rng.choice(goals_of[e]) for e in ep[a]])
 
+    def regress(d, y):  # per-member bootstrap mask (Bernoulli 0.63) on the shared batch; one member sees everything
+        y = torch.from_numpy(y).to(dev).expand(n_ens, -1)
+        m = torch.from_numpy(rng.random((n_ens, d.shape[1])) < 0.63).to(dev)
+        m[0] = True
+        return F.smooth_l1_loss(d[m], y[m])
+
     for step in range(steps):
         loss = 0.0
         if mode in ("state", "rtc"):
-            a = rng.choice(labelled, size=B)
+            a = rng.choice(labelled, size=B)  # expert, candidate and walk frames (kind 0, 2, 3)
             y = y_succ if mode == "state" else y_rtc
-            loss = F.smooth_l1_loss(dist(a, goal_for(a)), torch.from_numpy(y[a]).to(dev))
+            loss = regress(dist(a, goal_for(a)), y[a])
         if mode in ("time", "evid_time"):
             e = rng.choice(list(expert_of), size=B)
             a, g, gap = [], [], []
@@ -138,8 +148,7 @@ def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
                     j = rng.integers(i, len(ix))
                     a.append(ix[i]), g.append(ix[j]), gap.append(t[ix[j]] - t[ix[i]])
             a, g = np.array(a), np.array(g)
-            y = torch.from_numpy(np.log1p(np.maximum(np.array(gap), 0) / 5.0).astype(np.float32)).to(dev)
-            loss = loss + F.smooth_l1_loss(dist(a, g), y)
+            loss = loss + regress(dist(a, g), np.log1p(np.maximum(np.array(gap), 0) / 5.0).astype(np.float32))
         if mode in ("evid", "evid_time") and len(pos) and len(neg):
             p = rng.choice(pos, size=B // 2)
             n = rng.choice(neg, size=B // 2)
@@ -166,10 +175,23 @@ def ordering_accuracy(c, y):
 
 @torch.no_grad()
 def embed(head, vis, prop, dev, bs=512):
+    """PatchHead -> (N, d); ModuleList of E heads -> (E, N, d)"""
+    members = list(head) if isinstance(head, torch.nn.ModuleList) else [head]
     out = []
     for s in range(0, len(vis), bs):
-        out.append(head(torch.from_numpy(vis[s : s + bs]).to(dev).float(), torch.from_numpy(prop[s : s + bs]).to(dev).float()))
-    return torch.cat(out)
+        v, p = torch.from_numpy(vis[s : s + bs]).to(dev).float(), torch.from_numpy(prop[s : s + bs]).to(dev).float()
+        out.append(torch.stack([h(v, p) for h in members]))
+    E = torch.cat(out, 1)
+    return E if isinstance(head, torch.nn.ModuleList) else E[0]
+
+
+def ensemble_cost(E, gi, beta=0.0):
+    """member embeddings (E, N, d), goal index -> mean_k ||E_k - E_k[gi]||^2 + beta * std_k, as the planner uses it"""
+    d = (E - E[:, gi : gi + 1]).pow(2).sum(-1)
+    c = d.mean(0)
+    if beta and E.shape[0] > 1:
+        c = c + beta * d.std(0, unbiased=False)
+    return c.cpu().numpy()
 
 
 @torch.no_grad()
@@ -236,13 +258,16 @@ def main():
     ap.add_argument("--n_neg", type=int, default=64)
     ap.add_argument("--c_head", default="", help="Method C time head (mw_head_train) to score as a baseline")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--n_ens", type=int, default=1, help="ensemble members per head (planner cost: mean + beta * std)")
+    ap.add_argument("--beta", type=float, default=1.0, help="offline: also score the pessimistic ensemble cost with this beta")
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
     dev = "cuda"
     thr = SUCCESS_THRESHOLD.get(args.task[0], 0.05)
     D = load(args.train_dir, args.task)
+    kinds = {int(k): int(n) for k, n in zip(*np.unique(D["kind"], return_counts=True))}
     print(f"train {len(D['kind'])} frames / {len(np.unique(D['ep']))} eps from {len(args.train_dir)} task(s); "
-          f"train success frames {int((D['state'][:, 39] > 0.5).sum())}", flush=True)
+          f"kinds {kinds}; train success frames {int((D['state'][:, 39] > 0.5).sum())}", flush=True)
     heads, info = {}, {}
     if args.c_head:
         ck = torch.load(args.c_head, map_location="cpu")
@@ -250,9 +275,10 @@ def main():
         h.load_state_dict(ck["state_dict"])
         heads["methodC_time"] = h.to(dev).eval()
     for mode in args.modes.split(","):
-        h, info[mode] = train_head(D, mode, thr, args.steps, args.n_pos, args.n_neg, args.seed, dev)
+        h, info[mode] = train_head(D, mode, thr, args.steps, args.n_pos, args.n_neg, args.seed, dev, args.n_ens)
         heads[mode] = h
-        torch.save({"state_dict": h.state_dict(), "n_patches": D["vis"].shape[1], "d_in": D["vis"].shape[2],
+        torch.save({"state_dict": h[0].state_dict(), "state_dicts": [m.state_dict() for m in h],
+                    "n_patches": D["vis"].shape[1], "d_in": D["vis"].shape[2],
                     "d_prop": D["prop"].shape[1], "mode": mode, "task": args.task, "info": info[mode]},
                    os.path.join(args.out_dir, f"head_{mode}.pt"))
         print(mode, json.dumps(info[mode]), flush=True)
@@ -264,7 +290,12 @@ def main():
                     "released_a0.1": lambda gi, T=T: released(T["vis"], T["prop"], gi, 0.1, dev)}
         for name, h in heads.items():
             E = embed(h, T["vis"], T["prop"], dev)
-            cost_fns[name] = (lambda E: lambda gi: (E - E[gi]).pow(2).sum(-1).cpu().numpy())(E)
+            if E.dim() == 2:
+                cost_fns[name] = (lambda E: lambda gi: (E - E[gi]).pow(2).sum(-1).cpu().numpy())(E)
+            else:  # ensemble: mean cost, and the pessimistic cost the planner would use
+                cost_fns[name] = (lambda E: lambda gi: ensemble_cost(E, gi))(E)
+                if E.shape[0] > 1:
+                    cost_fns[f"{name}+{args.beta:g}std"] = (lambda E: lambda gi: ensemble_cost(E, gi, args.beta))(E)
         res = evaluate(T, cost_fns, thr)
         all_res[task] = res
         print(f"== {task}: test {len(T['kind'])} frames / {len(np.unique(T['ep']))} eps")

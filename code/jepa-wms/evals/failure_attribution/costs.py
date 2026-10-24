@@ -360,27 +360,36 @@ class TempoMixObjective:
 class LearnedHeadMPCObjective:
     """Method C: squared distance between learned embeddings of the candidate and the goal (see mw_head_train.py)."""
 
-    def __init__(self, cfg, target_enc: TensorDict, head_path: str, sum_all_diffs: bool = False, **kwargs):
+    def __init__(self, cfg, target_enc: TensorDict, head_path: str, sum_all_diffs: bool = False, beta: float = 0.0, **kwargs):
+        """head_path: mw_head_train / mw_pilot_heads checkpoint; with several members ('state_dicts', mw_pilot_heads --n_ens)
+        the cost is mean_k + beta * std_k of the member costs (pessimism where the members disagree, 2026-10-24)."""
         from evals.failure_attribution.mw_head_train import PatchHead
 
         ck = torch.load(head_path, map_location="cpu")
-        self.head = PatchHead(ck["n_patches"], ck["d_in"], ck["d_prop"])
-        self.head.load_state_dict(ck["state_dict"])
-        self.head = self.head.to(target_enc["visual"].device).eval().requires_grad_(False)
-        self.cfg, self.sum_all_diffs = cfg, sum_all_diffs
-        self.f_goal = self.embed(target_enc)  # (T_goal, B_goal, d)
+        sds = ck.get("state_dicts", [ck["state_dict"]])
+        members = []
+        for sd in sds:
+            h = PatchHead(ck["n_patches"], ck["d_in"], ck["d_prop"])
+            h.load_state_dict(sd)
+            members.append(h)
+        self.head = torch.nn.ModuleList(members).to(target_enc["visual"].device).eval().requires_grad_(False)
+        self.cfg, self.sum_all_diffs, self.beta = cfg, sum_all_diffs, float(beta)
+        self.f_goal = self.embed(target_enc)  # (E, T_goal, B_goal, d)
 
     @torch.no_grad()
     def embed(self, enc):
-        """visual (*lead, V, H, W, D) + proprio (*lead, Dp) -> (*lead, d)"""
+        """visual (*lead, V, H, W, D) + proprio (*lead, Dp) -> (E, *lead, d)"""
         vis, prop = enc["visual"], enc["proprio"]
         lead = vis.shape[:-4]
         n = int(np.prod(lead))
-        f = self.head(vis.reshape(n, -1, vis.shape[-1]).float(), prop.reshape(n, -1).float())
-        return f.view(*lead, -1)
+        v, p = vis.reshape(n, -1, vis.shape[-1]).float(), prop.reshape(n, -1).float()
+        return torch.stack([h(v, p).view(*lead, -1) for h in self.head])
 
     def __call__(self, encodings, actions, keepdims: bool = False):
-        diff = (self.embed(encodings) - self.f_goal).pow(2).sum(-1)
+        d = (self.embed(encodings) - self.f_goal).pow(2).sum(-1)  # (E, T, B)
+        diff = d.mean(0)
+        if self.beta and d.shape[0] > 1:
+            diff = diff + self.beta * d.std(0, unbiased=False)
         if not keepdims:
             return diff.sum(0) if self.sum_all_diffs else diff[-1]
         return diff.cumsum(0).flip(0) if self.sum_all_diffs else diff
