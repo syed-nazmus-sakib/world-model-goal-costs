@@ -69,6 +69,8 @@ def main():
     parser.add_argument("--dump_dir", default="",
                         help="save the sim_latent planner's visited frames (encoding + 41-d state, kind 5) per episode: training data "
                              "for the next head (mw_merge_planner_frames.py merges them with the expert frames of the pilot data)")
+    parser.add_argument("--dump_cands", type=int, default=32,
+                        help="with --dump_dir: also save this many of the planner's final-population candidates per replan (kind 6)")
     parser.add_argument("--robot_free", action="store_true",
                         help="oracle: goal and simulator candidate frames rendered without the robot (sim planners only)")
     args = parser.parse_args()
@@ -252,7 +254,8 @@ def main():
                     out[f"{name}_active"] = objective.active
                 planner.set_objective(objective)
                 planner.local_generator.manual_seed(int(ep_seed) + 1000 * (k + 1))
-            dump, dump_steps = {"vis": [], "prop": [], "state": [], "t": []}, 0
+            dump, dump_steps = {"vis": [], "prop": [], "state": [], "t": [], "kind": []}, 0
+            dump_rng = np.random.default_rng(ep)
             while True:
                 steps_left = max((env.steps_left() + 1) * model.action_skip // cfg.frameskip, 1)
                 progress[name].start(f"ep {ep:03d} [{name}] replan {replans}")
@@ -268,6 +271,7 @@ def main():
                         dump["prop"].append(z["proprio"].reshape(-1).cpu().numpy().astype(np.float16))
                         dump["state"].append(full_state(env.unwrapped, np.asarray(env.unwrapped._get_obs(), dtype=np.float64)))
                         dump["t"].append(dump_steps)
+                        dump["kind"].append(5)
                     unroll.spec = (task, capture(env.unwrapped), args.robot_free)
                     if replans > 0 and hasattr(planner.objective, "update"):  # v2: verify the detected target in closed loop
                         planner.objective.update(z, np.asarray(env.unwrapped._get_obs(), dtype=np.float64)[:3])
@@ -286,6 +290,21 @@ def main():
                         print(f"  [{name}] reach-then-change: {planner.objective.info}", flush=True)
                     res = planner.plan(z, steps_left=steps_left)
                     a = res.actions
+                    if args.dump_dir and name == "sim_latent" and args.dump_cands > 0 and getattr(planner.objective, "last_enc", None) is not None:
+                        # a sample of the final population the planner compared: the states it prices, right or wrong (kind 6)
+                        enc, ls = planner.objective.last_enc, np.asarray(unroll.last_states)
+                        v = enc["visual"]
+                        v = (v[-1] if v.dim() == 6 else v).reshape(len(ls), -1, v.shape[-1])
+                        p = enc["proprio"]
+                        p = (p[-1] if p.dim() == 3 else p).reshape(len(ls), -1)
+                        t_c = dump_steps + len(denorm(a))
+                        for i in np.sort(dump_rng.choice(len(ls), min(args.dump_cands, len(ls)), replace=False)):
+                            dump["vis"].append(v[i].cpu().numpy().astype(np.float16))
+                            dump["prop"].append(p[i].cpu().numpy().astype(np.float16))
+                            s_i = np.asarray(ls[i], dtype=np.float64)
+                            dump["state"].append(s_i.astype(np.float32) if s_i.shape[-1] == 41 else full_state(env.unwrapped, s_i[:39]))
+                            dump["t"].append(t_c)
+                            dump["kind"].append(6)
                     cem_final.append(float(res.losses.squeeze(-1)[-1]))
                 progress[name].stop()
                 obses, _, dones, infos = env.step_multiple(denorm(a))
@@ -303,9 +322,10 @@ def main():
                 dump["prop"].append(zf["proprio"].reshape(-1).cpu().numpy().astype(np.float16))
                 dump["state"].append(full_state(env.unwrapped, st))
                 dump["t"].append(dump_steps)
+                dump["kind"].append(5)
                 n_d = len(dump["vis"])
                 np.savez(os.path.join(args.dump_dir, f"ep_{ep:03d}.npz"), vis=np.stack(dump["vis"]), prop=np.stack(dump["prop"]),
-                         state=np.stack(dump["state"]).astype(np.float32), kind=np.full(n_d, 5), t=np.array(dump["t"]),
+                         state=np.stack(dump["state"]).astype(np.float32), kind=np.array(dump["kind"]), t=np.array(dump["t"]),
                          var=np.full(n_d, -1), start=np.full(n_d, -1), episode=np.array(ep), success=np.array(chunk_success[-1]))
             if name == "wm":
                 gen_state = (agent.local_generator.get_state(), agent.local_gpu_generator.get_state())

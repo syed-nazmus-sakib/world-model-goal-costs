@@ -421,6 +421,7 @@ class LearnedHeadMPCObjective:
         return torch.stack([h(v, p).view(*lead, -1) for h in self.head])
 
     def __call__(self, encodings, actions, keepdims: bool = False):
+        self.last_enc = encodings  # the population the planner evaluated last (run_closed --dump_dir saves a sample of it)
         d = (self.embed(encodings) - self.f_goal).pow(2).sum(-1)  # (E, T, B)
         diff = d.mean(0)
         if self.beta and d.shape[0] > 1:
@@ -482,6 +483,7 @@ class HeadChangeObjective:
         return cur / ref.clamp_min(1e-8)
 
     def __call__(self, encodings, actions, keepdims: bool = False):
+        self.last_enc = encodings
         h = self.head(encodings, actions, keepdims)
         if keepdims or self.robot0 is None:
             return h
