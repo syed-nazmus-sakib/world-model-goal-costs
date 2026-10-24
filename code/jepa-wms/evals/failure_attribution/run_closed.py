@@ -176,12 +176,12 @@ def main():
             agent.goal_state_enc = mean_enc
             agent.objective = ReprTargetDistMPCObjective(cfg, target_enc=mean_enc, **cfg.planner.planning_objective)
             agent.planner.set_objective(agent.objective)
-        if args.cost.startswith("reach:"):  # reach-then-change from images (costs.ReachThenChangeImage); robot map from mw_robot_map.py
+        if args.cost.startswith("reach:") or args.cost.startswith("reachrf:"):  # reach-then-change from images (costs.ReachThenChangeImage)
             from evals.failure_attribution.costs import ReachThenChangeImage
 
-            agent.objective = ReachThenChangeImage(cfg, target_enc=agent.goal_state_enc, head_path=args.cost[6:],
+            agent.objective = ReachThenChangeImage(cfg, target_enc=agent.goal_state_enc, head_path=args.cost.split(":", 1)[1],
                                                    unroll=oracles["sim_latent"][1] if "sim_latent" in oracles else None,
-                                                   r0=args.reach_r0_img)
+                                                   r0=args.reach_r0_img, rf=args.cost.startswith("reachrf:"))
             agent.planner.set_objective(agent.objective)
         elif args.cost.startswith("head:"):  # method C: learned goal cost (evals/failure_attribution/mw_head_train.py)
             from evals.failure_attribution.costs import LearnedHeadMPCObjective
