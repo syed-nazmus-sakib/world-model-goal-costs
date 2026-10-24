@@ -283,9 +283,10 @@ episode start. The head dominates the approach (0.3-8 against λ ≈ 0.5), the c
 that failed), no switch. Offline on held-out episodes the premise holds: near the goal the change term is 0.07-0.12 for
 pressed states and 0.36-0.56 for unpressed ones (head 0.05 against 1.4-4.8 on the same, in-distribution, candidates).
 
-**Result (12 episodes): button 0/12, push 5/11** (the 12th push episode hit the 2 h limit with five loops sharing the GPU;
-ensemble alone 3/12). On push the change term does what it should: with the hand at the goal hand in every episode, the
-puck ends within the 5 cm threshold in 5 of 11 and at 5-6 cm in 2 more. On button it changes nothing, for a reason the
+**Result (12 episodes): button 0/12, push 5/11, drawer-open 3/12, plate-slide 6/12** (ensemble alone: 1, 3, 1, 5; the 12th
+push episode hit the 2 h limit with five loops sharing the GPU). Where the object stays visible the change term does what it
+should: push ends within the 5 cm threshold in 5 of 11 with the hand at the goal hand in every episode, drawer-open goes
+from 1 to 3, plate-slide from 5 to 6 (the first task at the 6/12 bar). On button it changes nothing, for a reason the
 Stage 1 oracle could not show. In all 12 episodes the hand reaches the goal pose (0.6-3.9 cm) with the **gripper open
 (0.43-0.80, against 0.30 at the goal)**: the fingers straddle the button and the hand descends to the goal height without
 pressing it (button top 6 cm above the hand). Hidden under the arm, the button is in no robot-free patch, so the change
