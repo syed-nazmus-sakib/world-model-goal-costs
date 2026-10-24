@@ -78,8 +78,9 @@ def load(dirs, tasks=None):
 def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
-    vis = torch.from_numpy(D["vis"]).to(dev)
-    prop = torch.from_numpy(D["prop"]).to(dev)
+    # features stay on the CPU (8 tasks x 24 episodes of patch features are about 19 GB); each batch moves to the GPU
+    vis = torch.from_numpy(D["vis"])
+    prop = torch.from_numpy(D["prop"])
     ep, kind, t, st = D["ep"], D["kind"], D["t"], D["state"]
     thr = D["thr"] if "thr" in D else np.full(len(st), thr, dtype=np.float32)
     y_succ = np.log1p(st[:, 40] / thr).astype(np.float32)
@@ -105,7 +106,8 @@ def train_head(D, mode, thr, steps, n_pos, n_neg, seed, dev):
     B = 256
 
     def f(i):
-        return head(vis[i].float(), prop[i].float())
+        i = torch.as_tensor(np.asarray(i))
+        return head(vis[i].to(dev).float(), prop[i].to(dev).float())
 
     def dist(a, g):
         return (f(a) - f(g)).pow(2).sum(-1).add(1e-8).sqrt()
