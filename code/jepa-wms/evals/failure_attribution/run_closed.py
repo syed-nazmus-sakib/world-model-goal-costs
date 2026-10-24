@@ -123,7 +123,7 @@ def main():
     start = max(start, args.ep_start)
     n_episodes += args.ep_start
     if args.dump_dir:
-        from evals.failure_attribution.mw_pilot_data import full_state
+        from evals.failure_attribution.mw_pilot_data import flat, full_state
 
         os.makedirs(args.dump_dir, exist_ok=True)
 
@@ -266,9 +266,10 @@ def main():
                     cem_final.append(float(agent._prev_losses.squeeze(-1)[-1]))
                 else:
                     z = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
-                    if args.dump_dir and name == "sim_latent":  # the planner's own visited frame, with its labels
-                        dump["vis"].append(z["visual"].reshape(-1, z["visual"].shape[-1]).cpu().numpy().astype(np.float16))
-                        dump["prop"].append(z["proprio"].reshape(-1).cpu().numpy().astype(np.float16))
+                    if args.dump_dir and name == "sim_latent":  # the planner's own visited frame (last of the history), with its labels
+                        fv, fp = flat(z)
+                        dump["vis"].append(fv[-1])
+                        dump["prop"].append(fp[-1])
                         dump["state"].append(full_state(env.unwrapped, np.asarray(env.unwrapped._get_obs(), dtype=np.float64)))
                         dump["t"].append(dump_steps)
                         dump["kind"].append(5)
@@ -293,14 +294,11 @@ def main():
                     if args.dump_dir and name == "sim_latent" and args.dump_cands > 0 and getattr(planner.objective, "last_enc", None) is not None:
                         # a sample of the final population the planner compared: the states it prices, right or wrong (kind 6)
                         enc, ls = planner.objective.last_enc, np.asarray(unroll.last_states)
-                        v = enc["visual"]
-                        v = (v[-1] if v.dim() == 6 else v).reshape(len(ls), -1, v.shape[-1])
-                        p = enc["proprio"]
-                        p = (p[-1] if p.dim() == 3 else p).reshape(len(ls), -1)
+                        fv, fp = flat(enc)  # (B, P, D), (B, Dp): one frame per candidate
                         t_c = dump_steps + len(denorm(a))
-                        for i in np.sort(dump_rng.choice(len(ls), min(args.dump_cands, len(ls)), replace=False)):
-                            dump["vis"].append(v[i].cpu().numpy().astype(np.float16))
-                            dump["prop"].append(p[i].cpu().numpy().astype(np.float16))
+                        for i in np.sort(dump_rng.choice(min(len(ls), len(fv)), min(args.dump_cands, len(ls), len(fv)), replace=False)):
+                            dump["vis"].append(fv[i])
+                            dump["prop"].append(fp[i])
                             s_i = np.asarray(ls[i], dtype=np.float64)
                             dump["state"].append(s_i.astype(np.float32) if s_i.shape[-1] == 41 else full_state(env.unwrapped, s_i[:39]))
                             dump["t"].append(t_c)
@@ -318,15 +316,21 @@ def main():
                     break
             if args.dump_dir and name == "sim_latent" and dump["vis"]:  # the final frame too (the exploited end state), then save
                 zf = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
-                dump["vis"].append(zf["visual"].reshape(-1, zf["visual"].shape[-1]).cpu().numpy().astype(np.float16))
-                dump["prop"].append(zf["proprio"].reshape(-1).cpu().numpy().astype(np.float16))
+                fv, fp = flat(zf)
+                dump["vis"].append(fv[-1])
+                dump["prop"].append(fp[-1])
                 dump["state"].append(full_state(env.unwrapped, st))
                 dump["t"].append(dump_steps)
                 dump["kind"].append(5)
-                n_d = len(dump["vis"])
-                np.savez(os.path.join(args.dump_dir, f"ep_{ep:03d}.npz"), vis=np.stack(dump["vis"]), prop=np.stack(dump["prop"]),
-                         state=np.stack(dump["state"]).astype(np.float32), kind=np.array(dump["kind"]), t=np.array(dump["t"]),
-                         var=np.full(n_d, -1), start=np.full(n_d, -1), episode=np.array(ep), success=np.array(chunk_success[-1]))
+                shapes = {x.shape for x in dump["vis"]} | {x.shape for x in dump["prop"]}
+                if len({x.shape for x in dump["vis"]}) == 1 and len({x.shape for x in dump["prop"]}) == 1:
+                    n_d = len(dump["vis"])
+                    np.savez(os.path.join(args.dump_dir, f"ep_{ep:03d}.npz"), vis=np.stack(dump["vis"]), prop=np.stack(dump["prop"]),
+                             state=np.stack(dump["state"]).astype(np.float32), kind=np.array(dump["kind"]), t=np.array(dump["t"]),
+                             var=np.full(n_d, -1), start=np.full(n_d, -1), episode=np.array(ep), success=np.array(chunk_success[-1]))
+                    print(f"  [dump] ep {ep:03d}: {n_d} frames ({dump['kind'].count(5)} executed, {dump['kind'].count(6)} candidates)", flush=True)
+                else:
+                    print(f"  [dump] ep {ep:03d}: NOT saved, frame shapes differ: {shapes}", flush=True)
             if name == "wm":
                 gen_state = (agent.local_generator.get_state(), agent.local_gpu_generator.get_state())
             out.update(
