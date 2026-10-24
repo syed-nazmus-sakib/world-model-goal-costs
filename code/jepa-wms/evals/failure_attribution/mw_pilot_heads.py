@@ -51,9 +51,10 @@ from evals.failure_attribution.mw_head_train import PatchHead
 from evals.failure_attribution.mw_sim import SUCCESS_THRESHOLD
 
 
-def load(dirs, tasks=None, cand_stride=1):
+def load(dirs, tasks=None, cand_stride=1, walk_stride=1):
     """One or several pilot-data dirs (aligned with task names) -> dict; ep is unique across dirs, thr is per frame.
-    cand_stride k > 1 keeps every k-th candidate frame (kind 2, the most redundant kind: 450 per episode) to fit memory."""
+    cand_stride k > 1 keeps every k-th candidate frame (kind 2, the most redundant kind: 450 per episode) to fit memory;
+    walk_stride does the same for the walk and jitter frames (kinds 3 and 4). Expert, goal and planner frames are kept."""
     dirs = [dirs] if isinstance(dirs, str) else list(dirs)
     tasks = [tasks] if isinstance(tasks, str) else (list(tasks) if tasks else [None] * len(dirs))
     # two passes: count frames from the small 'kind' arrays, then fill preallocated arrays (np.concatenate on the patch
@@ -66,7 +67,13 @@ def load(dirs, tasks=None, cand_stride=1):
         n_ep += len(fs)
 
     def keep(kind):
-        return np.ones(len(kind), bool) if cand_stride <= 1 else ((kind != 2) | (np.arange(len(kind)) % cand_stride == 0))
+        ix = np.arange(len(kind))
+        m = np.ones(len(kind), bool)
+        if cand_stride > 1:
+            m &= (kind != 2) | (ix % cand_stride == 0)
+        if walk_stride > 1:
+            m &= ~np.isin(kind, (3, 4)) | (ix % walk_stride == 0)
+        return m
 
     keeps = [keep(np.load(f)["kind"]) for f, _, _, _ in files]
     counts = [int(m.sum()) for m in keeps]
@@ -272,11 +279,12 @@ def main():
     ap.add_argument("--n_ens", type=int, default=1, help="ensemble members per head (planner cost: mean + beta * std)")
     ap.add_argument("--beta", type=float, default=1.0, help="offline: also score the pessimistic ensemble cost with this beta")
     ap.add_argument("--cand_stride", type=int, default=1, help="keep every k-th candidate frame (kind 2) of the training dirs (memory)")
+    ap.add_argument("--walk_stride", type=int, default=1, help="keep every k-th walk / jitter frame (kinds 3, 4) of the training dirs (memory)")
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
     dev = "cuda"
     thr = SUCCESS_THRESHOLD.get(args.task[0], 0.05)
-    D = load(args.train_dir, args.task, cand_stride=args.cand_stride)
+    D = load(args.train_dir, args.task, cand_stride=args.cand_stride, walk_stride=args.walk_stride)
     kinds = {int(k): int(n) for k, n in zip(*np.unique(D["kind"], return_counts=True))}
     print(f"train {len(D['kind'])} frames / {len(np.unique(D['ep']))} eps from {len(args.train_dir)} task(s); "
           f"kinds {kinds}; train success frames {int((D['state'][:, 39] > 0.5).sum())}", flush=True)
