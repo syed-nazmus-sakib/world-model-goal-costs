@@ -23,7 +23,9 @@ Per episode (the eval's seeding, episodes [--ep_start, --ep_start + --episodes))
           loop (button 0/12): the planner visits arm poses that expert-path candidates never cover.
 Every frame keeps its 41-d state [39-d obs, success, obj_to_target]. The heads decide which labels they may use.
 
-Saves ep_XXX.npz: vis (N, P, D) fp16, prop (N, Dp) fp16, state (N, 41), kind (N,) 0 expert / 1 goal / 2 candidate / 3 walk,
+  jitter  (--jitter K, 2026-10-24) near-goal coverage: K short random action sequences (1-2 chunks) from the expert's own states
+          between 2 steps before contact and the end of the path (kind 4): gripper, height and object state vary at the goal pose.
+Saves ep_XXX.npz: vis (N, P, D) fp16, prop (N, Dp) fp16, state (N, 41), kind (N,) 0 expert / 1 goal / 2 candidate / 3 walk / 4 jitter,
 t (N,) expert step (start step for candidates), var (N,) goal variant index (-1 otherwise), start (N,) start index.
 With --robot_mask also rmask (N, P) uint8: 1 where the 14x14 patch shows the robot (the frame differs from the same state
 rendered with the robot hidden), 0 otherwise, 255 unknown (candidates). Training labels for the robot map (mw_robot_map.py).
@@ -76,6 +78,10 @@ def main():
     parser.add_argument("--walks", type=int, default=0, help="arm-coverage random walks per start point (0: none)")
     parser.add_argument("--walk_chunks", type=int, default=14, help="walk length in planner chunks (14 x frameskip 5 = 70 steps)")
     parser.add_argument("--walk_every", type=int, default=2, help="a walk frame every this many chunks")
+    parser.add_argument("--jitter", type=int, default=0,
+                        help="near-goal coverage (kind 4): random action sequences per start point along the expert path after contact (0: none)")
+    parser.add_argument("--jitter_chunks", type=int, default=2, help="jitter length in planner chunks; a frame after every chunk")
+    parser.add_argument("--jitter_starts", type=int, default=6, help="start points from 2 steps before contact to the end of the path")
     args = parser.parse_args()
     if args.robot_mask:
         from evals.failure_attribution.cost_share_mw import patch_mask
@@ -190,6 +196,21 @@ def main():
                     for n in range(args.walk_every, Hw + 1, args.walk_every):
                         states, frames = pool.rollout((task, snaps[s], False), unroll.env_actions(seq[:n]), True)
                         add(flat(unroll.encode_final(states, frames)), states, 3, s + n * fs, -1, si)
+
+            # near-goal coverage (kind 4, 2026-10-24): short random action sequences of the planner's prior from the expert's own
+            # states between 2 steps before contact and the end of the path. The hand stays near the goal pose while the gripper,
+            # the height and the object state vary: the terminal configurations the planner exploited with the walks-only head
+            # (button: hand at the goal pose, gripper open around the button, button unpressed, priced as success)
+            if args.jitter > 0:
+                T_end = len(snaps) - 1
+                base = max(0, contact - 2) if contact is not None else T_end // 2
+                j_starts = sorted({int(round(x)) for x in np.linspace(base, T_end, args.jitter_starts)})
+                Kj, Hj, d = args.jitter, args.jitter_chunks, model.action_dim
+                for si, s in enumerate(j_starts):
+                    seq = torch.randn(Hj, Kj, d, device=device)
+                    for n in range(1, Hj + 1):
+                        states, frames = pool.rollout((task, snaps[s], False), unroll.env_actions(seq[:n]), True)
+                        add(flat(unroll.encode_final(states, frames)), states, 4, s + n * fs, -1, si)
 
         extra = {}
         if args.robot_mask:  # expert frames, then goals, then candidates (unknown), in the order of V

@@ -51,8 +51,9 @@ from evals.failure_attribution.mw_head_train import PatchHead
 from evals.failure_attribution.mw_sim import SUCCESS_THRESHOLD
 
 
-def load(dirs, tasks=None):
-    """One or several pilot-data dirs (aligned with task names) -> dict; ep is unique across dirs, thr is per frame."""
+def load(dirs, tasks=None, cand_stride=1):
+    """One or several pilot-data dirs (aligned with task names) -> dict; ep is unique across dirs, thr is per frame.
+    cand_stride k > 1 keeps every k-th candidate frame (kind 2, the most redundant kind: 450 per episode) to fit memory."""
     dirs = [dirs] if isinstance(dirs, str) else list(dirs)
     tasks = [tasks] if isinstance(tasks, str) else (list(tasks) if tasks else [None] * len(dirs))
     # two passes: count frames from the small 'kind' arrays, then fill preallocated arrays (np.concatenate on the patch
@@ -63,7 +64,12 @@ def load(dirs, tasks=None):
         fs = sorted(glob.glob(os.path.join(d, "ep_*.npz")))
         files += [(f, n_ep + i, SUCCESS_THRESHOLD.get(task, 0.05), di) for i, f in enumerate(fs)]
         n_ep += len(fs)
-    counts = [len(np.load(f)["kind"]) for f, _, _, _ in files]
+
+    def keep(kind):
+        return np.ones(len(kind), bool) if cand_stride <= 1 else ((kind != 2) | (np.arange(len(kind)) % cand_stride == 0))
+
+    keeps = [keep(np.load(f)["kind"]) for f, _, _, _ in files]
+    counts = [int(m.sum()) for m in keeps]
     N = int(sum(counts))
     z0 = np.load(files[0][0])
     out = {"vis": np.empty((N,) + z0["vis"].shape[1:], z0["vis"].dtype), "prop": np.empty((N,) + z0["prop"].shape[1:], z0["prop"].dtype),
@@ -71,11 +77,11 @@ def load(dirs, tasks=None):
            "t": np.empty(N, z0["t"].dtype), "var": np.empty(N, z0["var"].dtype), "start": np.empty(N, z0["start"].dtype),
            "ep": np.empty(N, np.int64), "thr": np.empty(N, np.float32), "task": np.empty(N, np.int64)}
     s = 0
-    for (f, e, thr, di), n in zip(files, counts):
+    for (f, e, thr, di), n, m in zip(files, counts, keeps):
         z = np.load(f)
         sl = slice(s, s + n)
         for k in ("vis", "prop", "state", "kind", "t", "var", "start"):
-            out[k][sl] = z[k]
+            out[k][sl] = z[k] if m.all() else z[k][m]
         out["ep"][sl], out["thr"][sl], out["task"][sl] = e, thr, di
         s += n
     return out
@@ -265,11 +271,12 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--n_ens", type=int, default=1, help="ensemble members per head (planner cost: mean + beta * std)")
     ap.add_argument("--beta", type=float, default=1.0, help="offline: also score the pessimistic ensemble cost with this beta")
+    ap.add_argument("--cand_stride", type=int, default=1, help="keep every k-th candidate frame (kind 2) of the training dirs (memory)")
     args = ap.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
     dev = "cuda"
     thr = SUCCESS_THRESHOLD.get(args.task[0], 0.05)
-    D = load(args.train_dir, args.task)
+    D = load(args.train_dir, args.task, cand_stride=args.cand_stride)
     kinds = {int(k): int(n) for k, n in zip(*np.unique(D["kind"], return_counts=True))}
     print(f"train {len(D['kind'])} frames / {len(np.unique(D['ep']))} eps from {len(args.train_dir)} task(s); "
           f"kinds {kinds}; train success frames {int((D['state'][:, 39] > 0.5).sum())}", flush=True)
