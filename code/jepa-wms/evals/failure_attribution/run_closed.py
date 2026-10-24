@@ -176,12 +176,14 @@ def main():
             agent.goal_state_enc = mean_enc
             agent.objective = ReprTargetDistMPCObjective(cfg, target_enc=mean_enc, **cfg.planner.planning_objective)
             agent.planner.set_objective(agent.objective)
-        if args.cost.startswith("reach:") or args.cost.startswith("reachrf:"):  # reach-then-change from images (costs.ReachThenChangeImage)
+        if args.cost.split(":")[0] in ("reach", "reachrf", "reachrf2"):  # reach-then-change from images (costs.ReachThenChangeImage)
             from evals.failure_attribution.costs import ReachThenChangeImage
 
+            kind = args.cost.split(":")[0]
             agent.objective = ReachThenChangeImage(cfg, target_enc=agent.goal_state_enc, head_path=args.cost.split(":", 1)[1],
                                                    unroll=oracles["sim_latent"][1] if "sim_latent" in oracles else None,
-                                                   r0=args.reach_r0_img, rf=args.cost.startswith("reachrf:"))
+                                                   r0=args.reach_r0_img, rf=kind != "reach",
+                                                   radius_gate=0.35 if kind == "reachrf2" else 0.0, verify_replans=2 if kind == "reachrf2" else 0)
             agent.planner.set_objective(agent.objective)
         elif args.cost.startswith("tempo:"):  # TEMPO baseline: tempo:<map.pt>[:w] (costs.TempoMixObjective)
             from evals.failure_attribution.costs import TempoMixObjective
@@ -238,6 +240,8 @@ def main():
                 else:
                     z = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
                     unroll.spec = (task, capture(env.unwrapped), args.robot_free)
+                    if replans > 0 and hasattr(planner.objective, "update"):  # v2: verify the detected target in closed loop
+                        planner.objective.update(z, np.asarray(env.unwrapped._get_obs(), dtype=np.float64)[:3])
                     if replans == 0 and hasattr(planner.objective, "set_start"):  # change map from the episode's start and goal
                         import mujoco
 
@@ -274,6 +278,7 @@ def main():
                     f"{name}_obj": np.array(obj),
                     f"{name}_final_state": st,
                     f"{name}_obj_to_target": float(infos[-1].get("obj_to_target", np.nan)),
+                    **({f"{name}_reach_info_final": json.dumps(planner.objective.info)} if name != "wm" and hasattr(planner.objective, "info") else {}),
                 }
             )
         if gen_state is None:  # world model not run: the agent's generators were not used

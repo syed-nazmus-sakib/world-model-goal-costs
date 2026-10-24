@@ -134,6 +134,13 @@ class ReachThenChangeImage:
         self.head = self.head.to(self.device).eval().requires_grad_(False)
         self.unroll, self.r0, self.mad_k = unroll, r0, mad_k
         self.rf = bool(kwargs.get("rf", False))  # robot-free-mask change term (whole image minus the robot in goal and candidate)
+        # v2 (2026-10-24): (a) a detected object cluster is trusted only within `radius_gate` of the goal hand (an object's start
+        # is near where the hand ends; 6 of 9 false button detections were farther), (b) closed-loop verification: if the hand
+        # has been at the detected target for `verify_replans` replans and the change term has not moved 10% toward the goal,
+        # the detection was wrong and the target falls back to the goal hand (static object).
+        self.radius_gate = float(kwargs.get("radius_gate", 0.0))  # 0 = off
+        self.verify_replans = int(kwargs.get("verify_replans", 0))  # 0 = off
+        self._at_target, self._fallback_done = 0, False
         self.released = ReprTargetDistMPCObjective(cfg, target_enc=target_enc, alpha=cfg.planner.planning_objective.alpha)
         self.g = self._flat(target_enc)[0]  # (P, D)
         P = self.g.shape[0]
@@ -205,7 +212,12 @@ class ReachThenChangeImage:
                 if h0 is not None:
                     inb &= np.linalg.norm(pts - h0, axis=1) < 0.9
                 self.info["n_change_in_workspace"] = int(inb.sum())
-                if inb.sum() >= 3:  # a real detection: at least three in-workspace change patches
+                if self.radius_gate > 0 and gh is not None and inb.sum() >= 3:
+                    far0 = inb & (np.linalg.norm(pts - gh, axis=1) > 0.10)
+                    cand = pts[far0].mean(0) if far0.sum() >= 3 else pts[inb].mean(0)
+                    if np.linalg.norm(cand - gh) > self.radius_gate:
+                        self.info["detection_rejected_by_radius"] = round(float(np.linalg.norm(cand - gh)), 3)
+                if inb.sum() >= 3 and not self.info.get("detection_rejected_by_radius"):  # a real detection
                     keep = torch.zeros_like(change)
                     keep[idx[torch.from_numpy(inb).to(idx.device)]] = True
                     if gh is not None:  # plus the goal's contact disc: the object's final state sits under the hand there
@@ -228,11 +240,38 @@ class ReachThenChangeImage:
                     self.info["change_disc_patches"] = int(change.sum())
                 self.obj3d = torch.from_numpy(obj).to(self.device).float()
                 self.info["object_3d_estimate"] = [round(float(v), 3) for v in obj]
+            self.gh = None if goal_hand is None else np.asarray(goal_hand, dtype=np.float64)
+            self._at_target, self._fallback_done = 0, False
             self.c0 = (z0[self.change] - self.g[self.change]).pow(2).sum(-1).mean()  # the start's change term
             self.rg = rg > 0.5
             if self.rf:
                 m = (~self.robot0) & (~self.rg)
                 self.c0 = ((z0 - self.g).pow(2).sum(-1) * m.float()).sum() / m.float().sum().clamp_min(1.0)
+
+    @torch.no_grad()
+    def update(self, z_now_enc, hand_now):
+        """Closed-loop verification of the detected target (v2). Called once per replan with the current observation."""
+        if not (self.active and self.verify_replans > 0 and self.obj3d is not None and self.gh is not None) or self._fallback_done:
+            return
+        if self.info.get("change_disc_patches"):  # already on the goal-hand fallback
+            return
+        hand = np.asarray(hand_now, dtype=np.float64)
+        rn = 0.04 if self.rf else 0.06
+        z = self._flat(z_now_enc)[0]
+        r = self.head.robot_prob(z[None])[0] > 0.5
+        m = ((~r) & (~self.rg) & (~self.robot0)).float()
+        now = ((z - self.g).pow(2).sum(-1) * m).sum() / m.sum().clamp_min(1.0)
+        c0 = ((self.z0 - self.g).pow(2).sum(-1) * m).sum() / m.sum().clamp_min(1.0)
+        at_target = np.linalg.norm(hand - self.obj3d.cpu().numpy()) < rn + 0.03
+        self._at_target = self._at_target + 1 if at_target else 0
+        if self._at_target >= self.verify_replans and now > 0.9 * c0:  # reached the target, nothing changed: wrong detection
+            obj = self.gh + np.array([0.0, 0.0, 0.05])
+            rc = torch.from_numpy(self.project(obj)).to(self.device).float()
+            self.change = (self.grid - rc).norm(dim=-1) <= 1.5
+            self.disc, self.obj3d, self._fallback_done = True, torch.from_numpy(obj).to(self.device).float(), True
+            self.info["verification_fallback_at_replan"] = int(self.info.get("replans", 0))
+            print(f"  [reach-img] target verification failed after {self._at_target} replans at the target: falling back to the goal hand", flush=True)
+        self.info["replans"] = int(self.info.get("replans", 0)) + 1
 
     def __call__(self, encodings, actions, keepdims: bool = False):
         if not self.active or keepdims:
