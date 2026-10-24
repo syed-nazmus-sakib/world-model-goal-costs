@@ -17,9 +17,13 @@ Per episode (the eval's seeding, episodes [--ep_start, --ep_start + --episodes))
           trajectory: step 0, and 12 and 4 steps before the object first moves (so that some candidates move it);
           half CEM-initial random sequences, half the expert's next actions + noise; final frame encoded as the
           sim_latent planner encodes candidates
+  walks   (--walks K, 2026-10-24) arm-coverage frames: from the expert start and 4 steps before contact, K random action
+          sequences of --walk_chunks planner chunks (half the CEM prior, half with a constant random drift so that the
+          arm travels), a frame every --walk_every chunks. The rtc head trained without them was exploited in closed
+          loop (button 0/12): the planner visits arm poses that expert-path candidates never cover.
 Every frame keeps its 41-d state [39-d obs, success, obj_to_target]. The heads decide which labels they may use.
 
-Saves ep_XXX.npz: vis (N, P, D) fp16, prop (N, Dp) fp16, state (N, 41), kind (N,) 0 expert / 1 goal / 2 candidate,
+Saves ep_XXX.npz: vis (N, P, D) fp16, prop (N, Dp) fp16, state (N, 41), kind (N,) 0 expert / 1 goal / 2 candidate / 3 walk,
 t (N,) expert step (start step for candidates), var (N,) goal variant index (-1 otherwise), start (N,) start index.
 With --robot_mask also rmask (N, P) uint8: 1 where the 14x14 patch shows the robot (the frame differs from the same state
 rendered with the robot hidden), 0 otherwise, 255 unknown (candidates). Training labels for the robot map (mw_robot_map.py).
@@ -69,6 +73,9 @@ def main():
     parser.add_argument("--num_workers", type=int, default=12)
     parser.add_argument("--robot_mask", action="store_true", help="also store the robot patch mask of expert and goal frames")
     parser.add_argument("--no_cands", action="store_true", help="skip the candidate futures (robot-map training data only)")
+    parser.add_argument("--walks", type=int, default=0, help="arm-coverage random walks per start point (0: none)")
+    parser.add_argument("--walk_chunks", type=int, default=14, help="walk length in planner chunks (14 x frameskip 5 = 70 steps)")
+    parser.add_argument("--walk_every", type=int, default=2, help="a walk frame every this many chunks")
     args = parser.parse_args()
     if args.robot_mask:
         from evals.failure_attribution.cost_share_mw import patch_mask
@@ -171,6 +178,18 @@ def main():
                                   exp + noise.view(1, -1, 1) * torch.randn(H, len(noise), model.action_dim, device=device)], 1)
                 states, frames = pool.rollout((task, snaps[s], False), unroll.env_actions(cand), True)
                 add(flat(unroll.encode_final(states, frames)), states, 2, s, -1, si)
+
+            # arm-coverage walks (kind 3): the planner's own sampling distribution, continued for a whole episode
+            if args.walks > 0:
+                walk_starts = [0] if contact is None else sorted({0, max(0, contact - 4)})
+                Kw, Hw, d = args.walks, args.walk_chunks, model.action_dim
+                for si, s in enumerate(walk_starts):
+                    plain = torch.randn(Hw, Kw // 2, d, device=device)
+                    drift = torch.randn(1, Kw - Kw // 2, d, device=device)
+                    seq = torch.cat([plain, 0.4 * torch.randn(Hw, Kw - Kw // 2, d, device=device) + drift], 1)
+                    for n in range(args.walk_every, Hw + 1, args.walk_every):
+                        states, frames = pool.rollout((task, snaps[s], False), unroll.env_actions(seq[:n]), True)
+                        add(flat(unroll.encode_final(states, frames)), states, 3, s + n * fs, -1, si)
 
         extra = {}
         if args.robot_mask:  # expert frames, then goals, then candidates (unknown), in the order of V
