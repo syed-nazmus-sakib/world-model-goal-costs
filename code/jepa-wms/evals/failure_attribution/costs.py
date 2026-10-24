@@ -140,6 +140,14 @@ class ReachThenChangeImage:
         # the detection was wrong and the target falls back to the goal hand (static object).
         self.radius_gate = float(kwargs.get("radius_gate", 0.0))  # 0 = off
         self.verify_replans = int(kwargs.get("verify_replans", 0))  # 0 = off
+        # v3b (2026-10-24, from the v3 12-episode button run): (a) change patches next to the start arm (one-patch dilation of the
+        # start robot mask) are its shadow / vacated region, never the object: 6 of 12 button episodes detected exactly that;
+        # (b) an object cluster must change the features at least `rel_min` times as much as the robot's own appearance change
+        # (start-arm shadows measure 0.2-0.6 x, objects 0.9-1.8 x); (c) in the goal-hand fallback the stand-off is 6 cm and the
+        # second phase is the distance to the goal proprio (hand and gripper), so the gripper closes like the expert's.
+        self.v3b = bool(kwargs.get("v3b", False))
+        self.rel_min = float(kwargs.get("rel_min", 0.7))
+        self.gp = None
         self._at_target, self._fallback_done = 0, False
         self.released = ReprTargetDistMPCObjective(cfg, target_enc=target_enc, alpha=cfg.planner.planning_objective.alpha)
         self.g = self._flat(target_enc)[0]  # (P, D)
@@ -183,7 +191,8 @@ class ReachThenChangeImage:
         return c["pos"] + max(t, 0.0) * d
 
     @torch.no_grad()
-    def set_start(self, z0_enc, hand0=None, goal_hand_z=None, goal_hand=None):
+    def set_start(self, z0_enc, hand0=None, goal_hand_z=None, goal_hand=None, goal_prop=None):
+        self.gp = None if goal_prop is None else np.asarray(goal_prop, dtype=np.float64).reshape(-1)[:4]
         z0 = self._flat(z0_enc)[0]
         r0 = self.head.robot_prob(z0[None], None if hand0 is None else hand0[None].to(self.device).float())[0]
         rg = self.head.robot_prob(self.g[None], None if hand0 is None else hand0[None].to(self.device).float())[0]
@@ -212,6 +221,15 @@ class ReachThenChangeImage:
                 if h0 is not None:
                     inb &= np.linalg.norm(pts - h0, axis=1) < 0.9
                 self.info["n_change_in_workspace"] = int(inb.sum())
+                if self.v3b:  # object patches: in the workspace, not next to the start arm, strong relative to the robot's own change
+                    arm_app = rg & ~(r0 > 0.5)  # patches where the arm appears over background in the goal image
+                    robot_scale = float(diff[arm_app].mean()) if arm_app.any() else float(diff[rg].mean())
+                    rel = (diff[idx] / max(robot_scale, 1e-8)).cpu().numpy()
+                    r0_pts = self.grid[r0 > 0.5]
+                    near_r0 = (torch.cdist(self.grid[idx], r0_pts).min(-1).values <= 1.5).cpu().numpy() if len(r0_pts) else np.zeros(len(idx), bool)
+                    inb = inb & (rel >= self.rel_min) & ~near_r0
+                    self.info.update(robot_scale=round(robot_scale, 4), n_change_strong=int(inb.sum()),
+                                     n_change_next_to_start_arm=int(near_r0.sum()), rel_strength=[round(float(v), 2) for v in sorted(rel)[-6:]])
                 if self.radius_gate > 0 and gh is not None and inb.sum() >= 3:
                     far0 = inb & (np.linalg.norm(pts - gh, axis=1) > 0.10)
                     cand = pts[far0].mean(0) if far0.sum() >= 3 else pts[inb].mean(0)
@@ -306,6 +324,8 @@ class ReachThenChangeImage:
             hand = torch.from_numpy(np.asarray(self.unroll.last_states)[:len(z), :3]).to(self.device).float()
             raw = (hand - self.obj3d).norm(dim=-1)
             rn = 0.04 if self.rf else 0.06  # stand-off at the object estimate (4 cm: within one planning step of the object)
+            if self.v3b and self.disc:
+                rn = 0.06  # the fallback point is 5 cm above the goal hand: 4 cm never engaged the second phase (v3 smoke ep 1)
             reach = (raw - rn).clamp_min(0.0)
             near = raw < rn  # the hand is at the object: the change term decides from here on
             moved = near if self.rf else (moved | near)  # image progress gates are fooled by arm shadows: rf uses geometry only
@@ -314,6 +334,12 @@ class ReachThenChangeImage:
                 # hand pose is the task; the second phase is the distance to it (the latent term on the contact disc barely
                 # separates "pressed" from "touching": v2 smoke 0/3 on button after reaching it)
                 change_term = (hand - torch.from_numpy(self.gh).to(self.device).float()).norm(dim=-1)
+                if self.v3b and self.gp is not None:
+                    # v3b: distance to the goal proprio, hand and gripper (gripper opening in [0, 1] weighted as 5 cm): in v3, 3 of the
+                    # 6 button episodes that reached the goal hand to 1-2 cm hit the housing instead of the button
+                    prop = torch.from_numpy(np.asarray(self.unroll.last_states)[:len(z), :4]).to(self.device).float()
+                    w = torch.tensor([1.0, 1.0, 1.0, 0.05], device=self.device)
+                    change_term = ((prop - torch.from_numpy(self.gp).to(self.device).float()) * w).norm(dim=-1)
         else:  # image only: the arm's new footprint on the patch grid
             dist = (self.grid[None] - self.cent).norm(dim=-1).expand(len(z), -1)
             reach = torch.where(new, dist, torch.full_like(dist, float(self.grid.shape[0]))).min(-1).values

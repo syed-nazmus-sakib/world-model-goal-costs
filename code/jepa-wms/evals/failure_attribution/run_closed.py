@@ -176,14 +176,15 @@ def main():
             agent.goal_state_enc = mean_enc
             agent.objective = ReprTargetDistMPCObjective(cfg, target_enc=mean_enc, **cfg.planner.planning_objective)
             agent.planner.set_objective(agent.objective)
-        if args.cost.split(":")[0] in ("reach", "reachrf", "reachrf2"):  # reach-then-change from images (costs.ReachThenChangeImage)
+        if args.cost.split(":")[0] in ("reach", "reachrf", "reachrf2", "reachrf3"):  # reach-then-change from images (costs.ReachThenChangeImage)
             from evals.failure_attribution.costs import ReachThenChangeImage
 
             kind = args.cost.split(":")[0]
+            v23 = kind in ("reachrf2", "reachrf3")
             agent.objective = ReachThenChangeImage(cfg, target_enc=agent.goal_state_enc, head_path=args.cost.split(":", 1)[1],
                                                    unroll=oracles["sim_latent"][1] if "sim_latent" in oracles else None,
                                                    r0=args.reach_r0_img, rf=kind != "reach",
-                                                   radius_gate=0.35 if kind == "reachrf2" else 0.0, verify_replans=2 if kind == "reachrf2" else 0)
+                                                   radius_gate=0.35 if v23 else 0.0, verify_replans=2 if v23 else 0, v3b=kind == "reachrf3")
             agent.planner.set_objective(agent.objective)
         elif args.cost.startswith("tempo:"):  # TEMPO baseline: tempo:<map.pt>[:w] (costs.TempoMixObjective)
             from evals.failure_attribution.costs import TempoMixObjective
@@ -252,8 +253,9 @@ def main():
                         planner.objective.set_camera(mw0.data.cam_xpos[cid], mw0.data.cam_xmat[cid], float(mw0.model.cam_fovy[cid]),
                                                      int(cfg.task_specification.img_size))
                         hand0 = torch.from_numpy(np.asarray(mw0._get_obs(), dtype=np.float32)[:3])
-                        gh = np.asarray(goal_obs["proprio"], dtype=np.float64).reshape(-1, 4)[-1, :3]
-                        planner.objective.set_start(z, hand0, goal_hand_z=float(gh[2]), goal_hand=gh)
+                        gp = np.asarray(goal_obs["proprio"], dtype=np.float64).reshape(-1, 4)[-1]
+                        gh = gp[:3]
+                        planner.objective.set_start(z, hand0, goal_hand_z=float(gh[2]), goal_hand=gh, goal_prop=gp)
                         out[f"{name}_reach_info"] = json.dumps(planner.objective.info)
                         print(f"  [{name}] reach-then-change: {planner.objective.info}", flush=True)
                     res = planner.plan(z, steps_left=steps_left)
