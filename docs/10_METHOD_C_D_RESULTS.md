@@ -342,6 +342,43 @@ unchanged (0.86-1.00).
 - Drawer-open 3 → 10 and plate-slide 6 → 11 with the same change term as before: the planner frames gave the head labels
   for "handle pulled 13-16 cm, 3-7 cm short", which the walks did not contain.
 
+**Round 2 (R2 queue on pod K2, 2026-10-24/25, `podk_r2_queue.sh` + `podk_r2_fix.sh`).** Pod K's disk was wiped at stop, so the
+training data was regenerated (expert, candidates, walks, jitter, 8 tasks, ~2 min per task-split) and the planner frames were
+dumped again: round 1 (H3 head + rf) on the training episodes of the 4 headline tasks and round 2 (H6 head + rf) on all 8
+tasks. The ensemble (3 members, β = 1) retrained on 115,295 frames from 36 directories (expert 36.0k, goal 3.0k, candidates
+12.6k at 1 in 6, walks 13.3k at 1 in 3, jitter 16.9k, planner frames 1,152 executed + 32,256 candidates), 18 min; offline
+ranking unchanged (0.87-1.00). Closed loops, 12 test episodes, exact dynamics, same episodes as every earlier row:
+
+| cost (round-2 ensemble) | button | push | drawer-open | plate-slide | faucet | window | drawer-close† | reach-wall† |
+|---|---|---|---|---|---|---|---|---|
+| head + rf (λ = 0.5), round 1 (H6) | 3 | 7 | **10** | 11 | 2 | 7 | 12 | 11 |
+| head + rf (λ = 0.5), round 2 | 8 | 9 | 4 | 10 | 3 | 10 | 12 | 11 |
+| head alone (λ = 0), round 2 | **10** | **10** | 3 | **11** | **4** | **11** | 12 | 10 |
+| head + rf, union of round-1 and round-2 heads (6 members) | – | – | 8 | – | – | – | – | – |
+
+- **Five of six object tasks at or above 6/12 with the head alone (button 10, push 10, plate-slide 11, window 11) and
+  both controls at 10-12: the rule passes again, with a wider margin.** Faucet-open stays low (3-4).
+- **The change term is no longer needed.** With two rounds of planner frames the head alone is at or above head + rf on
+  every object task (differences of 1-2 episodes, within noise, but the sign is the same on all six). The rf term was the
+  remedy for the terminal state when the data had no "hand at goal, object off" frames; the planner frames supply them.
+- **Drawer-open regressed 10 → 4 (head + rf) / 3 (head alone).** All 8 failures are one mode: the planner never leaves the
+  start pose, best CEM cost 4.8-5.1 at every one of the 7 replans, hand 20 cm from the goal hand, drawer untouched; the 4
+  successes drop to cost 0.1 at the first replan exactly as in round 1. The same stuck mode existed before round 2: 1 of 12
+  test episodes with the H6 head, and 5 of 12 *training* episodes in the round-2 dump (H6 head, 5/12). So it is a
+  first-replan search plateau that round 2 made more frequent, not a new terminal-state exploit. The union ensemble
+  (round-1 + round-2 members, pessimism over rounds) gives 8/12. The β = 0 ablation (phase D) tells whether the
+  disagreement term flattens the start region.
+- Round-2 planner-frame dumps on the training episodes (H6 head + rf): button 2/12, push 8/12, drawer-open 5/12,
+  plate-slide 11/12, faucet 1/12, window 10/12, drawer-close 12/12, reach-wall 12/12 (training episodes 100-111 are harder
+  than the test episodes 0-11 for button and drawer-open).
+- Bug found and fixed in the queue: `local t=$1 root=$3 d=$root/dump_$t` expands `$root` before it is set, so every lane wrote
+  its episode files to `/dump_<task>` and `run_closed` skipped the episodes a sibling lane had already written there (round-2
+  button and drawer-open planner frames: 0 episodes; push 10/12; round-1 plate-slide 4/12). The missing episodes were
+  re-dumped (`podk_r2_fix.sh`, distinct out dirs, `"${root:?}"` guards) before the ensemble was trained.
+- Backup: `artifacts/lewm_explorations_raw/reach_image_2026-10-24/R2/` (heads, union head, every closed-loop episode file,
+  logs). Running next: β = 0, no-walks retrain, demonstration-only retrain (each + rf, 4 tasks), then the learned-predictor
+  runs.
+
 ## What the results say
 
 1. **The learned cost helps where the released distance contradicts task progress in a way the data shows.**
