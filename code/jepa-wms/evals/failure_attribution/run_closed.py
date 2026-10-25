@@ -212,7 +212,7 @@ def main():
             agent.objective = TempoMixObjective(cfg, target_enc=agent.goal_state_enc, map_path=parts[1], w=float(parts[2]) if len(parts) > 2 else 0.5)
             agent.planner.set_objective(agent.objective)
         elif args.cost.startswith("headrf:"):  # head + robot-free change term: headrf:<head.pt>:<robot.pt>[:beta[:lam]] (costs.HeadChangeObjective)
-            from evals.failure_attribution.costs import HeadChangeObjective
+            # (imported at module level: a local import here made the isinstance check below fail with UnboundLocalError for every other --cost)
 
             parts = args.cost.split(":")
             agent.objective = HeadChangeObjective(cfg, target_enc=agent.goal_state_enc, head_path=parts[1], robot_path=parts[2],
