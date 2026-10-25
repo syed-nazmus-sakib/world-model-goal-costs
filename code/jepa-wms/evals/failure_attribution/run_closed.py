@@ -274,6 +274,27 @@ def main():
                         agent.objective.set_start(model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True))
                     a = agent.act(prepare_obs(obs_type, td), steps_left=steps_left)
                     cem_final.append(float(agent._prev_losses.squeeze(-1)[-1]))
+                    if args.dump_dir and args.dump_cands > 0 and getattr(agent.objective, "last_pop", None) is not None:
+                        # kind 7: the PREDICTED final latents of the last CEM population (what the cost prices when it plans with the
+                        # learned predictor), each labelled by executing its action sequence in the simulator from the current state
+                        enc_p, acts = agent.objective.last_pop
+                        agent.objective.last_pop = None
+                        su = sim_unrolls["latent"]
+                        su.spec = (task, capture(env.unwrapped), args.robot_free)
+                        B_p = int(enc_p["visual"].shape[1])
+                        sel = np.sort(dump_rng.choice(B_p, min(args.dump_cands, B_p), replace=False))
+                        ls, _ = pool.rollout(su.spec, su.env_actions(acts[:, sel]), False)
+                        from tensordict import TensorDict as _TD
+
+                        fv, fp = flat(_TD({"visual": enc_p["visual"][-1:, sel], "proprio": enc_p["proprio"][-1:, sel]}, batch_size=[]))
+                        t_c = dump_steps + len(denorm(a))
+                        for j in range(len(sel)):
+                            dump["vis"].append(fv[j])
+                            dump["prop"].append(fp[j])
+                            s_j = np.asarray(ls[j], dtype=np.float64)
+                            dump["state"].append(s_j.astype(np.float32) if s_j.shape[-1] == 41 else full_state(env.unwrapped, s_j[:39]))
+                            dump["t"].append(t_c)
+                            dump["kind"].append(7)
                 else:
                     z = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
                     if args.dump_dir and name == "sim_latent":  # the planner's own visited frame (last of the history), with its labels
@@ -329,14 +350,15 @@ def main():
             if args.save_frames:
                 frames.append(frame_of(td))
                 out[f"{name}_frames"] = np.stack(frames)
-            if args.dump_dir and name == "sim_latent" and dump["vis"]:  # the final frame too (the exploited end state), then save
-                zf = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
-                fv, fp = flat(zf)
-                dump["vis"].append(fv[-1])
-                dump["prop"].append(fp[-1])
-                dump["state"].append(full_state(env.unwrapped, st))
-                dump["t"].append(dump_steps)
-                dump["kind"].append(5)
+            if args.dump_dir and name in ("sim_latent", "wm") and dump["vis"]:  # the final frame too (the exploited end state), then save
+                if name == "sim_latent":  # (the wm dump holds predicted latents only, kind 7)
+                    zf = model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True)
+                    fv, fp = flat(zf)
+                    dump["vis"].append(fv[-1])
+                    dump["prop"].append(fp[-1])
+                    dump["state"].append(full_state(env.unwrapped, st))
+                    dump["t"].append(dump_steps)
+                    dump["kind"].append(5)
                 shapes = {x.shape for x in dump["vis"]} | {x.shape for x in dump["prop"]}
                 if len({x.shape for x in dump["vis"]}) == 1 and len({x.shape for x in dump["prop"]}) == 1:
                     n_d = len(dump["vis"])

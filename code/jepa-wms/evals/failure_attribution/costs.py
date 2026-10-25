@@ -422,6 +422,8 @@ class LearnedHeadMPCObjective:
 
     def __call__(self, encodings, actions, keepdims: bool = False):
         self.last_enc = encodings  # the population the planner evaluated last (run_closed --dump_dir saves a sample of it)
+        if encodings["visual"].dim() == 6 and encodings["visual"].shape[1] > 1:
+            self.last_pop = (encodings, actions)  # last CEM population (not the final single mean rollout): predicted latents + actions
         d = (self.embed(encodings) - self.f_goal).pow(2).sum(-1)  # (E, T, B)
         diff = d.mean(0)
         if self.beta and d.shape[0] > 1:
@@ -484,6 +486,8 @@ class HeadChangeObjective:
 
     def __call__(self, encodings, actions, keepdims: bool = False):
         self.last_enc = encodings
+        if encodings["visual"].dim() == 6 and encodings["visual"].shape[1] > 1:
+            self.last_pop = (encodings, actions)  # see LearnedHeadMPCObjective: run_closed --planners wm --dump_dir
         h = self.head(encodings, actions, keepdims)
         if keepdims or self.robot0 is None:
             return h
