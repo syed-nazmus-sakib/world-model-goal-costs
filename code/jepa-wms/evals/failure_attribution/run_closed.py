@@ -272,6 +272,13 @@ def main():
                 if name == "wm":
                     if replans == 0 and isinstance(agent.objective, HeadChangeObjective):  # the change term needs the start frame
                         agent.objective.set_start(model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True))
+                    if args.dump_dir:  # the visited frame (encoder latent, kind 5), as in the sim_latent dump; also the merge's start reference
+                        fv, fp = flat(model.encode(prepare_obs(obs_type, td).to(device, non_blocking=True).unsqueeze(0), act=True))
+                        dump["vis"].append(fv[-1])
+                        dump["prop"].append(fp[-1])
+                        dump["state"].append(full_state(env.unwrapped, np.asarray(env.unwrapped._get_obs(), dtype=np.float64)))
+                        dump["t"].append(dump_steps)
+                        dump["kind"].append(5)
                     a = agent.act(prepare_obs(obs_type, td), steps_left=steps_left)
                     cem_final.append(float(agent._prev_losses.squeeze(-1)[-1]))
                     if args.dump_dir and args.dump_cands > 0 and getattr(agent.objective, "last_pop", None) is not None:

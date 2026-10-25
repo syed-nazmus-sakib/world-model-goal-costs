@@ -31,7 +31,8 @@ def main():
         d, p = np.load(f), np.load(pf)
         keep = np.isin(p["kind"], (0, 1))
         ex0 = np.where((p["kind"] == 0) & (p["t"] == p["t"][p["kind"] == 0].min()))[0][0]
-        drift = float(np.linalg.norm(p["state"][ex0, :3] - d["state"][0, :3]))
+        vis0 = np.where(d["kind"] == 5)[0]  # the first visited frame is the episode start; candidate frames (kinds 6, 7) are not
+        drift = float(np.linalg.norm(p["state"][ex0, :3] - d["state"][vis0[0], :3])) if len(vis0) else 0.0
         if drift > 0.01:
             print(f"{name}: start hand differs by {drift:.3f} m between pilot and dump, skipped")
             continue
