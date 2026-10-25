@@ -8,6 +8,8 @@
 from abc import ABC, abstractmethod
 from typing import Callable, List, NamedTuple
 
+import os
+
 import nevergrad as ng
 import numpy as np
 import torch
@@ -46,7 +48,19 @@ class Planner(ABC):
         pass
 
     def cost_function(self, actions: torch.Tensor, z_init: torch.Tensor) -> torch.Tensor:
-        predicted_encs = self.unroll(z_init, actions)
+        # JWM_UNROLL_CHUNK=<n>: unroll the candidates n at a time (same result; peak memory of the predictor's attention
+        # scales with the candidate batch, 300 candidates need > 12 GB on an RTX 3080 Ti). Unset / 0: one batch, as released.
+        chunk = int(os.environ.get("JWM_UNROLL_CHUNK", "0") or 0)
+        if chunk > 0 and actions.shape[1] > chunk:
+            outs = [self.unroll(z_init, a) for a in actions.split(chunk, dim=1)]  # each [T+tau, b, ...]
+            if isinstance(outs[0], torch.Tensor):
+                predicted_encs = torch.cat(outs, dim=1)
+            else:  # TensorDict with an empty batch_size: concatenate the candidate dim of every entry
+                predicted_encs = outs[0].__class__(
+                    {k: torch.cat([o[k] for o in outs], dim=1) for k in outs[0].keys()}, batch_size=outs[0].batch_size
+                )
+        else:
+            predicted_encs = self.unroll(z_init, actions)
         return self.objective(predicted_encs, actions)
 
 
