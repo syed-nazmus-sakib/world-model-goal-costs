@@ -42,6 +42,16 @@ register(
 )
 
 register(
+    id='swm/PointMaze_Medium-v3',
+    entry_point='stable_worldmodel.envs.gymnasium_robotics.d4rl_point_maze_medium:D4RLPointMazeMediumEnv',
+)
+
+register(
+    id='swm/PointMaze-v0',
+    entry_point='stable_worldmodel.envs.ogbench.pointmaze_env:PointMazeEnv',
+)
+
+register(
     id='swm/OGBScene-v0',
     entry_point='stable_worldmodel.envs.ogbench.scene_env:SceneEnv',
 )

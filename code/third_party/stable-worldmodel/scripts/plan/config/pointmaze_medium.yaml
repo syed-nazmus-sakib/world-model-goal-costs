@@ -1,0 +1,47 @@
+# PointMaze-Medium (D4RL layout), as in LP² (arXiv 2610.26979, github.com/yjang43/lp2 config/eval/pointmaze_medium.yaml).
+# Checkpoint yjang43/lp2-pointmaze-medium (LeWM trained on the random set); pairs from the expert set.
+defaults:
+  - launcher: local
+  - solver: cem
+  - objective: goal_mse
+  - _self_
+
+world:
+  env_name: swm/PointMaze_Medium-v3
+  num_envs: ${eval.num_eval}
+  max_episode_steps: ??? # set in eval_wm.py to 2 * eval_budget
+
+dataset:
+  stats: ${eval.dataset_name}
+  keys_to_cache:
+    - action
+
+seed: 42
+policy: random # ckpt name or random
+
+plan_config:
+  horizon: 5
+  receding_horizon: 5
+  action_block: 5 # frameskip
+
+eval:
+  num_eval: 50
+  goal_offset_steps: 25
+  eval_budget: 50
+  img_size: 224
+  dataset_name: d4rl_pointmaze_medium_expert.h5
+  callables:
+    - method: set_state
+      args:
+        state:
+          value: proprio
+        desired_goal:
+          value: goal_desired_goal
+    # success: ||goal_xy - agent_xy|| < 0.5
+    - method: set_goal
+      args:
+        goal:
+          value: goal_proprio
+
+output:
+  filename: pointmaze_medium_results.txt

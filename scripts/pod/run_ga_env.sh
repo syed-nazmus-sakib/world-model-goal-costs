@@ -20,6 +20,8 @@ case $ENV in
   tworoom) CFG=tworoom; M=quentinll/lewm-tworooms; KEY=pos_agent ;;
   cube)    CFG=cube;    M=quentinll/lewm-cube;     KEY=none ;;
   reacher) CFG=reacher; M=quentinll/lewm-reacher;  KEY=none ;;
+  pmm)     CFG=pointmaze_medium; M=yjang43/lp2-pointmaze-medium; KEY=proprio; DSN=d4rl_pointmaze_medium_expert.h5 ;;
+  pml)     CFG=pointmaze_large;  M=${PML_CKPT:?set PML_CKPT to the trained LeWM}; KEY=state; DSN=pointmaze_large.h5 ;;
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
 DS=${DS:-$(cat "$OUT/dataset_name" 2>/dev/null)}
@@ -30,10 +32,21 @@ cd "$SWM"
 if [ "$LANE" != anchor ]; then
   if [ -z "$DS" ]; then
     $PY $P/fetch_lewm_data.py $ENV > "$OUT/fetch.log" 2>&1 || abort "fetch FAILED"
-    DS=$(grep -a '^H5 ' "$OUT/fetch.log" | awk '{print $2}' | grep -iv test | head -1)
+    DS=$(grep -a '^H5 ' "$OUT/fetch.log" | awk '{print $2}' | grep -x "${DSN:-.*}" | grep -iv test | head -1)
     [ -n "$DS" ] || abort "no dataset found"
     echo "$DS" > "$OUT/dataset_name"; log "dataset $DS"
   fi
+  case $M in quentinll/*|/*) ;; *)  # third-party checkpoint: its config may only build stable_worldmodel / torch classes
+    $PY -c "
+import json, sys; from huggingface_hub import hf_hub_download
+c = json.load(open(hf_hub_download('$M', 'config.json'))); t = []
+def walk(x):
+    if isinstance(x, dict):
+        [t.append(v) for k, v in x.items() if k == '_target_']; [walk(v) for v in x.values()]
+    elif isinstance(x, list): [walk(v) for v in x]
+walk(c); bad = [v for v in t if not str(v).startswith(('stable_worldmodel.', 'stable_pretraining.', 'torch.nn.'))]
+print('targets', sorted(set(t))); sys.exit(1 if bad else 0)" > "$OUT/ckpt_check.log" 2>&1 || abort "checkpoint config has unexpected targets" ;;
+  esac
   $PY -c "import stable_worldmodel as swm; swm.wm.utils.load_pretrained('$M')" > "$OUT/ckpt.log" 2>&1 || abort "checkpoint FAILED"
   [ -f $NODES ] || { log "nodes start"; $PY $P/paa_nodes.py --out $NODES --model $M --dataset $DS --state_key $KEY --workers 8 \
       > $OUT/nodes.log 2>&1 || abort "nodes FAILED"; log "nodes: $(tail -1 $OUT/nodes.log)"; }
