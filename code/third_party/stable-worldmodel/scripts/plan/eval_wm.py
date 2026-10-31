@@ -107,7 +107,10 @@ def run(cfg: DictConfig):
     policy = cfg.get('policy', 'random')
 
     if policy != 'random':
-        model = swm.wm.utils.load_pretrained(cfg.policy)
+        if cfg.get('policy_object', None):  # a module saved with torch.save by our own training runs
+            model = torch.load(cfg.policy_object, map_location='cpu', weights_only=False)
+        else:
+            model = swm.wm.utils.load_pretrained(cfg.policy)
         if cfg.get('bf16', False):
             model = model.to(torch.bfloat16)
         model = model.to('cuda')

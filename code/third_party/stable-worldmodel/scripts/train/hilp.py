@@ -768,6 +768,8 @@ class SaveCkptCallback(Callback):
             config=self.cfg,
             filename=f'weights_epoch_{epoch}.pt',
         )
+        # whole module (our own training output): eval_wm.py loads it with +policy_object=<path>
+        torch.save(model, swm.data.utils.get_cache_dir(sub_folder='checkpoints') / self.run_name / 'model_object.pt')
 
 
 # ============================================================================
@@ -812,11 +814,12 @@ def run(cfg):
     # Extract policy from trained value function
     wandb_logger_policy = setup_pl_logger(cfg, postfix='_policy')
 
-    # load value function weights
-    checkpoint = torch.load(
-        f'{cache_dir}/{cfg.output_model_name}_value_weights.ckpt'
-    )
-    hilp_value_model.load_state_dict(checkpoint['state_dict'])
+    # load value function weights only when value training was skipped (the trained model is in memory)
+    if not cfg.get('train_value', True):
+        checkpoint = torch.load(
+            f'{cache_dir}/{cfg.output_model_name}_value_weights.ckpt'
+        )
+        hilp_value_model.load_state_dict(checkpoint['state_dict'])
 
     hilp_actor_model = get_hilp_actor_model(cfg, hilp_value_model)
 
