@@ -10,6 +10,8 @@ Anchor choice per replan and per env:
   mode='ap'    : Anchored Planning (arXiv 2609.30036) re-implemented on the same nodes for a matched comparison:
                  retrieve the node whose (z, z_{+remaining}, difference) key is nearest to (z_t, z_goal, z_goal - z_t),
                  remaining = max(5, goal offset - elapsed steps), and aim at that node's one-block successor
+  mode='apg'   : AP retrieval of the top `ap_k` keys, then the successor with the smallest graph distance to the goal
+                 (ties: retrieval order); stitches across episodes where a single recorded segment does not reach the goal
   mode='paa'   : the hop maximising P_attain(z_t, z_anchor, hops) * (graph progress), P from a learned ensemble
                  (paa_head.py) minus `pess` times its std; hops with P < tau are skipped
 When the goal is within `span` hops (or no path exists) the anchor is the goal itself.
@@ -24,7 +26,7 @@ from torch import nn
 
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
-                 thr_q=0.5, ap_offset=None, ap_step=5):
+                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -32,7 +34,7 @@ class PAAGoalCost(nn.Module):
         self.mode, self.span, self.max_hops, self.tau, self.pess, self.knn, self.agg = mode, int(span), int(max_hops), \
             float(tau), float(pess), int(knn), agg
         self.thr_q = float(thr_q)
-        self.ap_offset, self.ap_step = ap_offset, int(ap_step)
+        self.ap_offset, self.ap_step, self.ap_k = ap_offset, int(ap_step), int(ap_k)
         self.head = None
         if head:
             from paa_head import load_head
@@ -49,11 +51,12 @@ class PAAGoalCost(nn.Module):
         ep, step = self.ep_all[self.idx], self.step_all[self.idx]
         n = len(self.idx)
         order = np.lexsort((step, ep))
-        if self.mode == 'ap':  # no graph: retrieval banks are built per remaining horizon
+        if self.mode in ('ap', 'apg'):  # retrieval banks are built per remaining horizon
             self._ap_order, self._ap_ep, self._ap_st = order, ep[order], step[order]
             self._ap_bank, self._ap_env = {}, {}
             print(f'[paa] ap memory: {n} nodes ({len(eps)} episodes excluded)', flush=True)
-            return
+            if self.mode == 'ap':  # no graph
+                return
         a, b = order[:-1], order[1:]
         nxt = (ep[a] == ep[b]) & (step[b] - step[a] == 5)
         ta, tb = a[nxt], b[nxt]
@@ -72,6 +75,8 @@ class PAAGoalCost(nn.Module):
         G = csr_matrix((np.ones(len(r), np.float32), (r, c)), shape=(n, n))
         G.data[:] = 1.0
         self.GT = G.T.tocsr()  # distances TO the goal = dijkstra from the goal on the transposed graph
+        del dd
+        torch.cuda.empty_cache()  # several evaluation processes share one GPU
         self._goal_cache, self._anchor_cache = {}, {}
         print(f'[paa] graph: {n} nodes ({len(eps)} episodes excluded), {len(ta)} temporal + {G.nnz - len(ta)} k-NN edges, '
               f'thr={self.thr:.3f}', flush=True)
@@ -126,6 +131,7 @@ class PAAGoalCost(nn.Module):
     def _ap_bank_for(self, k):
         if k not in self._ap_bank:
             self._ap_bank.clear()  # one remaining-horizon bank at a time (about 1 GB each)
+            torch.cuda.empty_cache()
             o, ep, st = self._ap_order, self._ap_ep, self._ap_st
             pos = np.arange(len(o) - k)
             ok = (ep[pos + k] == ep[pos]) & (st[pos + k] - st[pos] == 5 * k) & (ep[pos + 1] == ep[pos]) & \
@@ -136,6 +142,8 @@ class PAAGoalCost(nn.Module):
             mu, sd = f.mean(0), f.std(0).clamp_min(1e-4)
             f = (f - mu) / sd
             self._ap_bank[k] = (f, f.pow(2).sum(-1), mu, sd, nxt)
+            del z, zg
+            torch.cuda.empty_cache()
         return self._ap_bank[k]
 
     def _ap_anchor(self, z0, g):
@@ -149,7 +157,12 @@ class PAAGoalCost(nn.Module):
                 k = max(1, int(round(max(5, self.ap_offset - st['t']) / 5)))
                 f, f2, mu, sd, nxt = self._ap_bank_for(k)
                 q = (torch.cat([z0[b], g[b], g[b] - z0[b]]) - mu) / sd
-                i = int((f2 - 2 * (f @ q)).argmin())
+                if self.mode == 'ap':
+                    i = int((f2 - 2 * (f @ q)).argmin())
+                else:
+                    top = (f2 - 2 * (f @ q)).topk(self.ap_k, largest=False).indices
+                    _, dist, _ = self._goal_tree(g[b])
+                    i = int(top[int(np.argmin(dist[nxt[top].cpu().numpy()]))])  # argmin keeps retrieval order on ties
                 st['a'] = self.emb[nxt[i]]
             out.append(st['a'])
         return torch.stack(out)
@@ -159,7 +172,7 @@ class PAAGoalCost(nn.Module):
         g = info_dict['goal_emb'][:, -1].float()  # (B, D)
         H = info_dict['pixels'].size(2)
         z0 = info_dict['predicted_emb'][:, 0, H - 1].float()  # current frame (last context step)
-        if self.mode == 'ap':
+        if self.mode in ('ap', 'apg'):
             a = self._ap_anchor(z0, g).to(g.device)
         else:
             a = torch.stack([self.anchor(z0[b], g[b]) for b in range(g.shape[0])]).to(g.device)
