@@ -7,6 +7,9 @@ are removed (the evaluation pairs' own episodes), so an anchor never replays the
 
 Anchor choice per replan and per env:
   mode='fixed' : the node `span` hops along the path (training-free, Anchored-Planning-style)
+  mode='ap'    : Anchored Planning (arXiv 2609.30036) re-implemented on the same nodes for a matched comparison:
+                 retrieve the node whose (z, z_{+remaining}, difference) key is nearest to (z_t, z_goal, z_goal - z_t),
+                 remaining = max(5, goal offset - elapsed steps), and aim at that node's one-block successor
   mode='paa'   : the hop maximising P_attain(z_t, z_anchor, hops) * (graph progress), P from a learned ensemble
                  (paa_head.py) minus `pess` times its std; hops with P < tau are skipped
 When the goal is within `span` hops (or no path exists) the anchor is the goal itself.
@@ -21,7 +24,7 @@ from torch import nn
 
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
-                 thr_q=0.5):
+                 thr_q=0.5, ap_offset=None, ap_step=5):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -29,6 +32,7 @@ class PAAGoalCost(nn.Module):
         self.mode, self.span, self.max_hops, self.tau, self.pess, self.knn, self.agg = mode, int(span), int(max_hops), \
             float(tau), float(pess), int(knn), agg
         self.thr_q = float(thr_q)
+        self.ap_offset, self.ap_step = ap_offset, int(ap_step)
         self.head = None
         if head:
             from paa_head import load_head
@@ -45,6 +49,11 @@ class PAAGoalCost(nn.Module):
         ep, step = self.ep_all[self.idx], self.step_all[self.idx]
         n = len(self.idx)
         order = np.lexsort((step, ep))
+        if self.mode == 'ap':  # no graph: retrieval banks are built per remaining horizon
+            self._ap_order, self._ap_ep, self._ap_st = order, ep[order], step[order]
+            self._ap_bank, self._ap_env = {}, {}
+            print(f'[paa] ap memory: {n} nodes ({len(eps)} episodes excluded)', flush=True)
+            return
         a, b = order[:-1], order[1:]
         nxt = (ep[a] == ep[b]) & (step[b] - step[a] == 5)
         ta, tb = a[nxt], b[nxt]
@@ -113,12 +122,47 @@ class PAAGoalCost(nn.Module):
         self._anchor_cache[key] = out
         return out
 
+    # ------------------------------------------------------------------------------------------- anchored planning
+    def _ap_bank_for(self, k):
+        if k not in self._ap_bank:
+            self._ap_bank.clear()  # one remaining-horizon bank at a time (about 1 GB each)
+            o, ep, st = self._ap_order, self._ap_ep, self._ap_st
+            pos = np.arange(len(o) - k)
+            ok = (ep[pos + k] == ep[pos]) & (st[pos + k] - st[pos] == 5 * k) & (ep[pos + 1] == ep[pos]) & \
+                 (st[pos + 1] - st[pos] == 5)
+            src, far, nxt = (torch.from_numpy(o[pos[ok] + j]).cuda() for j in (0, k, 1))
+            z, zg = self.emb[src], self.emb[far]
+            f = torch.cat([z, zg, zg - z], -1)
+            mu, sd = f.mean(0), f.std(0).clamp_min(1e-4)
+            f = (f - mu) / sd
+            self._ap_bank[k] = (f, f.pow(2).sum(-1), mu, sd, nxt)
+        return self._ap_bank[k]
+
+    def _ap_anchor(self, z0, g):
+        out = []
+        for b in range(len(z0)):  # elapsed steps per env: +ap_step every time its current latent changes (one decision)
+            gk, zk = hash(g[b].cpu().numpy().tobytes()), hash(z0[b].cpu().numpy().tobytes())
+            st = self._ap_env.setdefault(gk, {'z': zk, 't': 0, 'a': None})
+            if st['z'] != zk:
+                st['z'], st['t'], st['a'] = zk, st['t'] + self.ap_step, None
+            if st['a'] is None:
+                k = max(1, int(round(max(5, self.ap_offset - st['t']) / 5)))
+                f, f2, mu, sd, nxt = self._ap_bank_for(k)
+                q = (torch.cat([z0[b], g[b], g[b] - z0[b]]) - mu) / sd
+                i = int((f2 - 2 * (f @ q)).argmin())
+                st['a'] = self.emb[nxt[i]]
+            out.append(st['a'])
+        return torch.stack(out)
+
     # ----------------------------------------------------------------------------------------------------- cost
     def forward(self, info_dict):
         g = info_dict['goal_emb'][:, -1].float()  # (B, D)
         H = info_dict['pixels'].size(2)
         z0 = info_dict['predicted_emb'][:, 0, H - 1].float()  # current frame (last context step)
-        a = torch.stack([self.anchor(z0[b], g[b]) for b in range(g.shape[0])]).to(g.device)
+        if self.mode == 'ap':
+            a = self._ap_anchor(z0, g).to(g.device)
+        else:
+            a = torch.stack([self.anchor(z0[b], g[b]) for b in range(g.shape[0])]).to(g.device)
         if self.agg == 'min':
             p = info_dict['predicted_emb'][:, :, H:].float()
             return (p - a[:, None, None]).pow(2).sum(-1).min(-1).values
