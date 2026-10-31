@@ -12,6 +12,9 @@ Anchor choice per replan and per env:
                  remaining = max(5, goal offset - elapsed steps), and aim at that node's one-block successor
   mode='apg'   : AP retrieval of the top `ap_k` keys, then the successor with the smallest graph distance to the goal
                  (ties: retrieval order); stitches across episodes where a single recorded segment does not reach the goal
+  mode='apk'   : AP with the successors of the top `ap_k` keys as targets; cost = distance to the nearest of them
+  mode='apc'   : AP that commits to the retrieved record: while the current latent stays within one median block step
+                 of the record's next frame, the target advances along that record instead of being re-retrieved
   mode='paa'   : the hop maximising P_attain(z_t, z_anchor, hops) * (graph progress), P from a learned ensemble
                  (paa_head.py) minus `pess` times its std; hops with P < tau are skipped
 When the goal is within `span` hops (or no path exists) the anchor is the goal itself.
@@ -51,11 +54,17 @@ class PAAGoalCost(nn.Module):
         ep, step = self.ep_all[self.idx], self.step_all[self.idx]
         n = len(self.idx)
         order = np.lexsort((step, ep))
-        if self.mode in ('ap', 'apg'):  # retrieval banks are built per remaining horizon
+        if self.mode in ('ap', 'apg', 'apk', 'apc'):  # retrieval banks are built per remaining horizon
             self._ap_order, self._ap_ep, self._ap_st = order, ep[order], step[order]
             self._ap_bank, self._ap_env = {}, {}
+            pos = np.arange(n - 1)
+            cont = (self._ap_ep[pos + 1] == self._ap_ep[pos]) & (self._ap_st[pos + 1] - self._ap_st[pos] == 5)
+            o = torch.from_numpy(order).cuda()
+            self._ap_eps = float((self.emb[o[pos[cont]]] - self.emb[o[pos[cont] + 1]]).pow(2).sum(-1).median())
+            self._ap_cont = np.append(cont, False)  # sorted position p continues to p + 1 in the same episode
+            del o
             print(f'[paa] ap memory: {n} nodes ({len(eps)} episodes excluded)', flush=True)
-            if self.mode == 'ap':  # no graph
+            if self.mode != 'apg':  # no graph
                 return
         a, b = order[:-1], order[1:]
         nxt = (ep[a] == ep[b]) & (step[b] - step[a] == 5)
@@ -137,11 +146,12 @@ class PAAGoalCost(nn.Module):
             ok = (ep[pos + k] == ep[pos]) & (st[pos + k] - st[pos] == 5 * k) & (ep[pos + 1] == ep[pos]) & \
                  (st[pos + 1] - st[pos] == 5)
             src, far, nxt = (torch.from_numpy(o[pos[ok] + j]).cuda() for j in (0, k, 1))
+            npos = pos[ok] + 1  # sorted position of each successor (for apc)
             z, zg = self.emb[src], self.emb[far]
             f = torch.cat([z, zg, zg - z], -1)
             mu, sd = f.mean(0), f.std(0).clamp_min(1e-4)
             f = (f - mu) / sd
-            self._ap_bank[k] = (f, f.pow(2).sum(-1), mu, sd, nxt)
+            self._ap_bank[k] = (f, f.pow(2).sum(-1), mu, sd, nxt, npos)
             del z, zg
             torch.cuda.empty_cache()
         return self._ap_bank[k]
@@ -150,15 +160,26 @@ class PAAGoalCost(nn.Module):
         out = []
         for b in range(len(z0)):  # elapsed steps per env: +ap_step every time its current latent changes (one decision)
             gk, zk = hash(g[b].cpu().numpy().tobytes()), hash(z0[b].cpu().numpy().tobytes())
-            st = self._ap_env.setdefault(gk, {'z': zk, 't': 0, 'a': None})
+            st = self._ap_env.setdefault(gk, {'z': zk, 't': 0, 'a': None, 'p': None})
             if st['z'] != zk:
                 st['z'], st['t'], st['a'] = zk, st['t'] + self.ap_step, None
+                p = st['p']
+                if self.mode == 'apc' and p is not None and self._ap_cont[p] and \
+                        float((z0[b] - self.emb[int(self._ap_order[p])]).pow(2).sum()) < self._ap_eps:
+                    st['p'] = p + 1  # on track: aim at the record's next frame
+                    st['a'] = self.emb[int(self._ap_order[p + 1])]
             if st['a'] is None:
                 k = max(1, int(round(max(5, self.ap_offset - st['t']) / 5)))
-                f, f2, mu, sd, nxt = self._ap_bank_for(k)
+                f, f2, mu, sd, nxt, npos = self._ap_bank_for(k)
                 q = (torch.cat([z0[b], g[b], g[b] - z0[b]]) - mu) / sd
-                if self.mode == 'ap':
+                if self.mode in ('ap', 'apc'):
                     i = int((f2 - 2 * (f @ q)).argmin())
+                    st['p'] = int(npos[i])
+                elif self.mode == 'apk':
+                    top = (f2 - 2 * (f @ q)).topk(self.ap_k, largest=False).indices
+                    st['a'] = self.emb[nxt[top]]  # (k, D)
+                    out.append(st['a'])
+                    continue
                 else:
                     top = (f2 - 2 * (f @ q)).topk(self.ap_k, largest=False).indices
                     _, dist, _ = self._goal_tree(g[b])
@@ -172,7 +193,11 @@ class PAAGoalCost(nn.Module):
         g = info_dict['goal_emb'][:, -1].float()  # (B, D)
         H = info_dict['pixels'].size(2)
         z0 = info_dict['predicted_emb'][:, 0, H - 1].float()  # current frame (last context step)
-        if self.mode in ('ap', 'apg'):
+        if self.mode == 'apk':  # nearest of the k retrieved successors, last predicted step
+            a = self._ap_anchor(z0, g).to(g.device)  # (B, k, D)
+            p = info_dict['predicted_emb'][:, :, -1].float()
+            return (p[:, :, None] - a[:, None]).pow(2).sum(-1).min(-1).values
+        if self.mode in ('ap', 'apg', 'apc'):
             a = self._ap_anchor(z0, g).to(g.device)
         else:
             a = torch.stack([self.anchor(z0[b], g[b]) for b in range(g.shape[0])]).to(g.device)
