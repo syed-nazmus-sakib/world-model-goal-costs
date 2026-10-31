@@ -22,7 +22,7 @@ def main():
     ap.add_argument('--workers', type=int, default=16)
     args = ap.parse_args()
 
-    ds = swm.data.load_dataset(args.dataset, num_steps=1, frameskip=5, keys_to_load=['pixels', 'action', args.state_key])
+    ds = swm.data.load_dataset(args.dataset, num_steps=1, frameskip=5, keys_to_load=['pixels', 'action'] + ([] if args.state_key == 'none' else [args.state_key]))
     stats = dt.dataset_stats.ImageNet
     ds.transform = spt.data.transforms.Compose(
         dt.transforms.Compose(
@@ -43,10 +43,11 @@ def main():
             emb = model.encode({'pixels': b['pixels'].cuda(non_blocking=True)})['emb']  # (B, 1, D)
             embs.append(emb[:, 0].float().cpu().half())
             acts.append(torch.nan_to_num(b['action'][:, 0].float(), 0.0))
-            states.append(b[args.state_key][:, 0].float())
+            if args.state_key != 'none':
+                states.append(b[args.state_key][:, 0].float())
             if i % 50 == 0:
                 print(f'{(i + 1) * args.batch} / {len(pick)}', flush=True)
-    np.savez(args.out, emb=torch.cat(embs).numpy(), act=torch.cat(acts).numpy(), state=torch.cat(states).numpy(),
+    np.savez(args.out, emb=torch.cat(embs).numpy(), act=torch.cat(acts).numpy(), state=torch.cat(states).numpy() if states else np.zeros((0,)),
              ep=clips[pick, 0], step=clips[pick, 1])
     print('saved', args.out, flush=True)
 

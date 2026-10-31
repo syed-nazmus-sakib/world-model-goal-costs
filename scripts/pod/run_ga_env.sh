@@ -12,8 +12,8 @@ SWM=$R/code/third_party/stable-worldmodel; P=$R/code/lewm_explorations/paa; PY=$
 export MUJOCO_GL=egl HF_HUB_DISABLE_PROGRESS_BARS=1 OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
 case $ENV in
   tworoom) CFG=tworoom; M=quentinll/lewm-tworooms; KEY=pos_agent ;;
-  cube)    CFG=cube;    M=quentinll/lewm-cube;     KEY=privileged_block_0_pos ;;
-  reacher) CFG=reacher; M=quentinll/lewm-reacher;  KEY=proprio ;;
+  cube)    CFG=cube;    M=quentinll/lewm-cube;     KEY=none ;;
+  reacher) CFG=reacher; M=quentinll/lewm-reacher;  KEY=none ;;
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
 DS=${DS:-$(cat "$OUT/dataset_name" 2>/dev/null)}
