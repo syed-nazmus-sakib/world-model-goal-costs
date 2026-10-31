@@ -338,7 +338,7 @@ def run(cfg):
         trainer=trainer,
         module=gcbc_policy,
         data=data,
-        ckpt_path=f'{cache_dir}/{cfg.output_model_name}_weights.ckpt',
+        ckpt_path=(f'{cache_dir}/{cfg.output_model_name}_weights.ckpt' if __import__('os').path.exists(f'{cache_dir}/{cfg.output_model_name}_weights.ckpt') else None),
     )
     manager()
 

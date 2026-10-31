@@ -805,7 +805,7 @@ def run(cfg):
             trainer=trainer,
             module=hilp_value_model,
             data=data,
-            ckpt_path=f'{cache_dir}/{cfg.output_model_name}_value_weights.ckpt',
+            ckpt_path=(f'{cache_dir}/{cfg.output_model_name}_value_weights.ckpt' if __import__('os').path.exists(f'{cache_dir}/{cfg.output_model_name}_value_weights.ckpt') else None),
         )
         manager()
 
@@ -838,7 +838,7 @@ def run(cfg):
         trainer=trainer,
         module=hilp_actor_model,
         data=data,
-        ckpt_path=f'{cache_dir}/{cfg.output_model_name}_policy_weights.ckpt',
+        ckpt_path=(f'{cache_dir}/{cfg.output_model_name}_policy_weights.ckpt' if __import__('os').path.exists(f'{cache_dir}/{cfg.output_model_name}_policy_weights.ckpt') else None),
     )
     manager()
 

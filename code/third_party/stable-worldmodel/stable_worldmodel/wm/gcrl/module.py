@@ -635,3 +635,24 @@ class ExpectileLoss(nn.Module):
         weight = torch.abs(self.tau - (weight_source < 0).float())
         loss = (weight * residual.pow(2)).mean()
         return loss
+
+
+class MetricValuePredictor(nn.Module):
+    """HILP value V(s, g) = -||phi(s) - phi(g)|| (Park et al., ICML 2024). phi: an MLP on each patch embedding,
+    mean-pooled over the patches of a frame. Transformer kwargs of the shared predictor config are accepted and
+    ignored. Returns (B, T, 1) like the gcrl Predictor value head."""
+
+    def __init__(self, *, num_patches, num_frames, dim, embed_dim=64, mlp_dim=1024, **kwargs):
+        super().__init__()
+        self.num_patches, self.num_frames = num_patches, num_frames
+        self.phi = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, mlp_dim), nn.GELU(), nn.Linear(mlp_dim, mlp_dim),
+                                 nn.GELU(), nn.Linear(mlp_dim, embed_dim))
+
+    def embed(self, x):
+        b, n, _ = x.shape
+        z = self.phi(x).view(b, n // self.num_patches, self.num_patches, -1)
+        return z.mean(2)  # (B, T, embed_dim)
+
+    def forward(self, x, g):
+        zs, zg = self.embed(x), self.embed(g)  # zg: (B, 1, embed_dim)
+        return -(zs - zg).pow(2).sum(-1, keepdim=True).add(1e-6).sqrt()
