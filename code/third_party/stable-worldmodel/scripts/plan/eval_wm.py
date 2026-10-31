@@ -292,7 +292,7 @@ def run(cfg: DictConfig):
     if trace is not None:
         np.savez(cfg.trace_npz, success=np.asarray(metrics['episode_successes']), ep=np.asarray(eval_episodes),
                  start=np.asarray(eval_start_idx), offset=cfg.eval.goal_offset_steps,
-                 **{k: np.stack(v) for k, v in trace.items() if len(v)})
+                 **{f'tr_{k}': np.stack(v) for k, v in trace.items() if len(v)})
         print(f'[trace] {cfg.trace_npz} keys={sorted(trace)}', flush=True)
     if cfg.get('dump_npz', None):  # PAA harvest: final-frame latents for label-free attainment labels
         px = np.asarray(world.infos['pixels'])
