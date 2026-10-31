@@ -145,6 +145,8 @@ def run(cfg: DictConfig):
         policy = swm.policy.WorldModelPolicy(
             solver=solver, config=config, process=process, transform=transform
         )
+        if cfg.get('ff', False):  # learned goal-conditioned policy (GCBC / GCIVL / GCIQL / HILP): same pairs and scoring
+            policy = swm.policy.FeedForwardPolicy(model=model, process=process, transform=transform)
 
     else:
         policy = swm.policy.RandomPolicy()
