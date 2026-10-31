@@ -617,6 +617,8 @@ class World:
         def on_step(world, mask):
             world.infos.update(deepcopy(goal_snapshot))
             results['episode_successes'] |= world.terminateds
+            if getattr(world, 'trace_fn', None) is not None:  # diagnosis: per-step state / latent trace
+                world.trace_fn(world)
             if frames is not None:
                 for i in range(world.num_envs):
                     f = world.infos['pixels'][i]

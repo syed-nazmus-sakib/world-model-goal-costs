@@ -243,6 +243,36 @@ def run(cfg: DictConfig):
             )
         print('Warmup done.')
 
+    trace = None
+    if cfg.get('trace_npz', None):  # diagnosis: every `trace_every` steps, small numeric infos + latent distance to goal
+        trace, every = {'t': []}, int(cfg.get('trace_every', 5))
+        tstate = {'n': 0, 'zg': None}
+
+        def _enc(arr):
+            arr = np.asarray(arr)
+            arr = arr[:, -1] if arr.ndim == 5 else arr
+            with torch.no_grad():
+                im = torch.stack([transform['pixels'](np.ascontiguousarray(x)) for x in arr]).to('cuda', img_dtype)
+                return model.encode({'pixels': im[:, None]})['emb'][:, 0].float()
+
+        def trace_fn(w):
+            n = tstate['n']; tstate['n'] += 1
+            if n % every:
+                return
+            if tstate['zg'] is None:
+                tstate['zg'] = _enc(w.infos['goal'])
+            trace['t'].append(n)
+            trace.setdefault('lat_dist', []).append(((_enc(w.infos['pixels']) - tstate['zg']) ** 2).sum(-1).cpu().numpy())
+            trace.setdefault('done', []).append(np.asarray(w.terminateds).copy())
+            for k, v in w.infos.items():
+                if k in ('pixels', 'goal') or not isinstance(v, np.ndarray) or v.dtype.kind not in 'fiub':
+                    continue
+                last = v[:, -1] if v.ndim >= 2 and v.shape[0] == w.num_envs and v.shape[1] > 0 else v
+                if last.shape[0] == w.num_envs and last[0].size <= 64:
+                    trace.setdefault(k, []).append(np.asarray(last, dtype=np.float32).copy())
+
+        world.trace_fn = trace_fn
+
     start_time = time.time()
     with autocast_ctx:
         metrics = world.evaluate(
@@ -259,6 +289,11 @@ def run(cfg: DictConfig):
     end_time = time.time()
 
     print(metrics)
+    if trace is not None:
+        np.savez(cfg.trace_npz, success=np.asarray(metrics['episode_successes']), ep=np.asarray(eval_episodes),
+                 start=np.asarray(eval_start_idx), offset=cfg.eval.goal_offset_steps,
+                 **{k: np.stack(v) for k, v in trace.items() if len(v)})
+        print(f'[trace] {cfg.trace_npz} keys={sorted(trace)}', flush=True)
     if cfg.get('dump_npz', None):  # PAA harvest: final-frame latents for label-free attainment labels
         px = np.asarray(world.infos['pixels'])
         px = px[:, -1] if px.ndim == 5 else px
