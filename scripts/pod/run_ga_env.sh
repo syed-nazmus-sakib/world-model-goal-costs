@@ -9,7 +9,13 @@ set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
 SWM=$R/code/third_party/stable-worldmodel; P=$R/code/lewm_explorations/paa; PY=${SWM_PY:-/root/venv_swm/bin/python}
-export MUJOCO_GL=egl HF_HUB_DISABLE_PROGRESS_BARS=1 OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
+export MUJOCO_GL=egl PYOPENGL_PLATFORM=egl HF_HUB_DISABLE_PROGRESS_BARS=1 OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
+# Colab registers only Mesa's EGL vendor; MuJoCo's EGL context then segfaults once CUDA is up. Use NVIDIA's EGL instead.
+if [ -f /usr/lib64-nvidia/libEGL_nvidia.so.0 ]; then
+  V=/usr/share/glvnd/egl_vendor.d/10_nvidia.json; mkdir -p "$(dirname $V)"
+  [ -f $V ] || printf '{"file_format_version":"1.0.0","ICD":{"library_path":"/usr/lib64-nvidia/libEGL_nvidia.so.0"}}\n' > $V
+  export __EGL_VENDOR_LIBRARY_FILENAMES=$V LD_LIBRARY_PATH=/usr/lib64-nvidia:${LD_LIBRARY_PATH:-}
+fi
 case $ENV in
   tworoom) CFG=tworoom; M=quentinll/lewm-tworooms; KEY=pos_agent ;;
   cube)    CFG=cube;    M=quentinll/lewm-cube;     KEY=none ;;
