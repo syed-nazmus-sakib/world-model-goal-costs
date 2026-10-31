@@ -4,6 +4,7 @@ import os
 
 os.environ['MUJOCO_GL'] = 'egl'
 
+import sys
 import time
 from pathlib import Path
 
@@ -125,7 +126,15 @@ def run(cfg: DictConfig):
             model.predictor = torch.compile(model.predictor)
         config = swm.PlanConfig(**cfg.plan_config)
         objective = hydra.utils.instantiate(cfg.objective)
-        if cfg.get('metric_head', None):  # method C: learned task-aligned goal cost (scripts/plan/metric_cost.py)
+        if cfg.get('paa_nodes', None):  # PAA: aim CEM at graph anchors (code/lewm_explorations/paa/paa_cost.py)
+            sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'lewm_explorations' / 'paa'))
+            from paa_cost import PAAGoalCost
+
+            objective = PAAGoalCost(cfg.paa_nodes, mode=cfg.get('paa_mode', 'fixed'), span=cfg.get('paa_span', 4),
+                                    max_hops=cfg.get('paa_max_hops', 12), head=cfg.get('paa_head', None),
+                                    tau=cfg.get('paa_tau', 0.5), pess=cfg.get('paa_pess', 1.0),
+                                    agg=cfg.get('metric_agg', 'min'))
+        elif cfg.get('metric_head', None):  # method C: learned task-aligned goal cost (scripts/plan/metric_cost.py)
             from metric_cost import MetricGoalCost
 
             objective = MetricGoalCost(cfg.metric_head, cfg.get('metric_mix', 0.0), cfg.get('metric_agg', 'last'))
@@ -161,7 +170,11 @@ def run(cfg: DictConfig):
     # remove all the lines of dataset for which dataset['step_idx'] > max_start_per_row
     valid_mask = dataset.get_col_data('step_idx') <= max_start_per_row
     valid_indices = np.nonzero(valid_mask)[0]
-    print(valid_mask.sum(), 'valid starting points found for evaluation.')
+    if cfg.get('exclude_eps', None):  # PAA harvest: never sample from the evaluation pairs' episodes
+        ex = np.load(cfg.exclude_eps)
+        valid_indices = valid_indices[~np.isin(dataset.get_col_data(col_name)[valid_indices], ex)]
+        print(f'excluded {len(ex)} episodes', flush=True)
+    print(len(valid_indices), 'valid starting points found for evaluation.')
 
     g = np.random.default_rng(cfg.seed)
     random_episode_indices = g.choice(
@@ -179,11 +192,19 @@ def run(cfg: DictConfig):
     eval_episodes = dataset.get_col_data(col_name)[random_episode_indices]
     eval_start_idx = dataset.get_col_data('step_idx')[random_episode_indices]
 
+    if cfg.get('pairs_npz', None):  # record the sampled start-goal pairs (PAA: exclusion lists, paired analysis)
+        np.savez(cfg.pairs_npz, ep=np.asarray(eval_episodes), start=np.asarray(eval_start_idx),
+                 offset=cfg.eval.goal_offset_steps, seed=cfg.seed)
+        if cfg.get('pairs_only', False):
+            print('[pairs] saved', cfg.pairs_npz, flush=True)
+            return
     if len(eval_episodes) < cfg.eval.num_eval:
         raise ValueError(
             'Not enough episodes with sufficient length for evaluation.'
         )
 
+    if hasattr(policy, 'solver') and hasattr(objective, 'set_exclude'):  # PAA: drop the evaluation pairs' episodes
+        objective.set_exclude(np.unique(eval_episodes))
     world.set_policy(policy)
 
     results_path.mkdir(parents=True, exist_ok=True)
@@ -236,11 +257,22 @@ def run(cfg: DictConfig):
     end_time = time.time()
 
     print(metrics)
+    if cfg.get('dump_npz', None):  # PAA harvest: final-frame latents for label-free attainment labels
+        px = np.asarray(world.infos['pixels'])
+        px = px[:, -1] if px.ndim == 5 else px
+        with torch.no_grad():
+            imgs = torch.stack([transform['pixels'](np.ascontiguousarray(x)) for x in px]).to('cuda', img_dtype)
+            final_emb = model.encode({'pixels': imgs[:, None]})['emb'][:, 0].float().cpu().numpy()
+        np.savez(cfg.dump_npz, final_emb=final_emb, success=np.asarray(metrics['episode_successes']),
+                 ep=np.asarray(eval_episodes), start=np.asarray(eval_start_idx),
+                 offset=cfg.eval.goal_offset_steps, budget=cfg.eval.eval_budget)
+        print(f'[dump] {cfg.dump_npz}', flush=True)
     print(f'[eval] videos saved to {results_path.resolve()}')
     print(  # one-line summary for the method C queues
         f'[summary] env={cfg.world.env_name} seed={cfg.seed} goal_offset={cfg.eval.goal_offset_steps} '
         f'budget={cfg.eval.eval_budget} horizon={cfg.plan_config.horizon} '
         f'metric={Path(str(cfg.get("metric_head", "none"))).stem} agg={cfg.get("metric_agg", "last")} '
+        f'paa={cfg.get("paa_mode", "none") if cfg.get("paa_nodes", None) else "none"}:{cfg.get("paa_span", "-")}:{Path(str(cfg.get("paa_head", "none"))).stem} '
         f'success_rate={metrics["success_rate"]:.1f} n={cfg.eval.num_eval}'
     )
 
