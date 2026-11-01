@@ -29,7 +29,7 @@ from torch import nn
 
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
-                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False):
+                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -39,6 +39,7 @@ class PAAGoalCost(nn.Module):
         self.thr_q = float(thr_q)
         self.ap_offset, self.ap_step, self.ap_k = ap_offset, int(ap_step), int(ap_k)
         self.gap_cal = bool(gap_cal)  # gap: convert graph hops to recorded blocks before choosing the retrieval bank
+        self.frac = float(frac)  # ablation: build the graph from this fraction of the training episodes (seeded)
         self.head = None
         if head:
             from paa_head import load_head
@@ -50,6 +51,10 @@ class PAAGoalCost(nn.Module):
     # ----------------------------------------------------------------------------------------------------- graph
     def set_exclude(self, eps):
         keep = ~np.isin(self.ep_all, np.asarray(list(eps)))
+        if self.frac < 1.0:
+            u = np.unique(self.ep_all)
+            sub = np.random.default_rng(0).choice(u, size=max(1, int(round(self.frac * len(u)))), replace=False)
+            keep &= np.isin(self.ep_all, sub)
         self.idx = np.nonzero(keep)[0]
         self.emb = self.emb_all[self.idx].cuda()
         ep, step = self.ep_all[self.idx], self.step_all[self.idx]
@@ -76,8 +81,8 @@ class PAAGoalCost(nn.Module):
         ta, tb = a[nxt], b[nxt]
         one = (self.emb[torch.from_numpy(ta).cuda()] - self.emb[torch.from_numpy(tb).cuda()]).pow(2).sum(-1)
         self.thr = float(torch.quantile(one.float(), self.thr_q))
-        rows, cols = [ta], [tb]
-        for s in range(0, n, 1024):  # k-NN edges under the one-block threshold
+        rows, cols, dd = [ta], [tb], None
+        for s in range(0, n if self.knn > 0 else 0, 1024):  # k-NN edges under the one-block threshold (knn=0: temporal only)
             dd = torch.cdist(self.emb[s:s + 1024], self.emb).pow(2)
             dd[torch.arange(dd.shape[0]), torch.arange(s, s + dd.shape[0])] = float('inf')
             v, j = dd.topk(self.knn, largest=False)
