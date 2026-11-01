@@ -541,6 +541,7 @@ class World:
             episodes_idx,
             start_steps,
             goal_offset,
+            getattr(self, 'cross_goal', None),
         )
         episode_cols = set(
             getattr(dataset, 'episode_column_names', None) or []
@@ -642,7 +643,7 @@ class World:
         return results
 
 
-def _extract_init_goal(dataset, episodes_idx, start_steps, goal_offset):
+def _extract_init_goal(dataset, episodes_idx, start_steps, goal_offset, cross_goal=None):
     """Build per-episode init/goal rows for a dataset-driven evaluation.
 
     Returns ``(init_rows, goal_rows, dataset_videos)``:
@@ -689,6 +690,21 @@ def _extract_init_goal(dataset, episodes_idx, start_steps, goal_offset):
             init_row[col] = episode_data[col][i]
         init_rows.append(init_row)
         goal_rows.append(goal_row)
+
+    if cross_goal is not None:  # goals from other episodes (stitching test): goal_rows from (goal_eps, goal_steps)
+        g_ep, g_st = np.asarray(cross_goal[0]), np.asarray(cross_goal[1])
+        gdata = dataset.load_chunk(g_ep, g_st, g_st + 1)
+        for i, ep in enumerate(gdata):
+            for col in dataset.column_names:
+                if col.startswith('goal'):
+                    continue
+                val = ep[col]
+                if not isinstance(val, (torch.Tensor, np.ndarray)):
+                    continue
+                if col.startswith('pixels'):
+                    val = val.permute(0, 2, 3, 1)
+                arr = val.numpy() if isinstance(val, torch.Tensor) else val
+                goal_rows[i]['goal' if col == 'pixels' else f'goal_{col}'] = arr[-1]
 
     return init_rows, goal_rows, dataset_videos
 

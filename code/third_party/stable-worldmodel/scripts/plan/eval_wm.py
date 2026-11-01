@@ -199,9 +199,25 @@ def run(cfg: DictConfig):
     eval_episodes = dataset.get_col_data(col_name)[random_episode_indices]
     eval_start_idx = dataset.get_col_data('step_idx')[random_episode_indices]
 
+    goal_eps = goal_steps = None
+    if cfg.get('cross_goal', False):  # stitching test: each goal is a random state of a different episode
+        g2 = np.random.default_rng(cfg.seed + 1000)
+        all_eps = dataset.get_col_data(col_name)
+        all_steps = dataset.get_col_data('step_idx')
+        goal_eps, goal_steps = [], []
+        for e in eval_episodes:
+            while True:
+                j = int(g2.integers(len(all_eps)))
+                if all_eps[j] != e:
+                    break
+            goal_eps.append(int(all_eps[j])); goal_steps.append(int(all_steps[j]))
+        goal_eps, goal_steps = np.asarray(goal_eps), np.asarray(goal_steps)
+        world.cross_goal = (goal_eps, goal_steps)
+        print(f'[cross_goal] goals from other episodes, budget {cfg.eval.eval_budget}', flush=True)
     if cfg.get('pairs_npz', None):  # record the sampled start-goal pairs (PAA: exclusion lists, paired analysis)
         np.savez(cfg.pairs_npz, ep=np.asarray(eval_episodes), start=np.asarray(eval_start_idx),
-                 offset=cfg.eval.goal_offset_steps, seed=cfg.seed)
+                 offset=cfg.eval.goal_offset_steps, seed=cfg.seed,
+                 **({} if goal_eps is None else {'goal_ep': goal_eps, 'goal_step': goal_steps}))
         if cfg.get('pairs_only', False):
             print('[pairs] saved', cfg.pairs_npz, flush=True)
             return
@@ -211,7 +227,7 @@ def run(cfg: DictConfig):
         )
 
     if hasattr(policy, 'solver') and hasattr(objective, 'set_exclude'):  # PAA: drop the evaluation pairs' episodes
-        objective.set_exclude(np.unique(eval_episodes))
+        objective.set_exclude(np.unique(eval_episodes if goal_eps is None else np.concatenate([eval_episodes, goal_eps])))
     world.set_policy(policy)
 
     results_path.mkdir(parents=True, exist_ok=True)

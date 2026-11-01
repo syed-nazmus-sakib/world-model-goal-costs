@@ -73,6 +73,27 @@ ev() {  # name seed offset extra...
   echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
   log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
 }
+if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fixed budgets XB; AP gets half the budget as its offset
+  for seed in $SEEDS; do for bud in ${XB:-200 400}; do
+    X="eval.goal_offset_steps=5 eval.eval_budget=$bud +cross_goal=true"
+    for m in released relmin ga ap; do
+      name=x${m}_b${bud}_s$seed
+      [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && continue
+      log "$name start"
+      case $m in
+        released) A="" ;;
+        relmin)   A="+metric_head=released +metric_agg=min plan_config.horizon=10" ;;
+        ga)       A="+paa_nodes=$NODES +paa_mode=fixed +paa_span=6 +metric_agg=min plan_config.horizon=10" ;;
+        ap)       A="+paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1 +paa_ap_offset=$((bud / 2))" ;;
+      esac
+      $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS $X $A \
+        +pairs_npz=$OUT/pairs_$name.npz > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+      echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
+      log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
+    done
+  done; done
+  log "GA_LANE_DONE $ENV cross"; exit 0
+fi
 for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   [ "$(ok_off $off)" = 1 ] || { log "skip d$off: fewer than 60 episodes longer than $off"; continue; }
   if [ "$LANE" = all ] || [ "$LANE" = base ]; then
