@@ -1,0 +1,12 @@
+# OGBench PointMaze-Large at 224 px (LeWAM/lewam-pointmaze-large: 1,000 episodes x 1,000 steps). Our own LeWM is trained on it.
+dataset:
+  num_steps: ${eval:'${wm.num_preds} + ${wm.history_size}'}
+  frameskip: 5
+  name: pointmaze_large.h5
+  keys_to_load:
+    - pixels
+    - action
+    - proprio
+  keys_to_cache:
+    - action
+    - proprio

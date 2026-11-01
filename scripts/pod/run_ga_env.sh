@@ -41,7 +41,7 @@ if [ "$LANE" != anchor ]; then
     echo "$DS" > "$OUT/dataset_name"; log "dataset $DS"
   fi
   [ -f "$OUT/dataset_name" ] || echo "$DS" > "$OUT/dataset_name"
-  case $M in quentinll/*|/*|bl_*) ;; *)  # third-party checkpoint: its config may only build stable_worldmodel / torch classes
+  case $M in quentinll/*|/*|bl_*|lewm_*) ;; *)  # third-party checkpoint: its config may only build stable_worldmodel / torch classes
     $PY -c "
 import json, sys; from huggingface_hub import hf_hub_download
 c = json.load(open(hf_hub_download('$M', 'config.json'))); t = []
