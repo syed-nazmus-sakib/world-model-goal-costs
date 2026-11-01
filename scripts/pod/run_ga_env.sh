@@ -4,7 +4,8 @@
 #   nodes : encode the dataset's 5-step grid with the frozen encoder
 #   eval  : released h5, relmin h10 (released + min-over-plan), graph anchor span 6 and 8 (min, h10) at each offset
 # Offsets: OFFS (default "50 100 150"); an offset is skipped when fewer than 60 episodes are longer than it.
-# usage: bash scripts/pod/run_ga_env.sh <tworoom|cube|reacher> [seeds="0"] [out=/root/out/ga_<env>] [lane=all|base|anchor]
+# usage: bash scripts/pod/run_ga_env.sh <tworoom|cube|reacher|pmm> [seeds="0"] [out=/root/out/ga_<env>] [lane=all|base|anchor|ap]
+# lane ap: AP-CEM (APH="0.5 2" adds runs with the goal offset misstated by those factors)
 set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
@@ -18,6 +19,7 @@ if [ -f /usr/lib64-nvidia/libEGL_nvidia.so.0 ]; then
 fi
 case $ENV in
   tworoom) CFG=tworoom; M=quentinll/lewm-tworooms; KEY=pos_agent ;;
+  pusht)   CFG=pusht;   M=quentinll/lewm-pusht;    KEY=state; DS=${DS:-galilai-group/lewm-pusht} ;;
   cube)    CFG=cube;    M=quentinll/lewm-cube;     KEY=none ;;
   reacher) CFG=reacher; M=quentinll/lewm-reacher;  KEY=none ;;
   pmm)     CFG=pointmaze_medium; M=yjang43/lp2-pointmaze-medium; KEY=proprio; DSN=d4rl_pointmaze_medium_expert.h5 ;;
@@ -36,6 +38,7 @@ if [ "$LANE" != anchor ]; then
     [ -n "$DS" ] || abort "no dataset found"
     echo "$DS" > "$OUT/dataset_name"; log "dataset $DS"
   fi
+  [ -f "$OUT/dataset_name" ] || echo "$DS" > "$OUT/dataset_name"
   case $M in quentinll/*|/*) ;; *)  # third-party checkpoint: its config may only build stable_worldmodel / torch classes
     $PY -c "
 import json, sys; from huggingface_hub import hf_hub_download
@@ -72,9 +75,17 @@ ev() {  # name seed offset extra...
 }
 for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   [ "$(ok_off $off)" = 1 ] || { log "skip d$off: fewer than 60 episodes longer than $off"; continue; }
-  if [ "$LANE" != anchor ]; then
+  if [ "$LANE" = all ] || [ "$LANE" = base ]; then
     ev released_h5_d${off}_s$seed $seed $off
     ev relmin_h10_d${off}_s$seed $seed $off +metric_head=released +metric_agg=min plan_config.horizon=10
+  fi
+  if [ "$LANE" = ap ]; then  # Anchored Planning (arXiv 2609.30036) re-implemented: one-block CEM toward the retrieved successor
+    ev apcem_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1
+    for f in ${APH:-}; do  # AP told a wrong goal offset: f x the true one (AP needs the offset, graph anchors do not)
+      ev apcem_H${f}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 \
+         plan_config.receding_horizon=1 +paa_ap_offset=$(python3 -c "print(int(round($off * $f)))")
+    done
+    continue
   fi
   if [ "$LANE" != base ]; then
     for sp in ${SPANS:-6 8}; do
