@@ -54,7 +54,7 @@ class PAAGoalCost(nn.Module):
         ep, step = self.ep_all[self.idx], self.step_all[self.idx]
         n = len(self.idx)
         order = np.lexsort((step, ep))
-        if self.mode in ('ap', 'apg', 'apk', 'apc'):  # retrieval banks are built per remaining horizon
+        if self.mode in ('ap', 'apg', 'apk', 'apc', 'gap'):  # retrieval banks are built per remaining horizon
             self._ap_order, self._ap_ep, self._ap_st = order, ep[order], step[order]
             self._ap_bank, self._ap_env = {}, {}
             pos = np.arange(n - 1)
@@ -68,7 +68,7 @@ class PAAGoalCost(nn.Module):
             self._ap_kmax = max(1, int(span.max()) // 5)
             del o
             print(f'[paa] ap memory: {n} nodes ({len(eps)} episodes excluded)', flush=True)
-            if self.mode != 'apg':  # no graph
+            if self.mode not in ('apg', 'gap'):  # no graph
                 return
         a, b = order[:-1], order[1:]
         nxt = (ep[a] == ep[b]) & (step[b] - step[a] == 5)
@@ -143,7 +143,8 @@ class PAAGoalCost(nn.Module):
     # ------------------------------------------------------------------------------------------- anchored planning
     def _ap_bank_for(self, k):
         if k not in self._ap_bank:
-            self._ap_bank.clear()  # one remaining-horizon bank at a time (about 1 GB each)
+            if self.mode != 'gap':  # gap keeps its few banks (k <= span); AP keeps one per remaining horizon
+                self._ap_bank.clear()  # one remaining-horizon bank at a time (about 1 GB each)
             torch.cuda.empty_cache()
             o, ep, st = self._ap_order, self._ap_ep, self._ap_st
             pos = np.arange(len(o) - k)
@@ -192,6 +193,31 @@ class PAAGoalCost(nn.Module):
             out.append(st['a'])
         return torch.stack(out)
 
+    def _gap_anchor(self, z0, g):
+        """Graph-guided retrieval: the graph picks a waypoint `span` hops toward the goal and says how far it is (hops);
+        AP-style retrieval then returns the recorded successor of the record that best matches (z0, waypoint, hops).
+        No goal offset is needed, and the waypoint can lie on a path stitched from several episodes."""
+        out = []
+        for b in range(len(z0)):
+            key = (hash(z0[b].cpu().numpy().tobytes()), hash(g[b].cpu().numpy().tobytes()))
+            if key not in self._anchor_cache:
+                gn, dist, pred = self._goal_tree(g[b])
+                s = self._nearest(z0[b])
+                w, k = g[b], self.span
+                if np.isfinite(dist[s]):
+                    if dist[s] > self.span:
+                        path = self._path(s, gn, pred, self.span)
+                        if path:
+                            w, k = self.emb[path[-1]], len(path)
+                    else:
+                        k = int(dist[s])
+                k = min(self._ap_kmax, max(1, k))
+                f, f2, mu, sd, nxt, npos = self._ap_bank_for(k)
+                q = (torch.cat([z0[b], w, w - z0[b]]) - mu) / sd
+                self._anchor_cache[key] = self.emb[nxt[int((f2 - 2 * (f @ q)).argmin())]]
+            out.append(self._anchor_cache[key])
+        return torch.stack(out)
+
     # ----------------------------------------------------------------------------------------------------- cost
     def forward(self, info_dict):
         g = info_dict['goal_emb'][:, -1].float()  # (B, D)
@@ -203,6 +229,8 @@ class PAAGoalCost(nn.Module):
             return (p[:, :, None] - a[:, None]).pow(2).sum(-1).min(-1).values
         if self.mode in ('ap', 'apg', 'apc'):
             a = self._ap_anchor(z0, g).to(g.device)
+        elif self.mode == 'gap':
+            a = self._gap_anchor(z0, g).to(g.device)
         else:
             a = torch.stack([self.anchor(z0[b], g[b]) for b in range(g.shape[0])]).to(g.device)
         if self.agg == 'min':
