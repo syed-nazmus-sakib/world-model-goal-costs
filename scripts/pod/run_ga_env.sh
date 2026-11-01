@@ -79,7 +79,7 @@ if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fi
   for seed in $SEEDS; do for bud in ${XB:-200 400}; do
     X="eval.goal_offset_steps=5 eval.eval_budget=$bud +cross_goal=true"
     for m in ${XM:-released relmin ga ap}; do
-      name=x${m}_b${bud}_s$seed
+      name=x${m}${GCAL:+c}_b${bud}_s$seed
       [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && continue
       log "$name start"
       case $m in
@@ -87,7 +87,7 @@ if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fi
         relmin)   A="+metric_head=released +metric_agg=min plan_config.horizon=10" ;;
         ga)       A="+paa_nodes=$NODES +paa_mode=fixed +paa_span=6 +metric_agg=min plan_config.horizon=10" ;;
         ap)       A="+paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1 +paa_ap_offset=$((bud / 2))" ;;
-        gap)      A="+paa_nodes=$NODES +paa_mode=gap +paa_span=${GSPAN:-6} +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1" ;;
+        gap)      A="+paa_nodes=$NODES +paa_mode=gap +paa_span=${GSPAN:-6} +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1 ${GCAL:++gap_cal=true}" ;;
       esac
       $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS $X $A \
         +pairs_npz=$OUT/pairs_$name.npz > "$OUT/$name.log" 2>&1 || log "$name FAILED"
@@ -113,8 +113,8 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   fi
   if [ "$LANE" = gap ]; then  # graph-guided retrieval: graph waypoint + hop count replace AP's goal and offset
     for sp in ${GSPANS:-6}; do
-      ev gap_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=gap +paa_span=$sp +metric_agg=last \
-         plan_config.horizon=1 plan_config.receding_horizon=1
+      ev gap${GCAL:+c}_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=gap +paa_span=$sp +metric_agg=last \
+         plan_config.horizon=1 plan_config.receding_horizon=1 ${GCAL:++gap_cal=true}
     done
     continue
   fi

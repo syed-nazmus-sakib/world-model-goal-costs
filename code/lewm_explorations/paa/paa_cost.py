@@ -29,7 +29,7 @@ from torch import nn
 
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
-                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8):
+                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -38,6 +38,7 @@ class PAAGoalCost(nn.Module):
             float(tau), float(pess), int(knn), agg
         self.thr_q = float(thr_q)
         self.ap_offset, self.ap_step, self.ap_k = ap_offset, int(ap_step), int(ap_k)
+        self.gap_cal = bool(gap_cal)  # gap: convert graph hops to recorded blocks before choosing the retrieval bank
         self.head = None
         if head:
             from paa_head import load_head
@@ -91,6 +92,20 @@ class PAAGoalCost(nn.Module):
         del dd
         torch.cuda.empty_cache()  # several evaluation processes share one GPU
         self._goal_cache, self._anchor_cache = {}, {}
+        self.hop_scale = 1.0
+        if self.mode == 'gap' and self.gap_cal:
+            rng, r = np.random.default_rng(0), []
+            starts = np.r_[0, np.nonzero(np.diff(ep[order]))[0] + 1, len(order)]
+            for e in rng.choice(len(starts) - 1, size=min(40, len(starts) - 1), replace=False):
+                seg = order[starts[e]:starts[e + 1]]
+                if len(seg) < 8:
+                    continue
+                dsrc = dijkstra(G, directed=True, indices=int(seg[0]))
+                for j in range(4, len(seg)):  # >= 4 blocks apart along the recorded episode
+                    if np.isfinite(dsrc[seg[j]]) and dsrc[seg[j]] > 0:
+                        r.append(j / dsrc[seg[j]])
+            self.hop_scale = float(np.median(r)) if r else 1.0
+            print(f'[paa] gap hop scale: {self.hop_scale:.2f} recorded blocks per graph hop ({len(r)} pairs)', flush=True)
         print(f'[paa] graph: {n} nodes ({len(eps)} episodes excluded), {len(ta)} temporal + {G.nnz - len(ta)} k-NN edges, '
               f'thr={self.thr:.3f}', flush=True)
 
@@ -211,7 +226,7 @@ class PAAGoalCost(nn.Module):
                             w, k = self.emb[path[-1]], len(path)
                     else:
                         k = int(dist[s])
-                k = min(self._ap_kmax, max(1, k))
+                k = min(self._ap_kmax, max(1, int(round(k * self.hop_scale))))
                 f, f2, mu, sd, nxt, npos = self._ap_bank_for(k)
                 q = (torch.cat([z0[b], w, w - z0[b]]) - mu) / sd
                 self._anchor_cache[key] = self.emb[nxt[int((f2 - 2 * (f @ q)).argmin())]]

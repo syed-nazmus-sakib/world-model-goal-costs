@@ -138,7 +138,7 @@ def run(cfg: DictConfig):
                                     tau=cfg.get('paa_tau', 0.5), pess=cfg.get('paa_pess', 1.0),
                                     agg=cfg.get('metric_agg', 'min'), ap_offset=cfg.get('paa_ap_offset', cfg.eval.goal_offset_steps),
                                     ap_step=cfg.plan_config.action_block * cfg.plan_config.receding_horizon,
-                                    ap_k=cfg.get('ap_k', 8))
+                                    ap_k=cfg.get('ap_k', 8), gap_cal=cfg.get('gap_cal', False))
         elif cfg.get('metric_head', None):  # method C: learned task-aligned goal cost (scripts/plan/metric_cost.py)
             from metric_cost import MetricGoalCost
 
