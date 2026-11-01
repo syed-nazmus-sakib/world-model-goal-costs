@@ -4,6 +4,7 @@
 #                         per training phase (GCIVL/HILP: value then policy), evaluated with eval_wm.py +ff=true
 #   pldm                : PLDM world model, STEPS_WM batches, planned with the same CEM as LeWM
 #   dinowm              : released DINO-WM PushT checkpoint (pusht only), N_DINO pairs at d50/d100 (planning is slow)
+# XB/XSEEDS: also evaluate on stitched goals (goals from other episodes) at those budgets and seeds
 # usage: bash scripts/pod/run_baselines.sh <tworoom|pmm|pusht> "<methods>" [out=/root/out/bl_<env>]
 set -u
 ENV=$1; METHODS=$2; OUT=${3:-/root/out/bl_$ENV}; mkdir -p "$OUT"
@@ -50,11 +51,23 @@ ev() {  # name offset extra...
   echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
   log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
 }
+xev() {  # method policy-args...: stitched goals (+cross_goal) at budgets XB, seeds XSEEDS, same pairs as run_ga_env.sh cross
+  local m=$1; shift
+  for seed in ${XSEEDS:-}; do for bud in ${XB:-}; do
+    local name=x${m}_b${bud}_s$seed
+    [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && continue
+    $PY scripts/plan/eval_wm.py --config-name=$CFG seed=$seed eval.dataset_name=$DSN eval.goal_offset_steps=5 eval.eval_budget=$bud \
+      +cross_goal=true +pairs_npz=$OUT/pairs_$name.npz "$@" > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+    echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
+    log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
+  done; done
+}
 for m in $METHODS; do
   case $m in
-    gcbc)       train gcbc  && for d in $OFFS; do ev gcbc_d${d}_s0 $d policy=bl_${ENV}_gcbc +ff=true; done ;;
-    gcivl|hilp) train $m    && for d in $OFFS; do ev ${m}_d${d}_s0 $d policy=bl_${ENV}_${m}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}_policy/model_object.pt; done ;;
-    pldm)       train pldm  && for d in $OFFS; do ev pldm_d${d}_s0 $d policy=bl_${ENV}_pldm; done ;;
+    gcbc)       train gcbc  && { for d in $OFFS; do ev gcbc_d${d}_s0 $d policy=bl_${ENV}_gcbc +ff=true; done; xev gcbc policy=bl_${ENV}_gcbc +ff=true; } ;;
+    gcivl|hilp) train $m    && { A="policy=bl_${ENV}_${m}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}_policy/model_object.pt"
+                                 for d in $OFFS; do ev ${m}_d${d}_s0 $d $A; done; xev $m $A; } ;;
+    pldm)       train pldm  && { for d in $OFFS; do ev pldm_d${d}_s0 $d policy=bl_${ENV}_pldm; done; xev pldm policy=bl_${ENV}_pldm; } ;;
     dinowm)
       [ "$ENV" = pusht ] || { log "dinowm: pusht only"; continue; }
       D=$CK/dinowm_pusht; mkdir -p $D

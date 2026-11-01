@@ -6,6 +6,7 @@
 # Offsets: OFFS (default "50 100 150"); an offset is skipped when fewer than 60 episodes are longer than it.
 # usage: bash scripts/pod/run_ga_env.sh <tworoom|cube|reacher|pmm> [seeds="0"] [out=/root/out/ga_<env>] [lane=all|base|anchor|ap]
 # lane ap: AP-CEM (APH="0.5 2" adds runs with the goal offset misstated by those factors)
+# lane match: graph anchors under AP's planner (MSPANS); lane cross: stitched goals (XB budgets, XM methods); WM: other world model
 set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
@@ -26,6 +27,7 @@ case $ENV in
   pml)     CFG=pointmaze_large;  M=${PML_CKPT:?set PML_CKPT to the trained LeWM}; KEY=state; DSN=pointmaze_large.h5 ;;
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
+M=${WM:-$M}  # WM: another world model (e.g. bl_tworoom_pldm, our own PLDM checkpoint) planned with the same anchors
 DS=${DS:-$(cat "$OUT/dataset_name" 2>/dev/null)}
 NODES=$OUT/nodes.npz
 log() { echo "$(date -u +%F' '%T) $*" | tee -a "$OUT/queue.log"; }
@@ -39,7 +41,7 @@ if [ "$LANE" != anchor ]; then
     echo "$DS" > "$OUT/dataset_name"; log "dataset $DS"
   fi
   [ -f "$OUT/dataset_name" ] || echo "$DS" > "$OUT/dataset_name"
-  case $M in quentinll/*|/*) ;; *)  # third-party checkpoint: its config may only build stable_worldmodel / torch classes
+  case $M in quentinll/*|/*|bl_*) ;; *)  # third-party checkpoint: its config may only build stable_worldmodel / torch classes
     $PY -c "
 import json, sys; from huggingface_hub import hf_hub_download
 c = json.load(open(hf_hub_download('$M', 'config.json'))); t = []
@@ -76,7 +78,7 @@ ev() {  # name seed offset extra...
 if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fixed budgets XB; AP gets half the budget as its offset
   for seed in $SEEDS; do for bud in ${XB:-200 400}; do
     X="eval.goal_offset_steps=5 eval.eval_budget=$bud +cross_goal=true"
-    for m in released relmin ga ap; do
+    for m in ${XM:-released relmin ga ap}; do
       name=x${m}_b${bud}_s$seed
       [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && continue
       log "$name start"
@@ -105,6 +107,13 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
     for f in ${APH:-}; do  # AP told a wrong goal offset: f x the true one (AP needs the offset, graph anchors do not)
       ev apcem_H${f}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 \
          plan_config.receding_horizon=1 +paa_ap_offset=$(python3 -c "print(int(round($off * $f)))")
+    done
+    continue
+  fi
+  if [ "$LANE" = match ]; then  # graph anchors with AP's planner (one-block CEM, replan every block): isolates the anchor choice
+    for sp in ${MSPANS:-1 2}; do
+      ev gam_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=fixed +paa_span=$sp +metric_agg=last \
+         plan_config.horizon=1 plan_config.receding_horizon=1
     done
     continue
   fi
