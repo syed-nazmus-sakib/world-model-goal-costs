@@ -62,6 +62,10 @@ class PAAGoalCost(nn.Module):
             o = torch.from_numpy(order).cuda()
             self._ap_eps = float((self.emb[o[pos[cont]]] - self.emb[o[pos[cont] + 1]]).pow(2).sum(-1).median())
             self._ap_cont = np.append(cont, False)  # sorted position p continues to p + 1 in the same episode
+            # longest span (blocks) any record can have: an offset beyond it is clamped instead of retrieving nothing
+            starts = np.r_[0, np.nonzero(np.diff(self._ap_ep))[0] + 1]  # nodes are sorted by (episode, step)
+            span = np.maximum.reduceat(self._ap_st, starts) - np.minimum.reduceat(self._ap_st, starts)
+            self._ap_kmax = max(1, int(span.max()) // 5)
             del o
             print(f'[paa] ap memory: {n} nodes ({len(eps)} episodes excluded)', flush=True)
             if self.mode != 'apg':  # no graph
@@ -169,7 +173,7 @@ class PAAGoalCost(nn.Module):
                     st['p'] = p + 1  # on track: aim at the record's next frame
                     st['a'] = self.emb[int(self._ap_order[p + 1])]
             if st['a'] is None:
-                k = max(1, int(round(max(5, self.ap_offset - st['t']) / 5)))
+                k = min(self._ap_kmax, max(1, int(round(max(5, self.ap_offset - st['t']) / 5))))
                 f, f2, mu, sd, nxt, npos = self._ap_bank_for(k)
                 q = (torch.cat([z0[b], g[b], g[b] - z0[b]]) - mu) / sd
                 if self.mode in ('ap', 'apc'):
