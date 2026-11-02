@@ -18,9 +18,9 @@ if [ -f /usr/lib64-nvidia/libEGL_nvidia.so.0 ]; then
   export __EGL_VENDOR_LIBRARY_FILENAMES=$V LD_LIBRARY_PATH=/usr/lib64-nvidia:${LD_LIBRARY_PATH:-}
 fi
 case $ENV in
-  tworoom) DATA=tworoom;          DSN=tworoom.h5;                       PD=2; CFG=tworoom;          OFFS=${OFFS:-"25 50 75"} ;;
-  pmm)     DATA=pointmaze_medium; DSN=d4rl_pointmaze_medium_expert.h5;  PD=4; CFG=pointmaze_medium; OFFS=${OFFS:-"50 100 150 200"} ;;
-  pusht)   DATA=pusht_lewm;       DSN=galilai-group/lewm-pusht;         PD=4; CFG=pusht;            OFFS=${OFFS:-"50 75 100 150"} ;;
+  tworoom) DATA=tworoom;          DSN=tworoom.h5;                       PD=2; CFG=tworoom;          OFFS=${OFFS-"25 50 75"} ;;
+  pmm)     DATA=pointmaze_medium; DSN=d4rl_pointmaze_medium_expert.h5;  PD=4; CFG=pointmaze_medium; OFFS=${OFFS-"50 100 150 200"} ;;
+  pusht)   DATA=pusht_lewm;       DSN=galilai-group/lewm-pusht;         PD=4; CFG=pusht;            OFFS=${OFFS-"50 75 100 150"} ;;
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
 CK=${STABLEWM_HOME:-/root/.stable_worldmodel}/checkpoints
