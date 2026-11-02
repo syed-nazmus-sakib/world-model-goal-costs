@@ -47,7 +47,7 @@ ev() {  # name offset extra...
   local name=$1 off=$2; shift 2
   [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && return
   $PY scripts/plan/eval_wm.py --config-name=$CFG seed=0 eval.dataset_name=$DSN eval.goal_offset_steps=$off \
-    eval.eval_budget=$((2 * off)) "$@" > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+    eval.eval_budget=$((2 * off)) "$@" ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
   echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
   log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
 }
@@ -57,7 +57,7 @@ xev() {  # method policy-args...: stitched goals (+cross_goal) at budgets XB, se
     local name=x${m}_b${bud}_s$seed
     [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && continue
     $PY scripts/plan/eval_wm.py --config-name=$CFG seed=$seed eval.dataset_name=$DSN eval.goal_offset_steps=5 eval.eval_budget=$bud \
-      +cross_goal=true +pairs_npz=$OUT/pairs_$name.npz "$@" > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+      +cross_goal=true +pairs_npz=$OUT/pairs_$name.npz "$@" ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
     echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
     log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
   done; done

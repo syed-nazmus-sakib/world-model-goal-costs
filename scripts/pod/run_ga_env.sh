@@ -6,6 +6,7 @@
 # Offsets: OFFS (default "50 100 150"); an offset is skipped when fewer than 60 episodes are longer than it.
 # usage: bash scripts/pod/run_ga_env.sh <tworoom|cube|reacher|pmm> [seeds="0"] [out=/root/out/ga_<env>] [lane=all|base|anchor|ap]
 # lane ap: AP-CEM (APH="0.5 2" adds runs with the goal offset misstated by those factors)
+# EVX: extra Hydra overrides for every evaluation; TAG: run-name suffix (ablations)
 # lane match: graph anchors under AP's planner (MSPANS); lane cross: stitched goals (XB budgets, XM methods); WM: other world model
 set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
@@ -71,7 +72,7 @@ ev() {  # name seed offset extra...
   [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && return
   log "$name start"
   $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS \
-    eval.goal_offset_steps=$off eval.eval_budget=$((2 * off)) "$@" > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+    eval.goal_offset_steps=$off eval.eval_budget=$((2 * off)) "$@" ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
   echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
   log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
 }
@@ -79,7 +80,7 @@ if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fi
   for seed in $SEEDS; do for bud in ${XB:-200 400}; do
     X="eval.goal_offset_steps=5 eval.eval_budget=$bud +cross_goal=true"
     for m in ${XM:-released relmin ga ap}; do
-      name=x${m}${GCAL:+c}_b${bud}_s$seed
+      name=x${m}${GCAL:+c}${TAG:-}_b${bud}_s$seed
       [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && continue
       log "$name start"
       case $m in
@@ -90,7 +91,7 @@ if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fi
         gap)      A="+paa_nodes=$NODES +paa_mode=gap +paa_span=${GSPAN:-6} +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1 ${GCAL:++gap_cal=true}" ;;
       esac
       $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS $X $A \
-        +pairs_npz=$OUT/pairs_$name.npz > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+        +pairs_npz=$OUT/pairs_$name.npz ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
       echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
       log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
     done
@@ -100,8 +101,8 @@ fi
 for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   [ "$(ok_off $off)" = 1 ] || { log "skip d$off: fewer than 60 episodes longer than $off"; continue; }
   if [ "$LANE" = all ] || [ "$LANE" = base ]; then
-    ev released_h5_d${off}_s$seed $seed $off
-    ev relmin_h10_d${off}_s$seed $seed $off +metric_head=released +metric_agg=min plan_config.horizon=10
+    ev released${TAG:-}_h5_d${off}_s$seed $seed $off
+    ev relmin${TAG:-}_h10_d${off}_s$seed $seed $off +metric_head=released +metric_agg=min plan_config.horizon=10
   fi
   if [ "$LANE" = ap ]; then  # Anchored Planning (arXiv 2609.30036) re-implemented: one-block CEM toward the retrieved successor
     ev apcem_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1
@@ -127,7 +128,7 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   fi
   if [ "$LANE" != base ]; then
     for sp in ${SPANS:-6 8}; do
-      ev ga_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=fixed +paa_span=$sp +metric_agg=min plan_config.horizon=10
+      ev ga${TAG:-}_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=fixed +paa_span=$sp +metric_agg=min plan_config.horizon=10
     done
   fi
 done; done

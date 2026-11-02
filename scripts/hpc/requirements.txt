@@ -1,0 +1,36 @@
+# Package set of the graph-anchor runs (Colab, Nov 2026). env_setup.sh prefers requirements-lock.txt (exact versions
+# of a tested install) when it exists. PyTorch is installed separately from the CUDA wheel index.
+transformers<5
+stable-pretraining
+pymunk
+shapely
+pygame
+gymnasium
+h5py>=3.16
+hdf5plugin
+einops
+hydra-core
+omegaconf
+tabulate
+tqdm
+typer
+rich
+pillow
+opencv-python-headless
+scikit-learn
+huggingface_hub>=0.34,<1.0
+datasets>=3,<4.1
+imageio[ffmpeg]
+lancedb
+pylance
+pyarrow
+scipy
+statsmodels
+mujoco
+dm-env
+dm-tree
+glfw
+lxml
+pyopengl
+absl-py
+gymnasium-robotics

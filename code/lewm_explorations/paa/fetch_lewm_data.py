@@ -4,6 +4,7 @@ Lists the quentinll / galilai-group dataset repos, downloads the ones whose id c
 usage: python fetch_lewm_data.py <tworoom|cube|reacher|pmm|pml>
 pmm = PointMaze-Medium (LP², yjang43/lp2-pointmaze-medium); pml = OGBench PointMaze-Large at 224 px (LeWAM/lewam-pointmaze-large).
 """
+import fcntl
 import glob
 import os
 import subprocess
@@ -19,6 +20,8 @@ FIXED = {'pmm': ['yjang43/lp2-pointmaze-medium'], 'pml': ['LeWAM/lewam-pointmaze
 home = os.environ.get('STABLEWM_HOME', os.path.expanduser('~/.stable_worldmodel'))
 dd = os.path.join(home, 'datasets')
 os.makedirs(dd, exist_ok=True)
+lock = open(os.path.join(dd, '.fetch.lock'), 'w')  # jobs on several GPUs may fetch the same data at once
+fcntl.flock(lock, fcntl.LOCK_EX)
 api = HfApi()
 ids = []
 for author in (() if env in FIXED else ('quentinll', 'galilai-group')):
@@ -33,7 +36,10 @@ for rid in pick:
     loc = os.path.join(dd, '_raw', rid.replace('/', '--'))
     snapshot_download(rid, repo_type='dataset', local_dir=loc)
     for z in glob.glob(f'{loc}/**/*.tar.zst', recursive=True):
-        subprocess.run(['tar', '--zstd', '-xf', z, '-C', os.path.dirname(z)], check=True)
+        done = z + '.extracted'
+        if not os.path.exists(done):  # unpack once
+            subprocess.run(['tar', '--zstd', '-xf', z, '-C', os.path.dirname(z)], check=True)
+            open(done, 'w').close()
     for h in glob.glob(f'{loc}/**/*.h5', recursive=True):
         dst = os.path.join(dd, os.path.basename(h))
         if not os.path.exists(dst):
