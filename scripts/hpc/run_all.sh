@@ -27,7 +27,7 @@ JOBS="${JOBS:-J1 J2 J3 J4 J5}"
 
 pack() {
     log "summary:"
-    for j in smoke $JOBS; do log "  $j: $(status "$j" || true)"; done
+    for j in smoke $JOBS; do st="$(status "$j")"; log "  $j: ${st:-not finished (run the same command again to continue)}"; done
     local items=(run_all.log)
     for j in smoke $JOBS; do [[ -d "$OUT_ROOT/$j" ]] && items+=("$j"); done
     tar czf "$OUT_ROOT/ALL_results.tgz" -C "$OUT_ROOT" --exclude='nodes.npz' --exclude='*.mp4' "${items[@]}" \
