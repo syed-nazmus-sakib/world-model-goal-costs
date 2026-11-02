@@ -42,7 +42,8 @@ waitf() { while [[ ! -f "$1" ]]; do [[ -f "$(dirname "$1")/ABORT" ]] && return 1
 finish() {  # summary table, PASS/FAIL line, results archive
     local n f
     n=$(cat "$O"/*/summary.txt 2>/dev/null | grep -c 'success_rate=' || true)
-    f=$(cat "$O"/*/queue.log 2>/dev/null | grep -cE 'FAILED|ABORT|rc=[1-9]' || true)
+    # failures since this start only (a resumed job keeps the lines of earlier, interrupted attempts)
+    f=$(cat "$O"/*/queue.log 2>/dev/null | awk -v t="$T0" 'substr($0, 1, 19) >= t' | grep -cE 'FAILED|ABORT|rc=[1-9]' || true)
     log "results ($n runs):"
     cat "$O"/*/summary.txt 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i ~ /^success_rate=/) print "  " $1, $i}' | tee -a "$L"
     if [[ "$n" -gt 0 && "$f" -eq 0 ]]; then log "JOB $JOB PASS ($n runs)"; else log "JOB $JOB FAIL ($n runs, $f failures; see */queue.log)"; fi
@@ -50,6 +51,7 @@ finish() {  # summary table, PASS/FAIL line, results archive
         && log "packed $OUT_ROOT/${JOB}_results.tgz  <- please send this file back"
 }
 
+T0="$(date -u +%F' '%T)"
 log "JOB $JOB start (QUICK=$Q) on $(hostname) | $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1) | git $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)"
 case "$JOB" in
 smoke)  # environment, data, checkpoints, graph and planner on Two-Room and PointMaze-Medium, 2 episodes per evaluation
