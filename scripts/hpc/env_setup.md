@@ -16,6 +16,14 @@ This one command:
 
 How long it takes, roughly: 30 A100 hours of work in total. That is about 30 h on 1 GPU, 16 h on 2 GPUs, 11 h on 3 GPUs, or 10 h on 4 GPUs. `PLAN_ONLY=1 bash scripts/hpc/run_all.sh` prints which GPU will run what.
 
+**One large GPU (H100 / H200, 80-141 GB)?** Use this command instead:
+
+```bash
+bash scripts/hpc/run_1gpu.sh
+```
+
+It runs several jobs at the same time on that one GPU. Each job needs at most about 24 GB of GPU memory and about 60 GB of host RAM. The script picks the number of parallel jobs from the GPU memory and the free RAM: on a 141 GB GPU with 300 GB or more of free RAM, all five jobs run together. Everything else works the same, including the one file to send back. Jobs that share a GPU slow each other down somewhat, so expect roughly 15-20 h of wall time on one H200.
+
 **If it stops** (cluster time limit, crash, reboot), run the same command again. Finished jobs are skipped, and unfinished ones continue where they stopped.
 
 Everything below is optional detail.
@@ -87,7 +95,8 @@ bash scripts/hpc/run_all.sh
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `GPUS` | all GPUs | GPUs `run_all.sh` uses, e.g. `"0 1"` |
+| `GPUS` | all GPUs | GPUs `run_all.sh` uses, e.g. `"0 1"` (repeat an id to run several jobs on one GPU, e.g. `"0 0 0"`) |
+| `PAR` | from GPU memory and RAM | `run_1gpu.sh` only: force the number of parallel jobs on the GPU |
 | `MAXPAR` | one per GPU | At most this many jobs at once (each needs about 64 GB of host RAM) |
 | `JOBS` | `J1 J2 J3 J4 J5` | Subset of jobs for `run_all.sh` |
 | `GWM_ENV` | `gwm` | Conda environment name |
@@ -103,4 +112,4 @@ bash scripts/hpc/run_all.sh
 - **`[check]` fails at the MuJoCo render step.** The node has no working EGL. Try `GWM_EGL_FIX=0`, or ask for nodes with the NVIDIA EGL libraries (`libEGL_nvidia.so`). As a last resort, use `MUJOCO_GL=osmesa` after `conda install -n gwm -c conda-forge mesalib`, which is slower.
 - **Download errors.** The data comes from Hugging Face (`quentinll/*`, `yjang43/lp2-pointmaze-medium`, `LeWAM/lewam-pointmaze-large`). Check the node's internet access, or set `HF_HUB_OFFLINE=1` after the first successful download.
 - **A run shows `FAILED` in `<job>/*/queue.log`.** Its own log, `<job>/<env dir>/<run name>.log`, has the error. `ALL_results.tgz` includes it, so sending that one file is enough.
-- **Jobs get killed (`rc=137`).** The node ran out of host RAM. Set `MAXPAR` lower so fewer jobs run at once.
+- **Jobs get killed (`rc=137`).** The node ran out of host RAM. Set `MAXPAR` lower so fewer jobs run at once (with `run_1gpu.sh`, set `PAR` lower).

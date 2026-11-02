@@ -47,7 +47,7 @@ for j in $(for j in $JOBS; do echo "$(hours "$j") $j"; done | sort -rn | awk '{p
     b=0; for ((i = 1; i < NL; i++)); do [[ ${LOAD[i]} -lt ${LOAD[b]} ]] && b=$i; done
     LANE[b]="${LANE[b]} $j"; LOAD[b]=$(( LOAD[b] + $(hours "$j") ))
 done
-log "run_all start (QUICK=$Q) on $(hostname): ${#G[@]} GPU(s) [${G[*]}], $NL job(s) at a time"
+log "run_all start (QUICK=$Q) on $(hostname): GPU slots [${G[*]}], $NL job(s) at a time"
 for ((i = 0; i < NL; i++)); do log "  GPU ${G[i]}:${LANE[i]}  (~${LOAD[i]} A100 h)"; done
 [[ "${PLAN_ONLY:-0}" == 1 ]] && exit 0
 
