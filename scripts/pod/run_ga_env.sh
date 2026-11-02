@@ -6,6 +6,7 @@
 # Offsets: OFFS (default "50 100 150"); an offset is skipped when fewer than 60 episodes are longer than it.
 # usage: bash scripts/pod/run_ga_env.sh <tworoom|cube|reacher|pmm> [seeds="0"] [out=/root/out/ga_<env>] [lane=all|base|anchor|ap]
 # lane ap: AP-CEM (APH="0.5 2" adds runs with the goal offset misstated by those factors)
+# OKNODES: nodes file for the offset check when the graph comes from another dataset
 # EVX: extra Hydra overrides for every evaluation; TAG: run-name suffix (ablations)
 # lane match: graph anchors under AP's planner (MSPANS); lane cross: stitched goals (XB budgets, XM methods); WM: other world model
 set -u
@@ -65,7 +66,7 @@ fi
 while [ ! -f "$OUT/READY" ]; do [ -f "$OUT/ABORT" ] && { log "anchor lane: setup aborted"; exit 1; }; sleep 30; done   # anchor lane waits for the nodes
 DS=$(cat "$OUT/dataset_name")
 ok_off() { $PY -c "
-import numpy as np; d=np.load('$NODES'); ep,st=d['ep'],d['step']
+import numpy as np; d=np.load('${OKNODES:-$NODES}'); ep,st=d['ep'],d['step']
 print(int(sum(st[ep==e].max()>$1 for e in np.unique(ep))>=60))"; }
 ev() {  # name seed offset extra...
   local name=$1 seed=$2 off=$3; shift 3

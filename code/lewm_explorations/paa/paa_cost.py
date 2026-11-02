@@ -96,7 +96,7 @@ class PAAGoalCost(nn.Module):
         self.GT = G.T.tocsr()  # distances TO the goal = dijkstra from the goal on the transposed graph
         del dd
         torch.cuda.empty_cache()  # several evaluation processes share one GPU
-        self._goal_cache, self._anchor_cache = {}, {}
+        self._goal_cache, self._anchor_cache, self.anchor_log = {}, {}, []
         self.hop_scale = 1.0
         if self.mode == 'gap' and self.gap_cal:
             rng, r = np.random.default_rng(0), []
@@ -142,12 +142,13 @@ class PAAGoalCost(nn.Module):
             return self._anchor_cache[key]
         gn, dist, pred = self._goal_tree(g)
         s = self._nearest(z0)
-        out = g
+        out, a_node = g, -1
         if np.isfinite(dist[s]) and dist[s] > self.span:
             path = self._path(s, gn, pred, self.max_hops)
             if path:
                 if self.mode == 'fixed' or self.head is None:
-                    out = self.emb[path[min(self.span, len(path)) - 1]]
+                    a_node = path[min(self.span, len(path)) - 1]
+                    out = self.emb[a_node]
                 else:
                     za = self.emb[torch.as_tensor(path, device=self.emb.device)]
                     hops = torch.arange(1, len(path) + 1, device=za.device, dtype=torch.float32)
@@ -158,6 +159,8 @@ class PAAGoalCost(nn.Module):
                     k = int(score.argmax()) if bool((score > 0).any()) else 0
                     out = za[k]
         self._anchor_cache[key] = out
+        # figure log, indices into nodes.npz: (goal node, current node, anchor node or -1 = the goal itself)
+        self.anchor_log.append((int(self.idx[gn]), int(self.idx[s]), int(self.idx[a_node]) if a_node >= 0 else -1))
         return out
 
     # ------------------------------------------------------------------------------------------- anchored planning

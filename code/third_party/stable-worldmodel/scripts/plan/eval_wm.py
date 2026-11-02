@@ -162,6 +162,8 @@ def run(cfg: DictConfig):
         if cfg.policy != 'random'
         else Path(__file__).parent
     )
+    if cfg.get('video_dir', None):  # one folder per run (parallel runs of the same policy would overwrite env_*.mp4)
+        results_path = Path(cfg.video_dir)
 
     # sample the episodes and the starting indices
     episode_len = get_episodes_length(dataset, ep_indices)
@@ -227,7 +229,8 @@ def run(cfg: DictConfig):
             'Not enough episodes with sufficient length for evaluation.'
         )
 
-    if hasattr(policy, 'solver') and hasattr(objective, 'set_exclude'):  # PAA: drop the evaluation pairs' episodes
+    # PAA: drop the evaluation pairs' episodes (paa_noexclude: the graph comes from another dataset, e.g. random-play data)
+    if hasattr(policy, 'solver') and hasattr(objective, 'set_exclude') and not cfg.get('paa_noexclude', False):
         objective.set_exclude(np.unique(eval_episodes if goal_eps is None else np.concatenate([eval_episodes, goal_eps])))
     world.set_policy(policy)
 
@@ -312,8 +315,9 @@ def run(cfg: DictConfig):
 
     print(metrics)
     if trace is not None:
+        alog = np.asarray(getattr(objective, 'anchor_log', []), dtype=np.int64).reshape(-1, 3)
         np.savez(cfg.trace_npz, success=np.asarray(metrics['episode_successes']), ep=np.asarray(eval_episodes),
-                 start=np.asarray(eval_start_idx), offset=cfg.eval.goal_offset_steps,
+                 start=np.asarray(eval_start_idx), offset=cfg.eval.goal_offset_steps, anchor_log=alog,
                  **{f'tr_{k}': np.stack(v) for k, v in trace.items() if len(v)})
         print(f'[trace] {cfg.trace_npz} keys={sorted(trace)}', flush=True)
     if cfg.get('dump_npz', None):  # PAA harvest: final-frame latents for label-free attainment labels
