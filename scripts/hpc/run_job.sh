@@ -7,6 +7,9 @@
 #   bash scripts/hpc/run_job.sh J3             # PointMaze-Medium: PLDM baseline, and graph anchors on PLDM
 #   bash scripts/hpc/run_job.sh J4             # third seed (1) for the main table, Two-Room and PointMaze-Medium
 #   bash scripts/hpc/run_job.sh J5             # ablations on PointMaze-Medium and Two-Room
+#   bash scripts/hpc/run_job.sh J6             # PointMaze-Medium: graph waypoints given to GCBC (graph + policy, no planner)
+#   bash scripts/hpc/run_job.sh J7             # PointMaze-Medium: PLDM with graph anchors AND with AP (J3 + AP)
+#   bash scripts/hpc/run_job.sh J8             # PointMaze-Medium: AP with its memory built from random-play data
 #   QUICK=1 bash scripts/hpc/run_job.sh J3     # plumbing test: a few training steps, 2 episodes per evaluation
 #
 # Each job writes to $OUT_ROOT/<job>/ (default out/hpc/<job>/), ends with a PASS/FAIL line in <job>/job.log and packs
@@ -14,17 +17,21 @@
 # Finished runs are skipped, so after a time limit or a crash the same command simply continues.
 #
 # Environment: GWM_ENV (conda env, default gwm), STABLEWM_HOME (data/checkpoint cache, default ~/.stable_worldmodel),
-# OUT_ROOT, QUICK=1. One GPU per job; jobs can run at the same time on different GPUs (CUDA_VISIBLE_DEVICES).
+# OUT_ROOT, QUICK=1, GWM_NOCONDA=1 (use the python on PATH instead of the conda env, e.g. on Colab).
+# One GPU per job; jobs can run at the same time on different GPUs (CUDA_VISIBLE_DEVICES).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-JOB="${1:?usage: bash scripts/hpc/run_job.sh <smoke|J1|J2|J3|J4|J5>}"
-source "$ROOT/env/conda.sh"
-CONDA_BASE="$(project_conda_root)" || exit 1
-source "$CONDA_BASE/etc/profile.d/conda.sh"
-conda activate "${GWM_ENV:-gwm}" || { echo "conda env ${GWM_ENV:-gwm} missing: run scripts/hpc/env_setup.sh"; exit 1; }
+JOB="${1:?usage: bash scripts/hpc/run_job.sh <smoke|J1|...|J8>}"
+if [[ "${GWM_NOCONDA:-0}" != 1 ]]; then
+    source "$ROOT/env/conda.sh"
+    CONDA_BASE="$(project_conda_root)" || exit 1
+    source "$CONDA_BASE/etc/profile.d/conda.sh"
+    conda activate "${GWM_ENV:-gwm}" || { echo "conda env ${GWM_ENV:-gwm} missing: run scripts/hpc/env_setup.sh"; exit 1; }
+fi
+command -v python > /dev/null || python() { python3 "$@"; }
 
 Q="${QUICK:-0}"
-export JEPAWM_HOME="$ROOT" SWM_PY="$(command -v python)"
+export JEPAWM_HOME="$ROOT" SWM_PY="$(command -v python || command -v python3)"
 export PYTHONPATH="$ROOT/code/third_party/stable-worldmodel${PYTHONPATH:+:$PYTHONPATH}"
 export STABLEWM_HOME="${STABLEWM_HOME:-$HOME/.stable_worldmodel}"
 export MUJOCO_GL="${MUJOCO_GL:-egl}" PYOPENGL_PLATFORM="${PYOPENGL_PLATFORM:-egl}" SDL_VIDEODRIVER=dummy
@@ -133,6 +140,41 @@ J5)  # ablations (graph anchors, span 6 unless varied): PointMaze-Medium d200 an
         # A5: LeWM with 3x the CEM samples (compute-matched baseline), PointMaze d200 and Two-Room d75
         TAG=_cem3x EVX="$X0 solver.num_samples=900" OFFS="$PO" bash "$R" pmm 0 "$O/pmm" base >> "$O/abl_cem3x.log" 2>&1
         TAG=_cem3x EVX="$X0 solver.num_samples=900" OFFS="$TO" bash "$R" tworoom 0 "$O/tworoom" base >> "$O/abl_cem3x.log" 2>&1 ) &
+    wait
+    ;;
+J6)  # graph + policy baseline (reviewer question "SoRB in latent space?"): GCBC trained here, evaluated plain and with
+     # graph waypoints (the anchor 6 hops ahead on the LeWM latent graph as its goal); standard d50-200 + stitched goals.
+    OFFS=50 bash "$R" pmm 0 "$O/pmm" setup >> "$O/laneA.log" 2>&1   # LeWM nodes for the graph (same as our planner's)
+    XB="$(q 100 400)" XSEEDS="$(q 0 '0 42')" OFFS="$(q 50 '50 100 150 200')" GNODES="$O/pmm/nodes.npz" \
+        GWM=yjang43/lp2-pointmaze-medium bash "$B" pmm "gcbc gcbcg" "$O/bl_pmm" >> "$O/laneB.log" 2>&1
+    ;;
+J7)  # PLDM on PointMaze-Medium (trained here): PLDM alone, + graph anchors, + AP; d100/d200 and stitched goals, 2 seeds
+    XB="$(q 100 400)" XSEEDS="$(q 0 '0 42')" OFFS="" bash "$B" pmm pldm "$O/bl_pmm" >> "$O/laneA.log" 2>&1
+    if [[ -f "$O/bl_pmm/train_pldm.done" ]]; then
+        mkdir -p "$O/pldm_pmm"; echo d4rl_pointmaze_medium_expert.h5 > "$O/pldm_pmm/dataset_name"
+        S2="$(q 0 '0 42')"; export WM=bl_pmm_pldm
+        ( OFFS="$(q 100 '100 200')" SPANS=6 bash "$R" pmm "$S2" "$O/pldm_pmm" all >> "$O/laneB.log" 2>&1 ) &
+        ( waitf "$O/pldm_pmm/READY" && OFFS="$(q 100 '100 200')" bash "$R" pmm "$S2" "$O/pldm_pmm" ap >> "$O/laneC.log" 2>&1 \
+          && XB="$(q 100 400)" XM="ga ap" bash "$R" pmm "$S2" "$O/pldm_pmm" cross >> "$O/laneC.log" 2>&1 ) &
+        wait
+    else
+        log "PLDM training did not finish (see bl_pmm/train_pldm.log)"
+    fi
+    ;;
+J8)  # AP whose retrieval memory is built from random-play data (graph anchors on the same data: 94/88/92/88, stitched 96/94)
+    OFFS=50 bash "$R" pmm 0 "$O/pmm" setup >> "$O/lane.log" 2>&1     # expert data, LeWM, expert nodes (offset check)
+    D="$O/rand_pmm"; mkdir -p "$D"
+    RH="$(ls "$STABLEWM_HOME/datasets/" | grep -i 'pointmaze_medium_random.*h5' | head -1)"
+    [[ -n "$RH" ]] || { echo "no random dataset" >> "$D/queue.log"; finish; exit 1; }
+    if [[ ! -f "$D/nodes.npz" ]]; then
+        (cd "$SW" && python "$P/paa_nodes.py" --out "$D/nodes.npz" --model yjang43/lp2-pointmaze-medium --dataset "$RH" \
+            --state_key proprio --workers 8 > "$D/nodes.log" 2>&1) || { echo "random nodes FAILED" >> "$D/queue.log"; finish; exit 1; }
+    fi
+    echo d4rl_pointmaze_medium_expert.h5 > "$D/dataset_name"; touch "$D/READY"
+    export TAG=_rand EVX="$EVX +paa_noexclude=true" OKNODES="$O/pmm/nodes.npz"
+    S2="$(q 0 '0 42')"
+    ( OFFS="$(q 50 '50 100 150 200')" bash "$R" pmm "$S2" "$D" ap >> "$O/laneA.log" 2>&1 ) &
+    ( XB="$(q 100 400)" XM=ap bash "$R" pmm "$S2" "$D" cross >> "$O/laneB.log" 2>&1 ) &
     wait
     ;;
 *) echo "unknown job $JOB (smoke | J1 | J2 | J3 | J4 | J5)"; exit 1 ;;

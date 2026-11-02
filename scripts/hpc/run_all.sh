@@ -10,7 +10,7 @@
 # Options (environment variables):
 #   GPUS="0 1 2 3"   GPUs to use (default: all GPUs that nvidia-smi lists, or CUDA_VISIBLE_DEVICES if set)
 #   MAXPAR=2         at most this many jobs at the same time (each needs ~64 GB host RAM; default: one per GPU)
-#   JOBS="J1 J2"     subset of jobs (default: J1 J2 J3 J4 J5)
+#   JOBS="J1 J2"     subset of jobs (default: J1 J2 J3 J4 J5; the follow-ups J6 J7 J8 run with JOBS="J6 J7 J8")
 #   PLAN_ONLY=1      print which GPU runs which job, then exit
 #   QUICK=1          plumbing test: a few training steps, 2 episodes per evaluation (written to out/hpc_quick/)
 #   plus the options of env_setup.sh and run_job.sh (GWM_ENV, STABLEWM_HOME, CONDA_ROOT, ...)
@@ -40,7 +40,7 @@ elif [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]]; then IFS=',' read -r -a G <<< "$CUDA_
 else read -r -a G <<< "$(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | tr '\n' ' ')"; fi
 [[ ${#G[@]} -gt 0 ]] || G=(0)
 NL=${#G[@]}; [[ -n "${MAXPAR:-}" && "${MAXPAR}" -lt "$NL" ]] && NL="$MAXPAR"
-hours() { case $1 in J1) echo 10 ;; J5) echo 7 ;; J4) echo 5 ;; J2|J3) echo 4 ;; *) echo 3 ;; esac; }
+hours() { case $1 in J1) echo 10 ;; J5) echo 7 ;; J4) echo 5 ;; J2|J3|J6|J7) echo 4 ;; *) echo 3 ;; esac; }
 declare -a LANE LOAD
 for ((i = 0; i < NL; i++)); do LANE[i]=""; LOAD[i]=0; done
 for j in $(for j in $JOBS; do echo "$(hours "$j") $j"; done | sort -rn | awk '{print $2}'); do  # longest job to the least loaded lane

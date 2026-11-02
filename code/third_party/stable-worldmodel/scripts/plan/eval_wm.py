@@ -151,6 +151,18 @@ def run(cfg: DictConfig):
         )
         if cfg.get('ff', False):  # learned goal-conditioned policy (GCBC / GCIVL / GCIQL / HILP): same pairs and scoring
             policy = swm.policy.FeedForwardPolicy(model=model, process=process, transform=transform)
+            if cfg.get('graph_waypoints', False):  # graph + policy baseline: waypoints from the latent graph
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'lewm_explorations' / 'paa'))
+                from paa_cost import PAAGoalCost
+                from graph_policy import GraphWaypointPolicy
+
+                enc = swm.wm.utils.load_pretrained(cfg.graph_wm).to('cuda').eval().requires_grad_(False)
+                graph = PAAGoalCost(cfg.graph_nodes, mode='fixed', span=cfg.get('paa_span', 6),
+                                    max_hops=cfg.get('paa_max_hops', 12), knn=cfg.get('paa_knn', 10))
+                policy = GraphWaypointPolicy(policy, enc, graph, dataset, transform['pixels'],
+                                             every=cfg.get('waypoint_every', 5), img_dtype=img_dtype)
+                print(f'[graph_waypoints] {cfg.graph_wm} graph, span {graph.span}, waypoint every '
+                      f'{policy.every} steps', flush=True)
 
     else:
         policy = swm.policy.RandomPolicy()
@@ -232,6 +244,8 @@ def run(cfg: DictConfig):
     # PAA: drop the evaluation pairs' episodes (paa_noexclude: the graph comes from another dataset, e.g. random-play data)
     if hasattr(policy, 'solver') and hasattr(objective, 'set_exclude') and not cfg.get('paa_noexclude', False):
         objective.set_exclude(np.unique(eval_episodes if goal_eps is None else np.concatenate([eval_episodes, goal_eps])))
+    if hasattr(policy, 'graph') and not cfg.get('paa_noexclude', False):  # graph-waypoint policy: same exclusion
+        policy.graph.set_exclude(np.unique(eval_episodes if goal_eps is None else np.concatenate([eval_episodes, goal_eps])))
     world.set_policy(policy)
 
     results_path.mkdir(parents=True, exist_ok=True)
@@ -316,7 +330,8 @@ def run(cfg: DictConfig):
     print(metrics)
     if trace is not None:
         alog = np.asarray(getattr(objective, 'anchor_log', []), dtype=np.int64).reshape(-1, 3)
-        np.savez(cfg.trace_npz, success=np.asarray(metrics['episode_successes']), ep=np.asarray(eval_episodes),
+        wlog = np.asarray(getattr(policy, 'log', []), dtype=np.int64).reshape(-1, 3)  # graph-waypoint policy
+        np.savez(cfg.trace_npz, success=np.asarray(metrics['episode_successes']), ep=np.asarray(eval_episodes), waypoint_log=wlog,
                  start=np.asarray(eval_start_idx), offset=cfg.eval.goal_offset_steps, anchor_log=alog,
                  **{f'tr_{k}': np.stack(v) for k, v in trace.items() if len(v)})
         print(f'[trace] {cfg.trace_npz} keys={sorted(trace)}', flush=True)

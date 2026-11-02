@@ -4,7 +4,7 @@
 #                         per training phase (GCIVL/HILP: value then policy), evaluated with eval_wm.py +ff=true
 #   pldm                : PLDM world model, STEPS_WM batches, planned with the same CEM as LeWM
 #   dinowm              : released DINO-WM PushT checkpoint (pusht only), N_DINO pairs at d50/d100 (planning is slow)
-# XB/XSEEDS: also evaluate on stitched goals (goals from other episodes) at those budgets and seeds
+# gcbcg: graph waypoints + GCBC (needs GNODES, GWM); XB/XSEEDS: also evaluate on stitched goals (goals from other episodes) at those budgets and seeds
 # usage: bash scripts/pod/run_baselines.sh <tworoom|pmm|pusht> "<methods>" [out=/root/out/bl_<env>]
 set -u
 ENV=$1; METHODS=$2; OUT=${3:-/root/out/bl_$ENV}; mkdir -p "$OUT"
@@ -67,6 +67,9 @@ for m in $METHODS; do
     gcbc)       train gcbc  && { for d in $OFFS; do ev gcbc_d${d}_s0 $d policy=bl_${ENV}_gcbc +ff=true; done; xev gcbc policy=bl_${ENV}_gcbc +ff=true; } ;;
     gcivl|hilp) train $m    && { A="policy=bl_${ENV}_${m}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}_policy/model_object.pt"
                                  for d in $OFFS; do ev ${m}_d${d}_s0 $d $A; done; xev $m $A; } ;;
+    gcbcg)      # graph + GCBC: the GCBC policy is given graph waypoints (GNODES: LeWM nodes, GWM: that LeWM) as its goal
+                train gcbc  && { A="policy=bl_${ENV}_gcbc +ff=true +graph_waypoints=true +graph_nodes=${GNODES:?set GNODES} +graph_wm=${GWM:?set GWM} +paa_span=${GSPAN:-6}"
+                                 for d in $OFFS; do ev gcbcg_d${d}_s0 $d $A; done; xev gcbcg $A; } ;;
     pldm)       train pldm  && { for d in $OFFS; do ev pldm_d${d}_s0 $d policy=bl_${ENV}_pldm; done; xev pldm policy=bl_${ENV}_pldm; } ;;
     dinowm)
       [ "$ENV" = pusht ] || { log "dinowm: pusht only"; continue; }

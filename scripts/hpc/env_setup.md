@@ -69,9 +69,13 @@ Each job uses one GPU. Jobs can run at the same time on different GPUs (`CUDA_VI
 | `J3` | PLDM baseline on PointMaze-Medium, then our graph anchors on top of PLDM | 3-4 |
 | `J4` | Third seed for all main-table rows (Two-Room and PointMaze-Medium) | 4-5 |
 | `J5` | Ablations (graph edges, anchor span, graph size, k-NN, compute-matched baseline) | 6-8 |
+| `J6` | *Optional follow-up:* graph waypoints given to a GCBC policy (graph + policy, no planner) | 4 |
+| `J7` | *Optional follow-up:* PLDM on PointMaze-Medium with graph anchors and with AP (J3 plus AP) | 4 |
+| `J8` | *Optional follow-up:* AP with its memory built from random-play data | 3 |
 
 ```bash
 bash scripts/hpc/run_job.sh J1      # then J2 ... J5, or in parallel on separate GPUs
+JOBS="J6 J7 J8" bash scripts/hpc/run_all.sh    # the optional follow-ups, only when asked
 ```
 
 When a job finishes, `out/hpc/<job>/job.log` ends with a results table and `JOB <job> PASS` or `FAIL`. Its own archive is `out/hpc/<job>_results.tgz`. `run_all.sh` collects them all into `ALL_results.tgz`.

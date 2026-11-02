@@ -8,6 +8,7 @@
 # lane ap: AP-CEM (APH="0.5 2" adds runs with the goal offset misstated by those factors)
 # OKNODES: nodes file for the offset check when the graph comes from another dataset
 # EVX: extra Hydra overrides for every evaluation; TAG: run-name suffix (ablations)
+# lane setup: data, checkpoint and nodes only
 # lane match: graph anchors under AP's planner (MSPANS); lane cross: stitched goals (XB budgets, XM methods); WM: other world model
 set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
@@ -64,6 +65,7 @@ ln=np.array([st[ep==e].max() for e in u]); print('episodes',len(u),'nodes',len(e
   touch "$OUT/READY"
 fi
 while [ ! -f "$OUT/READY" ]; do [ -f "$OUT/ABORT" ] && { log "anchor lane: setup aborted"; exit 1; }; sleep 30; done   # anchor lane waits for the nodes
+[ "$LANE" = setup ] && { log "setup done (data, checkpoint, nodes)"; exit 0; }  # lane setup: only prepare $OUT
 DS=$(cat "$OUT/dataset_name")
 ok_off() { $PY -c "
 import numpy as np; d=np.load('${OKNODES:-$NODES}'); ep,st=d['ep'],d['step']
@@ -106,7 +108,7 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
     ev relmin${TAG:-}_h10_d${off}_s$seed $seed $off +metric_head=released +metric_agg=min plan_config.horizon=10
   fi
   if [ "$LANE" = ap ]; then  # Anchored Planning (arXiv 2609.30036) re-implemented: one-block CEM toward the retrieved successor
-    ev apcem_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1
+    ev apcem${TAG:-}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1
     for f in ${APH:-}; do  # AP told a wrong goal offset: f x the true one (AP needs the offset, graph anchors do not)
       ev apcem_H${f}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 \
          plan_config.receding_horizon=1 +paa_ap_offset=$(python3 -c "print(int(round($off * $f)))")
