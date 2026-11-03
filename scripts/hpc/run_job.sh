@@ -277,8 +277,12 @@ J11)  # PointMaze-Large: graph and AP memory built from OGBench pointmaze-large-
 J12)  # fair baselines on PointMaze-Medium: GCBC and GCIVL with 4x the training budget (4 epochs of 5,000 batches), PLDM with
       # 5 epochs; the stronger PLDM is then planned plain, with min-over-plan, with graph anchors and with AP
     S2="$(q 0 '0 42')"; E4="$(q 1 4)"; E5="$(q 1 5)"
-    ( EPOCHS=$E4 MTAG=_e4 EVSEEDS=0 XSEEDS="$S2" XB="$(q 100 400)" OFFS="$(q 50 '50 100 150 200')" bash "$B" pmm gcbc "$O/bl_gcbc_e4" ) >> "$O/laneA.log" 2>&1 &
-    ( EPOCHS=$E4 MTAG=_e4 EVSEEDS=0 XSEEDS="$S2" XB="$(q 100 400)" OFFS="$(q 50 '50 100 150 200')" bash "$B" pmm gcivl "$O/bl_gcivl_e4" ) >> "$O/laneB.log" 2>&1 &
+    # three trainings at once need ~150 GB of host RAM (each caches the dataset); with less, run them one after another
+    RAMGB="$(free -g 2>/dev/null | awk '/^Mem:/ {print $7}')"; PARJ=1; [[ "${RAMGB:-0}" -ge 150 ]] || PARJ=0
+    log "J12: ${RAMGB:-?} GB free host RAM -> trainings $([[ $PARJ == 1 ]] && echo 'in parallel' || echo 'one after another')"
+    bg() { if [[ $PARJ == 1 ]]; then "$@" & else "$@"; fi; }
+    bg bash -c "EPOCHS=$E4 MTAG=_e4 EVSEEDS=0 XSEEDS='$S2' XB='$(q 100 400)' OFFS='$(q 50 '50 100 150 200')' bash '$B' pmm gcbc '$O/bl_gcbc_e4' >> '$O/laneA.log' 2>&1"
+    bg bash -c "EPOCHS=$E4 MTAG=_e4 EVSEEDS=0 XSEEDS='$S2' XB='$(q 100 400)' OFFS='$(q 50 '50 100 150 200')' bash '$B' pmm gcivl '$O/bl_gcivl_e4' >> '$O/laneB.log' 2>&1"
     ( EPOCHS_WM=$E5 MTAG=_e5 EVSEEDS="$S2" XSEEDS="$S2" XB="$(q 100 400)" OFFS="$(q 50 '50 100 200')" bash "$B" pmm pldm "$O/bl_pldm_e5"
       if [[ -f "$O/bl_pldm_e5/train_pldm.done" ]]; then
           D="$O/pldm5_pmm"; mkdir -p "$D"; echo d4rl_pointmaze_medium_expert.h5 > "$D/dataset_name"
