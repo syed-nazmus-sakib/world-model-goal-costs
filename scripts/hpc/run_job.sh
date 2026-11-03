@@ -59,6 +59,7 @@ finish() {  # summary table, PASS/FAIL line, results archive
 }
 
 T0="$(date -u +%F' '%T)"
+rm -f "$O"/*/ABORT   # a stale abort marker from an earlier attempt would stop the waiting lanes of this one
 log "JOB $JOB start (QUICK=$Q) on $(hostname) | $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1) | git $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)"
 case "$JOB" in
 smoke)  # environment, data, checkpoints, graph and planner on Two-Room and PointMaze-Medium, 2 episodes per evaluation
@@ -84,8 +85,13 @@ print({k: f[k].shape for k in f.keys()})" > "$D/h5_keys.txt" 2>&1; log "data: $(
             trainer.max_epochs="$(q 1 "${EP:-10}")" +trainer.limit_train_batches="$(q 30 "${NB:-3000}")" \
             +trainer.limit_val_batches="$(q 5 20)" > "$D/train.log" 2>&1
         rc=$?; log "train lewm_pml rc=$rc $(( $(date +%s) - t0 ))s $(grep -aE '^[A-Za-z.]*(Error|Exception)' "$D/train.log" | tail -1)"
-        [[ $rc == 0 ]] || { echo "train rc=$rc" >> "$D/queue.log"; finish; exit 1; }
+        [[ $rc == 0 ]] || { echo "$(date -u +%F' '%T) train rc=$rc" >> "$D/queue.log"; finish; exit 1; }
         touch "$D/train.done"
+    fi
+    K="$STABLEWM_HOME/checkpoints/lewm_pml"   # training saves one .pt per epoch; the loader needs exactly one: keep the last
+    if [[ $(ls "$K"/*.pt 2>/dev/null | wc -l) -gt 1 ]]; then
+        mkdir -p "$K/older_epochs"; ls "$K"/*.pt | sort -V | head -n -1 | xargs -I{} mv {} "$K/older_epochs/"
+        log "checkpoint: kept $(ls "$K"/*.pt), older epochs moved to $K/older_epochs"
     fi
     cd "$ROOT"
     echo pointmaze_large.h5 > "$O/pml/dataset_name"

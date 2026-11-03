@@ -50,6 +50,10 @@ done
 log "run_all start (QUICK=$Q) on $(hostname): GPU slots [${G[*]}], $NL job(s) at a time"
 for ((i = 0; i < NL; i++)); do log "  GPU ${G[i]}:${LANE[i]}  (~${LOAD[i]} A100 h)"; done
 [[ "${PLAN_ONLY:-0}" == 1 ]] && exit 0
+exec 9> "$OUT_ROOT/.run_all.lock"   # two copies writing the same out/ directory overwrite each other's logs
+if command -v flock > /dev/null && ! flock -n 9; then
+    log "another run_all.sh is already running for $OUT_ROOT: wait for it to finish (or stop it) before starting again"; exit 1
+fi
 
 # --------------------------------------------------------------------------------------------- 1. environment
 source "$ROOT/env/conda.sh"
