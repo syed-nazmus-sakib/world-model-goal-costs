@@ -29,7 +29,7 @@ from torch import nn
 
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
-                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0):
+                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -40,6 +40,11 @@ class PAAGoalCost(nn.Module):
         self.ap_offset, self.ap_step, self.ap_k = ap_offset, int(ap_step), int(ap_k)
         self.gap_cal = bool(gap_cal)  # gap: convert graph hops to recorded blocks before choosing the retrieval bank
         self.frac = float(frac)  # ablation: build the graph from this fraction of the training episodes (seeded)
+        # coverage ablation: drop every node whose agent position (state[:, :2]) lies in the box (x0, x1, y0, y1)
+        self.drop_box = None if drop_box in (None, 'none', '') else [float(v) for v in
+                                                                     (drop_box.split(',') if isinstance(drop_box, str) else drop_box)]
+        self.state_all = d['state'] if 'state' in d.files and d['state'].ndim == 2 else None
+        self._t = {'build_s': 0.0, 'dijkstra_s': 0.0, 'dijkstra_n': 0, 'anchor_s': 0.0, 'anchor_n': 0}
         self.head = None
         if head:
             from paa_head import load_head
@@ -50,7 +55,16 @@ class PAAGoalCost(nn.Module):
 
     # ----------------------------------------------------------------------------------------------------- graph
     def set_exclude(self, eps):
+        import time as _time
+        t_build = _time.perf_counter()
         keep = ~np.isin(self.ep_all, np.asarray(list(eps)))
+        if self.drop_box is not None:
+            assert self.state_all is not None, 'drop_box needs agent positions (state) in the nodes file'
+            x0, x1, y0, y1 = self.drop_box
+            xy = self.state_all[:, :2]
+            inside = (xy[:, 0] >= x0) & (xy[:, 0] <= x1) & (xy[:, 1] >= y0) & (xy[:, 1] <= y1)
+            keep &= ~inside
+            print(f'[paa] drop_box {self.drop_box}: {int(inside.sum())} nodes removed', flush=True)
         if self.frac < 1.0:
             u = np.unique(self.ep_all)
             sub = np.random.default_rng(0).choice(u, size=max(1, int(round(self.frac * len(u)))), replace=False)
@@ -98,6 +112,7 @@ class PAAGoalCost(nn.Module):
         torch.cuda.empty_cache()  # several evaluation processes share one GPU
         self._goal_cache, self._anchor_cache, self.anchor_log, self._anchor_node = {}, {}, [], {}
         self.hop_scale = 1.0
+        self._t['build_s'] += _time.perf_counter() - t_build
         if self.mode == 'gap' and self.gap_cal:
             rng, r = np.random.default_rng(0), []
             starts = np.r_[0, np.nonzero(np.diff(ep[order]))[0] + 1, len(order)]
@@ -120,8 +135,12 @@ class PAAGoalCost(nn.Module):
     def _goal_tree(self, g):
         key = hash(g.cpu().numpy().tobytes())
         if key not in self._goal_cache:
+            import time as _time
+            t0 = _time.perf_counter()
             gn = self._nearest(g)
             dist, pred = dijkstra(self.GT, directed=True, indices=gn, return_predecessors=True)
+            self._t['dijkstra_s'] += _time.perf_counter() - t0
+            self._t['dijkstra_n'] += 1
             self._goal_cache[key] = (gn, dist, pred)
         return self._goal_cache[key]
 
@@ -163,6 +182,12 @@ class PAAGoalCost(nn.Module):
         # figure log, indices into nodes.npz: (goal node, current node, anchor node or -1 = the goal itself)
         self.anchor_log.append((int(self.idx[gn]), int(self.idx[s]), int(self.idx[a_node]) if a_node >= 0 else -1))
         return out
+
+    def timing(self):
+        """Graph build time (s, all set_exclude calls), mean shortest-path search per goal (ms), number of goals."""
+        t = self._t
+        return {'graph_build_s': t['build_s'], 'dijkstra_ms': 1e3 * t['dijkstra_s'] / max(1, t['dijkstra_n']),
+                'goals': float(t['dijkstra_n'])}
 
     def anchor_node(self, z0, g):
         """Index (into the nodes file) of the anchor anchor() picks for (z0, g); -1 when it is the goal itself."""

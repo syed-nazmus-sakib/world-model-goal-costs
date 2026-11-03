@@ -23,6 +23,9 @@ class GraphWaypointPolicy(BasePolicy):
         self.tf, self.every, self.img_dtype = transform, int(every), img_dtype
         self._t, self._wp, self._rows = 0, None, {}
         self.log = []  # (env step, env index, anchor node or -1), for analysis
+        # diagnostics: at each refresh, latent distance from the current state to the previous waypoint, relative to the
+        # graph's one-block edge threshold (< 1: the waypoint was reached, i.e. the agent is at that node)
+        self.reach = []  # (env index, distance / threshold) for refreshes whose previous waypoint was a graph node
 
     def set_env(self, env):
         self.env = env
@@ -54,9 +57,25 @@ class GraphWaypointPolicy(BasePolicy):
             self._rows[node] = row
         return self._rows[node]
 
+    def stats(self):
+        """swap_rate: fraction of refreshes at which the goal was replaced by a graph node; reach_rate: fraction of
+        replaced goals that the agent reached (within one edge threshold) by the next refresh; dist_ratio: median
+        distance to the previous waypoint in units of that threshold."""
+        nodes = np.asarray([n for _, _, n in self.log]) if self.log else np.zeros(0)
+        r = np.asarray([x for _, x in self.reach]) if self.reach else np.zeros(0)
+        return {'refreshes': float(len(nodes)), 'swap_rate': float((nodes >= 0).mean()) if len(nodes) else float('nan'),
+                'reach_rate': float((r < 1.0).mean()) if len(r) else float('nan'),
+                'dist_ratio': float(np.median(r)) if len(r) else float('nan')}
+
     def get_action(self, info_dict, **kwargs):
         if self._wp is None or self._t % self.every == 0:
             z0, g = self._enc(self._last(info_dict['pixels'])), self._enc(self._last(info_dict['goal']))
+            if self._wp is not None:
+                thr = float(getattr(self.graph, 'thr', 1.0))
+                for b, node in enumerate(self._wp):
+                    if node >= 0:
+                        zn = self.graph.emb_all[node].to(z0.device, torch.float32)
+                        self.reach.append((b, float((z0[b] - zn).pow(2).sum()) / thr))
             self._wp = [self.graph.anchor_node(z0[b], g[b]) for b in range(len(z0))]
             self.log += [(self._t, b, n) for b, n in enumerate(self._wp)]
         self._t += 1

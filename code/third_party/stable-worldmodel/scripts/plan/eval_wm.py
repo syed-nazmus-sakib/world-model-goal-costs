@@ -139,7 +139,9 @@ def run(cfg: DictConfig):
                                     agg=cfg.get('metric_agg', 'min'), ap_offset=cfg.get('paa_ap_offset', cfg.eval.goal_offset_steps),
                                     ap_step=cfg.plan_config.action_block * cfg.plan_config.receding_horizon,
                                     ap_k=cfg.get('ap_k', 8), gap_cal=cfg.get('gap_cal', False),
-                                    knn=cfg.get('paa_knn', 10), thr_q=cfg.get('paa_thr_q', 0.5), frac=cfg.get('paa_frac', 1.0))
+                                    knn=cfg.get('paa_knn', 10), thr_q=cfg.get('paa_thr_q', 0.5), frac=cfg.get('paa_frac', 1.0),
+                                    drop_box=([cfg.paa_drop_x0, cfg.paa_drop_x1, cfg.paa_drop_y0, cfg.paa_drop_y1]
+                                              if cfg.get('paa_drop_x0', None) is not None else None))
         elif cfg.get('metric_head', None):  # method C: learned task-aligned goal cost (scripts/plan/metric_cost.py)
             from metric_cost import MetricGoalCost
 
@@ -246,6 +248,20 @@ def run(cfg: DictConfig):
         objective.set_exclude(np.unique(eval_episodes if goal_eps is None else np.concatenate([eval_episodes, goal_eps])))
     if hasattr(policy, 'graph') and not cfg.get('paa_noexclude', False):  # graph-waypoint policy: same exclusion
         policy.graph.set_exclude(np.unique(eval_episodes if goal_eps is None else np.concatenate([eval_episodes, goal_eps])))
+    _dec_t = []  # wall time per policy decision (ms), CUDA-synchronised; printed in the summary line
+    _get_action = policy.get_action
+
+    def _timed_get_action(*a, **k):
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        t0 = time.perf_counter()
+        out = _get_action(*a, **k)
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        _dec_t.append(1e3 * (time.perf_counter() - t0))
+        return out
+
+    policy.get_action = _timed_get_action
     world.set_policy(policy)
 
     results_path.mkdir(parents=True, exist_ok=True)
@@ -346,12 +362,19 @@ def run(cfg: DictConfig):
                  offset=cfg.eval.goal_offset_steps, budget=cfg.eval.eval_budget)
         print(f'[dump] {cfg.dump_npz}', flush=True)
     print(f'[eval] videos saved to {results_path.resolve()}')
+    if hasattr(policy, 'stats'):  # graph-waypoint policy: how often the goal was replaced and waypoints were reached
+        print('[waypoints] ' + ' '.join(f'{k}={v:.3f}' for k, v in policy.stats().items()), flush=True)
+    if hasattr(objective, 'timing'):  # graph build / shortest-path time
+        print('[graph_timing] ' + ' '.join(f'{k}={v:.3f}' for k, v in objective.timing().items()), flush=True)
+    eps_bits = ''.join('1' if bool(x) else '0' for x in np.asarray(metrics['episode_successes']).ravel())
+    ms = np.asarray(_dec_t[1:] if len(_dec_t) > 1 else _dec_t, dtype=np.float64)  # first decision includes warm-up
     print(  # one-line summary for the method C queues
         f'[summary] env={cfg.world.env_name} seed={cfg.seed} goal_offset={cfg.eval.goal_offset_steps} '
         f'budget={cfg.eval.eval_budget} horizon={cfg.plan_config.horizon} '
         f'metric={Path(str(cfg.get("metric_head", "none"))).stem} agg={cfg.get("metric_agg", "last")} '
         f'paa={cfg.get("paa_mode", "none") if cfg.get("paa_nodes", None) else "none"}:{cfg.get("paa_span", "-")}:{Path(str(cfg.get("paa_head", "none"))).stem} '
-        f'success_rate={metrics["success_rate"]:.1f} n={cfg.eval.num_eval}'
+        f'success_rate={metrics["success_rate"]:.1f} n={cfg.eval.num_eval} '
+        f'ms_per_decision={float(ms.mean()) if len(ms) else float("nan"):.1f} decisions={len(_dec_t)} eps={eps_bits}'
     )
 
     results_path = results_path / cfg.output.filename
