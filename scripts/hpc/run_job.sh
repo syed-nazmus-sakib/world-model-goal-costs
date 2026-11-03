@@ -43,7 +43,10 @@ export STABLEWM_HOME="${STABLEWM_HOME:-$HOME/.stable_worldmodel}"
 export MUJOCO_GL="${MUJOCO_GL:-egl}" PYOPENGL_PLATFORM="${PYOPENGL_PLATFORM:-egl}" SDL_VIDEODRIVER=dummy
 source "$ROOT/scripts/hpc/egl.sh"
 if [[ "$Q" == 1 ]]; then OUT_ROOT="${OUT_ROOT:-$ROOT/out/hpc_quick}"; else OUT_ROOT="${OUT_ROOT:-$ROOT/out/hpc}"; fi
-O="$OUT_ROOT/$JOB"; mkdir -p "$O" "$STABLEWM_HOME"
+mkdir -p "$OUT_ROOT" "$STABLEWM_HOME"
+OUT_ROOT="$(cd "$OUT_ROOT" && pwd)"; STABLEWM_HOME="$(cd "$STABLEWM_HOME" && pwd)"   # absolute: lanes cd before writing
+export OUT_ROOT STABLEWM_HOME
+O="$OUT_ROOT/$JOB"; mkdir -p "$O"
 L="$O/job.log"
 log() { echo "$(date -u +%F' '%T) $*" | tee -a "$L"; }
 R="$ROOT/scripts/pod/run_ga_env.sh"; B="$ROOT/scripts/pod/run_baselines.sh"

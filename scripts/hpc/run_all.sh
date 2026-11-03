@@ -20,6 +20,7 @@ H="$ROOT/scripts/hpc"
 Q="${QUICK:-0}"
 if [[ "$Q" == 1 ]]; then export OUT_ROOT="${OUT_ROOT:-$ROOT/out/hpc_quick}"; else export OUT_ROOT="${OUT_ROOT:-$ROOT/out/hpc}"; fi
 mkdir -p "$OUT_ROOT"
+export OUT_ROOT="$(cd "$OUT_ROOT" && pwd)"   # absolute: the job scripts change directory before writing
 L="$OUT_ROOT/run_all.log"
 log() { echo "$(date -u +%F' '%T) $*" | tee -a "$L"; }
 status() { grep -aoE "JOB $1 (PASS|FAIL)[^)]*\)" "$OUT_ROOT/$1/job.log" 2>/dev/null | tail -1; }
