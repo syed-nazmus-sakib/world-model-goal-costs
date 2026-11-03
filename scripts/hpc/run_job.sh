@@ -60,8 +60,9 @@ keep_last() {  # training saves one .pt per epoch; the loader needs exactly one:
     fi
 }
 pml_model() {  # J10/J11: our PointMaze-Large LeWM is trained by J1; wait for it when J1 runs at the same time (max 12 h)
+    # J1 may have run in another output folder (e.g. out/hpc while this batch writes to out/hpc2): any finished J1 counts
     local t=0
-    until [[ -f "$OUT_ROOT/J1/train/train.done" ]]; do
+    until ls "$OUT_ROOT"/J1/train/train.done "$ROOT"/out/hpc*/J1/train/train.done >/dev/null 2>&1; do
         (( t++ > 720 )) && { log "no trained PointMaze-Large model after 12 h: run J1 first"; return 1; }
         sleep 60
     done
