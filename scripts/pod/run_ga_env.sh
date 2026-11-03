@@ -10,6 +10,8 @@
 # EVX: extra Hydra overrides for every evaluation; TAG: run-name suffix (ablations)
 # lane setup: data, checkpoint and nodes only
 # lane match: graph anchors under AP's planner (MSPANS); lane cross: stitched goals (XB budgets, XM methods); WM: other world model
+# lane fact: graph anchors with the RELEASED search (H=5, last-step cost): the missing cell of target x search
+# TRACE=1: save a per-run trace (agent state, anchors) to $OUT/trace_<run>.npz for the failure analysis
 set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
@@ -75,7 +77,8 @@ ev() {  # name seed offset extra...
   [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && return
   log "$name start"
   $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS \
-    eval.goal_offset_steps=$off eval.eval_budget=$((2 * off)) "$@" ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+    eval.goal_offset_steps=$off eval.eval_budget=$((2 * off)) "$@" ${EVX:-} \
+    ${TRACE:+"+trace_npz=$OUT/trace_$name.npz" +trace_every=5} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
   echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
   log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
 }
@@ -113,6 +116,10 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
       ev apcem_H${f}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 \
          plan_config.receding_horizon=1 +paa_ap_offset=$(python3 -c "print(int(round($off * $f)))")
     done
+    continue
+  fi
+  if [ "$LANE" = fact ]; then  # 2x2 target {goal, anchor} x search {released H5 last, H10 min}: this is (anchor, released)
+    ev gah5${TAG:-}_sp6_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=fixed +paa_span=6 +metric_agg=last
     continue
   fi
   if [ "$LANE" = gap ]; then  # graph-guided retrieval: graph waypoint + hop count replace AP's goal and offset

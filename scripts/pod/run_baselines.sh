@@ -5,6 +5,9 @@
 #   pldm                : PLDM world model, STEPS_WM batches, planned with the same CEM as LeWM
 #   dinowm              : released DINO-WM PushT checkpoint (pusht only), N_DINO pairs at d50/d100 (planning is slow)
 # gcbcg: graph waypoints + GCBC (needs GNODES, GWM); XB/XSEEDS: also evaluate on stitched goals (goals from other episodes) at those budgets and seeds
+# EVSEEDS: seeds of the standard evaluations (default 0); EPOCHS / EPOCHS_WM: training epochs (default 1, STEPS / STEPS_WM
+# batches each); MTAG: suffix of the trained model names (bl_<env>_<method><MTAG>), so longer trainings do not overwrite others
+# GSPAN: waypoint span of gcbcg (default 6); GTAG: run-name suffix of gcbcg (e.g. _sp2)
 # usage: bash scripts/pod/run_baselines.sh <tworoom|pmm|pusht> "<methods>" [out=/root/out/bl_<env>]
 set -u
 ENV=$1; METHODS=$2; OUT=${3:-/root/out/bl_$ENV}; mkdir -p "$OUT"
@@ -20,6 +23,7 @@ fi
 case $ENV in
   tworoom) DATA=tworoom;          DSN=tworoom.h5;                       PD=2; CFG=tworoom;          OFFS=${OFFS-"25 50 75"} ;;
   pmm)     DATA=pointmaze_medium; DSN=d4rl_pointmaze_medium_expert.h5;  PD=4; CFG=pointmaze_medium; OFFS=${OFFS-"50 100 150 200"} ;;
+  pml)     DATA=pointmaze_large;  DSN=pointmaze_large.h5;               PD=4; CFG=pointmaze_large;  OFFS=${OFFS-"50 100 200 400"} ;;
   pusht)   DATA=pusht_lewm;       DSN=galilai-group/lewm-pusht;         PD=4; CFG=pusht;            OFFS=${OFFS-"50 75 100 150"} ;;
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
@@ -29,27 +33,31 @@ cd "$SWM"
 if [ "$ENV" != pusht ] && [ ! -f "$OUT/FETCHED" ]; then
   $PY $P/fetch_lewm_data.py $ENV > "$OUT/fetch.log" 2>&1 && touch "$OUT/FETCHED" || { log "fetch FAILED"; exit 1; }
 fi
-LIM="+wandb.enable=false trainer.max_epochs=1 +trainer.limit_val_batches=20"
+MT=${MTAG:-}
+LIM="+wandb.enable=false trainer.max_epochs=${EPOCHS:-1} +trainer.limit_val_batches=20"
 train() {  # method
-  local m=$1 n=bl_${ENV}_$1 t0=$(date +%s)
+  local m=$1 n=bl_${ENV}_$1$MT t0=$(date +%s)
   [ -f "$OUT/train_$m.done" ] && return 0
   log "train $m start"
   case $m in
     gcbc)  $PY scripts/train/gcbc.py data=$DATA wm.proprio_dim=$PD output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     gcivl) $PY scripts/train/gcivl.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     hilp)  $PY scripts/train/hilp.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
-    pldm)  $PY scripts/train/pldm.py data=$DATA output_model_name=$n trainer.max_epochs=1 +trainer.limit_train_batches=$STEPS_WM +trainer.limit_val_batches=20 ;;
+    pldm)  $PY scripts/train/pldm.py data=$DATA output_model_name=$n trainer.max_epochs=${EPOCHS_WM:-1} +trainer.limit_train_batches=$STEPS_WM +trainer.limit_val_batches=20 ;;
   esac > "$OUT/train_$m.log" 2>&1
   local rc=$?; log "train $m rc=$rc $(( $(date +%s) - t0 ))s $(grep -aE '^[A-Za-z.]*(Error|Exception)' $OUT/train_$m.log | tail -1 | cut -c1-160)"
   [ $rc = 0 ] && touch "$OUT/train_$m.done"; return $rc
 }
-ev() {  # name offset extra...
-  local name=$1 off=$2; shift 2
-  [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && return
-  $PY scripts/plan/eval_wm.py --config-name=$CFG seed=0 eval.dataset_name=$DSN eval.goal_offset_steps=$off \
-    eval.eval_budget=$((2 * off)) "$@" ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
-  echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
-  log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
+ev() {  # name(ending in _s0) offset extra...: one evaluation per seed in EVSEEDS (default 0)
+  local base=${1%_s0} off=$2 name sd; shift 2
+  for sd in ${EVSEEDS:-0}; do
+    name=${base}_s$sd
+    [ -f "$OUT/$name.log" ] && grep -q '\[summary\]' "$OUT/$name.log" && continue
+    $PY scripts/plan/eval_wm.py --config-name=$CFG seed=$sd eval.dataset_name=$DSN eval.goal_offset_steps=$off \
+      eval.eval_budget=$((2 * off)) "$@" ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
+    echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
+    log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
+  done
 }
 xev() {  # method policy-args...: stitched goals (+cross_goal) at budgets XB, seeds XSEEDS, same pairs as run_ga_env.sh cross
   local m=$1; shift
@@ -64,13 +72,13 @@ xev() {  # method policy-args...: stitched goals (+cross_goal) at budgets XB, se
 }
 for m in $METHODS; do
   case $m in
-    gcbc)       train gcbc  && { for d in $OFFS; do ev gcbc_d${d}_s0 $d policy=bl_${ENV}_gcbc +ff=true; done; xev gcbc policy=bl_${ENV}_gcbc +ff=true; } ;;
-    gcivl|hilp) train $m    && { A="policy=bl_${ENV}_${m}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}_policy/model_object.pt"
+    gcbc)       train gcbc  && { for d in $OFFS; do ev gcbc_d${d}_s0 $d policy=bl_${ENV}_gcbc$MT +ff=true; done; xev gcbc policy=bl_${ENV}_gcbc$MT +ff=true; } ;;
+    gcivl|hilp) train $m    && { A="policy=bl_${ENV}_${m}${MT}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}${MT}_policy/model_object.pt"
                                  for d in $OFFS; do ev ${m}_d${d}_s0 $d $A; done; xev $m $A; } ;;
     gcbcg)      # graph + GCBC: the GCBC policy is given graph waypoints (GNODES: LeWM nodes, GWM: that LeWM) as its goal
-                train gcbc  && { A="policy=bl_${ENV}_gcbc +ff=true +graph_waypoints=true +graph_nodes=${GNODES:?set GNODES} +graph_wm=${GWM:?set GWM} +paa_span=${GSPAN:-6}"
-                                 for d in $OFFS; do ev gcbcg_d${d}_s0 $d $A; done; xev gcbcg $A; } ;;
-    pldm)       train pldm  && { for d in $OFFS; do ev pldm_d${d}_s0 $d policy=bl_${ENV}_pldm; done; xev pldm policy=bl_${ENV}_pldm; } ;;
+                train gcbc  && { A="policy=bl_${ENV}_gcbc$MT +ff=true +graph_waypoints=true +graph_nodes=${GNODES:?set GNODES} +graph_wm=${GWM:?set GWM} +paa_span=${GSPAN:-6}"
+                                 for d in $OFFS; do ev gcbcg${GTAG:-}_d${d}_s0 $d $A; done; xev gcbcg${GTAG:-} $A; } ;;
+    pldm)       train pldm  && { for d in $OFFS; do ev pldm_d${d}_s0 $d policy=bl_${ENV}_pldm$MT; done; xev pldm policy=bl_${ENV}_pldm$MT; } ;;
     dinowm)
       [ "$ENV" = pusht ] || { log "dinowm: pusht only"; continue; }
       D=$CK/dinowm_pusht; mkdir -p $D
