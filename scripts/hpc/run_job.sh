@@ -10,6 +10,12 @@
 #   bash scripts/hpc/run_job.sh J6             # PointMaze-Medium: graph waypoints given to GCBC (graph + policy, no planner)
 #   bash scripts/hpc/run_job.sh J7             # PointMaze-Medium: PLDM with graph anchors AND with AP (J3 + AP)
 #   bash scripts/hpc/run_job.sh J8             # PointMaze-Medium: AP with its memory built from random-play data
+#   bash scripts/hpc/run_job.sh J9             # 3-seed robustness: target x search, AP told a wrong distance, random data,
+#                                              #   graph + GCBC with diagnostics, coverage (PointMaze-Medium, Two-Room)
+#   bash scripts/hpc/run_job.sh J10            # PointMaze-Large (needs J1's model): AP told a wrong distance, GCBC (+ graph)
+#   bash scripts/hpc/run_job.sh J11            # PointMaze-Large (needs J1's model): graph / AP memory from OGBench stitch data
+#   bash scripts/hpc/run_job.sh J12            # PointMaze-Medium: GCBC / GCIVL with 4x and PLDM with 5x the training budget
+#   bash scripts/hpc/run_job.sh J13            # planning time per decision: LeWM, min-over-plan, graph anchors, AP
 #   QUICK=1 bash scripts/hpc/run_job.sh J3     # plumbing test: a few training steps, 2 episodes per evaluation
 #
 # Each job writes to $OUT_ROOT/<job>/ (default out/hpc/<job>/), ends with a PASS/FAIL line in <job>/job.log and packs
@@ -21,7 +27,7 @@
 # One GPU per job; jobs can run at the same time on different GPUs (CUDA_VISIBLE_DEVICES).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-JOB="${1:?usage: bash scripts/hpc/run_job.sh <smoke|J1|...|J8>}"
+JOB="${1:?usage: bash scripts/hpc/run_job.sh <smoke|J1|...|J13>}"
 if [[ "${GWM_NOCONDA:-0}" != 1 ]]; then
     source "$ROOT/env/conda.sh"
     CONDA_BASE="$(project_conda_root)" || exit 1
@@ -45,6 +51,23 @@ SW="$ROOT/code/third_party/stable-worldmodel"; P="$ROOT/code/lewm_explorations/p
 q() { if [[ "$Q" == 1 ]]; then echo "$1"; else echo "$2"; fi; }  # q <quick value> <full value>
 if [[ "$Q" == 1 ]]; then export EVX="eval.num_eval=2" STEPS=30 STEPS_WM=30; else export EVX=""; fi
 waitf() { while [[ ! -f "$1" ]]; do [[ -f "$(dirname "$1")/ABORT" ]] && return 1; sleep 30; done; }
+
+keep_last() {  # training saves one .pt per epoch; the loader needs exactly one: keep the last, move the others away
+    local K="$1"
+    if [[ $(ls "$K"/*.pt 2>/dev/null | wc -l) -gt 1 ]]; then
+        mkdir -p "$K/older_epochs"; ls "$K"/*.pt | sort -V | head -n -1 | xargs -I{} mv {} "$K/older_epochs/"
+        log "checkpoint: kept $(ls "$K"/*.pt), older epochs moved to $K/older_epochs"
+    fi
+}
+pml_model() {  # J10/J11: our PointMaze-Large LeWM is trained by J1; wait for it when J1 runs at the same time (max 12 h)
+    local t=0
+    until [[ -f "$OUT_ROOT/J1/train/train.done" ]]; do
+        (( t++ > 720 )) && { log "no trained PointMaze-Large model after 12 h: run J1 first"; return 1; }
+        sleep 60
+    done
+    keep_last "$STABLEWM_HOME/checkpoints/lewm_pml"
+    export PML_CKPT=lewm_pml
+}
 
 finish() {  # summary table, PASS/FAIL line, results archive
     local n f
@@ -88,11 +111,7 @@ print({k: f[k].shape for k in f.keys()})" > "$D/h5_keys.txt" 2>&1; log "data: $(
         [[ $rc == 0 ]] || { echo "$(date -u +%F' '%T) train rc=$rc" >> "$D/queue.log"; finish; exit 1; }
         touch "$D/train.done"
     fi
-    K="$STABLEWM_HOME/checkpoints/lewm_pml"   # training saves one .pt per epoch; the loader needs exactly one: keep the last
-    if [[ $(ls "$K"/*.pt 2>/dev/null | wc -l) -gt 1 ]]; then
-        mkdir -p "$K/older_epochs"; ls "$K"/*.pt | sort -V | head -n -1 | xargs -I{} mv {} "$K/older_epochs/"
-        log "checkpoint: kept $(ls "$K"/*.pt), older epochs moved to $K/older_epochs"
-    fi
+    keep_last "$STABLEWM_HOME/checkpoints/lewm_pml"
     cd "$ROOT"
     echo pointmaze_large.h5 > "$O/pml/dataset_name"
     export PML_CKPT=lewm_pml
@@ -183,6 +202,105 @@ J8)  # AP whose retrieval memory is built from random-play data (graph anchors o
     ( XB="$(q 100 400)" XM=ap bash "$R" pmm "$S2" "$D" cross >> "$O/laneB.log" 2>&1 ) &
     wait
     ;;
-*) echo "unknown job $JOB (smoke | J1 | J2 | J3 | J4 | J5)"; exit 1 ;;
+J9)  # Tier-1 robustness, seeds 0/42/1 (PointMaze-Medium d200 / Two-Room d75 unless stated):
+     #   target x search 2x2 (adds graph anchors with the released H5 search), AP told 0.5x / 1x / 2x the true distance,
+     #   random-play graph and AP memory (seed 1), graph + GCBC with waypoint diagnostics (span 6 and 2),
+     #   coverage: every node in one doorway cell of PointMaze-Medium removed (cell row 3 / col 2: x in [-2,-1], y in [0,1])
+    S3="$(q 0 '0 42 1')"
+    OFFS=50 bash "$R" pmm 0 "$O/pmm" setup >> "$O/setup.log" 2>&1
+    OFFS=25 bash "$R" tworoom 0 "$O/tworoom" setup >> "$O/setup.log" 2>&1
+    (   PD="$(q 50 200)"
+        TRACE=1 OFFS="$PD" SPANS=6 bash "$R" pmm "$S3" "$O/pmm" all
+        TRACE=1 OFFS="$PD" bash "$R" pmm "$S3" "$O/pmm" fact
+        OFFS="$(q 50 '100 200')" APH="0.5 2" bash "$R" pmm "$S3" "$O/pmm" ap
+        TAG=_drop32 EVX="$EVX +paa_drop_x0=-2 +paa_drop_x1=-1 +paa_drop_y0=0 +paa_drop_y1=1" OFFS="$(q 50 '100 200')" SPANS=6 \
+            bash "$R" pmm "$(q 0 '0 42')" "$O/pmm" anchor ) >> "$O/laneA.log" 2>&1 &
+    (   TD="$(q 25 75)"
+        OFFS="$TD" SPANS=6 bash "$R" tworoom "$S3" "$O/tworoom" all
+        OFFS="$TD" bash "$R" tworoom "$S3" "$O/tworoom" fact
+        OFFS="$(q 25 '50 75')" APH="0.5 2" bash "$R" tworoom "$S3" "$O/tworoom" ap ) >> "$O/laneB.log" 2>&1 &
+    (   # random-play data, seed 1 (seeds 0 and 42: Colab runs x_jwmrand / J8)
+        D="$O/rand_pmm"; mkdir -p "$D"
+        RH="$(ls "$STABLEWM_HOME/datasets/" | grep -i 'pointmaze_medium_random.*h5' | head -1)"
+        if [[ -n "$RH" ]]; then
+            [[ -f "$D/nodes.npz" ]] || (cd "$SW" && python "$P/paa_nodes.py" --out "$D/nodes.npz" --model yjang43/lp2-pointmaze-medium \
+                --dataset "$RH" --state_key proprio --workers 8 > "$D/nodes.log" 2>&1) || echo "random nodes FAILED" >> "$D/queue.log"
+            echo d4rl_pointmaze_medium_expert.h5 > "$D/dataset_name"; touch "$D/READY"
+            S1="$(q 1 1)"
+            TAG=_rand EVX="$EVX +paa_noexclude=true" OKNODES="$O/pmm/nodes.npz" OFFS="$(q 50 '50 100 150 200')" SPANS=6 bash "$R" pmm "$S1" "$D" anchor
+            TAG=_rand EVX="$EVX +paa_noexclude=true" OKNODES="$O/pmm/nodes.npz" OFFS="$(q 50 '50 100 150 200')" bash "$R" pmm "$S1" "$D" ap
+            TAG=_rand EVX="$EVX +paa_noexclude=true" XB="$(q 100 400)" XM="ga ap" bash "$R" pmm "$S1" "$D" cross
+        else
+            echo "no random dataset" >> "$D/queue.log"
+        fi
+        # graph + GCBC: one GCBC training, every evaluation at seeds 0/42/1, waypoint diagnostics in each log ([waypoints])
+        G="GNODES=$O/pmm/nodes.npz GWM=yjang43/lp2-pointmaze-medium"
+        env $G EVSEEDS="$S3" XSEEDS="$S3" XB="$(q 100 400)" OFFS="$(q 50 '100 200')" bash "$B" pmm "gcbc gcbcg" "$O/bl_pmm"
+        env $G EVSEEDS="$S3" XSEEDS="$S3" XB="$(q 100 400)" OFFS="$(q 50 '100 200')" GSPAN=2 GTAG=_sp2 bash "$B" pmm gcbcg "$O/bl_pmm"
+    ) >> "$O/laneC.log" 2>&1 &
+    wait
+    ;;
+J10)  # PointMaze-Large, second maze for the comparison with AP: AP told 0.5x / 1x / 2x the true distance (graph anchors at
+      # the same pairs), and GCBC trained on PointMaze-Large, plain and with our graph's waypoints (standard + stitched)
+    pml_model || { finish; exit 1; }
+    mkdir -p "$O/pml"; echo pointmaze_large.h5 > "$O/pml/dataset_name"
+    OFFS=50 bash "$R" pml 0 "$O/pml" setup >> "$O/setup.log" 2>&1
+    S2="$(q 0 '0 42')"
+    ( OFFS="$(q 50 '200 400')" APH="0.5 2" bash "$R" pml "$S2" "$O/pml" ap
+      OFFS="$(q 50 '200 400')" SPANS=6 bash "$R" pml "$S2" "$O/pml" anchor ) >> "$O/laneA.log" 2>&1 &
+    ( GNODES="$O/pml/nodes.npz" GWM=lewm_pml EVSEEDS="$S2" XSEEDS="$S2" XB="$(q 100 400)" OFFS="$(q 50 '50 100 200 400')" \
+        bash "$B" pml "gcbc gcbcg" "$O/bl_pml" ) >> "$O/laneB.log" 2>&1 &
+    wait
+    ;;
+J11)  # PointMaze-Large: graph and AP memory built from OGBench pointmaze-large-stitch-v0 (short trajectories, no pixels:
+      # rendered with the same environment class as the pixel data, gated by a render check and an encoder check)
+      # instead of the navigate data the model was trained on; same model and test pairs.  Expert-graph runs: J1.
+    pml_model || { finish; exit 1; }
+    mkdir -p "$O/pml" "$O/stitch_pml"; echo pointmaze_large.h5 > "$O/pml/dataset_name"
+    OFFS=50 bash "$R" pml 0 "$O/pml" setup >> "$O/setup.log" 2>&1
+    D="$O/stitch_pml"
+    if [[ ! -f "$D/nodes.npz" ]]; then
+        (cd "$SW" && python "$P/stitch_nodes.py" --model lewm_pml --out "$D/nodes.npz" \
+            --check_h5 "$STABLEWM_HOME/datasets/pointmaze_large.h5" --check_nodes "$O/pml/nodes.npz" \
+            --dataset "${STITCH_DS:-pointmaze-large-stitch-v0}" $(q "--max_eps 40" "") > "$D/nodes.log" 2>&1)
+        rc=$?; log "stitch nodes rc=$rc $(grep -a '\[stitch_check\]' "$D/nodes.log" | cut -c1-400)"
+        [[ $rc == 0 && -f "$D/nodes.npz" ]] || { echo "$(date -u +%F' '%T) stitch nodes FAILED rc=$rc" >> "$D/queue.log"; finish; exit 1; }
+    fi
+    echo pointmaze_large.h5 > "$D/dataset_name"
+    S2="$(q 0 '0 42')"; XS=(TAG=_stitch "EVX=$EVX +paa_noexclude=true" OKNODES="$O/pml/nodes.npz")
+    ( env "${XS[@]}" OFFS=50 bash "$R" pml 0 "$D" setup                      # checkpoint check, READY (nodes exist)
+      env "${XS[@]}" OFFS="$(q 50 '100 200 400')" SPANS=6 bash "$R" pml "$S2" "$D" anchor ) >> "$O/laneA.log" 2>&1 &
+    ( sleep 60; waitf "$D/READY" && env "${XS[@]}" OFFS="$(q 50 '100 200 400')" bash "$R" pml "$S2" "$D" ap ) >> "$O/laneB.log" 2>&1 &
+    ( sleep 120; waitf "$D/READY" && env "${XS[@]}" XB="$(q 100 400)" XM="ga ap" bash "$R" pml "$S2" "$D" cross ) >> "$O/laneC.log" 2>&1 &
+    wait
+    ;;
+J12)  # fair baselines on PointMaze-Medium: GCBC and GCIVL with 4x the training budget (4 epochs of 5,000 batches), PLDM with
+      # 5 epochs; the stronger PLDM is then planned plain, with min-over-plan, with graph anchors and with AP
+    S2="$(q 0 '0 42')"; E4="$(q 1 4)"; E5="$(q 1 5)"
+    ( EPOCHS=$E4 MTAG=_e4 EVSEEDS=0 XSEEDS="$S2" XB="$(q 100 400)" OFFS="$(q 50 '50 100 150 200')" bash "$B" pmm gcbc "$O/bl_gcbc_e4" ) >> "$O/laneA.log" 2>&1 &
+    ( EPOCHS=$E4 MTAG=_e4 EVSEEDS=0 XSEEDS="$S2" XB="$(q 100 400)" OFFS="$(q 50 '50 100 150 200')" bash "$B" pmm gcivl "$O/bl_gcivl_e4" ) >> "$O/laneB.log" 2>&1 &
+    ( EPOCHS_WM=$E5 MTAG=_e5 EVSEEDS="$S2" XSEEDS="$S2" XB="$(q 100 400)" OFFS="$(q 50 '50 100 200')" bash "$B" pmm pldm "$O/bl_pldm_e5"
+      if [[ -f "$O/bl_pldm_e5/train_pldm.done" ]]; then
+          D="$O/pldm5_pmm"; mkdir -p "$D"; echo d4rl_pointmaze_medium_expert.h5 > "$D/dataset_name"
+          WM=bl_pmm_pldm_e5 OFFS="$(q 100 '100 200')" SPANS=6 bash "$R" pmm "$S2" "$D" all
+          WM=bl_pmm_pldm_e5 OFFS="$(q 100 '100 200')" bash "$R" pmm "$S2" "$D" ap
+          WM=bl_pmm_pldm_e5 XB="$(q 100 400)" XM="ga ap" bash "$R" pmm "$S2" "$D" cross
+      else
+          log "PLDM (5 epochs) training did not finish (see bl_pldm_e5/train_pldm.log)"
+      fi ) >> "$O/laneC.log" 2>&1 &
+    wait
+    ;;
+J13)  # planning time per decision (ms_per_decision in each summary line, CUDA-synchronised) and graph build / search time
+      # ([graph_timing]); PointMaze-Medium d100, 10 pairs, the four planners interleaved three times so they share the load
+    OFFS=50 bash "$R" pmm 0 "$O/pmm" setup >> "$O/setup.log" 2>&1
+    N="$(q 2 10)"
+    for rep in $(q 1 '1 2 3'); do
+        TAG=_t$rep EVX="$EVX eval.num_eval=$N" OFFS=100 SPANS=6 bash "$R" pmm 0 "$O/pmm" all
+        TAG=_t$rep EVX="$EVX eval.num_eval=$N" OFFS=100 bash "$R" pmm 0 "$O/pmm" ap
+    done >> "$O/lane.log" 2>&1
+    log "timing (ms per decision, mean over decisions):"
+    grep -a "summary" "$O/pmm/summary.txt" | awk '{n=$1; for(i=1;i<=NF;i++) if($i~/^ms_per_decision=/) print "  " n, $i}' | tee -a "$L"
+    ;;
+*) echo "unknown job $JOB (smoke | J1 ... J13)"; exit 1 ;;
 esac
 finish
