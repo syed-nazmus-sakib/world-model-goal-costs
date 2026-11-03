@@ -142,6 +142,14 @@ def run(cfg: DictConfig):
                                     knn=cfg.get('paa_knn', 10), thr_q=cfg.get('paa_thr_q', 0.5), frac=cfg.get('paa_frac', 1.0),
                                     drop_box=([cfg.paa_drop_x0, cfg.paa_drop_x1, cfg.paa_drop_y0, cfg.paa_drop_y1]
                                               if cfg.get('paa_drop_x0', None) is not None else None))
+        elif cfg.get('ngc_nodes', None):  # NGC baseline (arXiv 2610.25013, concurrent work): graph-distance cost
+            sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'lewm_explorations' / 'paa'))
+            from ngc_cost import NGCObjective
+
+            objective = NGCObjective(cfg.ngc_nodes, n_nodes=cfg.get('ngc_n', 5000), neighbors=cfg.get('ngc_k', 15),
+                                     anchors=cfg.get('ngc_anchors', 4), seed=cfg.get('ngc_seed', 0),
+                                     target=cfg.get('ngc_target', 'goal'), span=cfg.get('paa_span', 6),
+                                     agg=cfg.get('metric_agg', 'last'))
         elif cfg.get('metric_head', None):  # method C: learned task-aligned goal cost (scripts/plan/metric_cost.py)
             from metric_cost import MetricGoalCost
 

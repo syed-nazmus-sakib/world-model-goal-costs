@@ -11,6 +11,7 @@
 # lane setup: data, checkpoint and nodes only
 # lane match: graph anchors under AP's planner (MSPANS); lane cross: stitched goals (XB budgets, XM methods); WM: other world model
 # lane fact: graph anchors with the RELEASED search (H=5, last-step cost): the missing cell of target x search
+# lane ngc: NGC baseline (NGCM="ngc gangc": + the hybrid, our anchor scored with NGC's graph distance); cross: XM="ngc ..."
 # TRACE=1: save a per-run trace (agent state, anchors) to $OUT/trace_<run>.npz for the failure analysis
 set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
@@ -94,6 +95,8 @@ if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fi
         relmin)   A="+metric_head=released +metric_agg=min plan_config.horizon=10" ;;
         ga)       A="+paa_nodes=$NODES +paa_mode=fixed +paa_span=6 +metric_agg=min plan_config.horizon=10" ;;
         ap)       A="+paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1 +paa_ap_offset=$((bud / 2))" ;;
+        ngc)      A="+ngc_nodes=$NODES +metric_agg=last" ;;
+        gangc)    A="+ngc_nodes=$NODES +ngc_target=anchor +paa_span=6 +metric_agg=min plan_config.horizon=10" ;;
         gap)      A="+paa_nodes=$NODES +paa_mode=gap +paa_span=${GSPAN:-6} +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1 ${GCAL:++gap_cal=true}" ;;
       esac
       $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS $X $A \
@@ -120,6 +123,16 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   fi
   if [ "$LANE" = fact ]; then  # 2x2 target {goal, anchor} x search {released H5 last, H10 min}: this is (anchor, released)
     ev gah5${TAG:-}_sp6_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=fixed +paa_span=6 +metric_agg=last
+    continue
+  fi
+  if [ "$LANE" = ngc ]; then  # NGC (arXiv 2610.25013, concurrent work) and the hybrid: our anchor + NGC's graph distance
+    for m in ${NGCM:-ngc}; do
+      case $m in
+        ngc)   ev ngc${TAG:-}_d${off}_s$seed $seed $off +ngc_nodes=$NODES +metric_agg=last ;;
+        gangc) ev gangc${TAG:-}_sp6_d${off}_s$seed $seed $off +ngc_nodes=$NODES +ngc_target=anchor +paa_span=6 \
+                  +metric_agg=min plan_config.horizon=10 ;;
+      esac
+    done
     continue
   fi
   if [ "$LANE" = gap ]; then  # graph-guided retrieval: graph waypoint + hop count replace AP's goal and offset
