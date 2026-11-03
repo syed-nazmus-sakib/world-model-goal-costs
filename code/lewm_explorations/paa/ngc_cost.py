@@ -106,31 +106,38 @@ class NGCCost(nn.Module):
 # ----------------------------------------------------------------------------------------- our wrapper
 class NGCObjective(nn.Module):
     def __init__(self, nodes, n_nodes=5000, neighbors=15, anchors=4, rule='mutual', seed=0, target='goal', span=6,
-                 agg='last', max_hops=12, knn=10):
+                 agg='last', max_hops=12, knn=10, frac=1.0):
         super().__init__()
         d = np.load(nodes)
         self.emb_all, self.ep_all = d['emb'].astype(np.float32), d['ep']
         self.n, self.k, self.a, self.rule, self.seed = int(n_nodes), int(neighbors), int(anchors), rule, int(seed)
-        self.target, self.agg = target, agg
+        self.target, self.agg, self.frac = target, agg, float(frac)
         self.anchor_cost = None
         if target == 'anchor':
             from paa_cost import PAAGoalCost
-            self.anchor_cost = PAAGoalCost(nodes, mode='fixed', span=span, max_hops=max_hops, knn=knn)
+            self.anchor_cost = PAAGoalCost(nodes, mode='fixed', span=span, max_hops=max_hops, knn=knn, frac=frac)
         self.ngc = None
         self.set_exclude([])
 
     def set_exclude(self, eps):
         import time
         t0 = time.perf_counter()
-        eligible = np.setdiff1d(np.unique(self.ep_all), np.asarray(list(eps)))
+        u = np.unique(self.ep_all)
+        if self.frac < 1.0:  # data ablation: the same seeded episode subset as PAAGoalCost(frac=...)
+            u = np.random.default_rng(0).choice(u, size=max(1, int(round(self.frac * len(u)))), replace=False)
+        eligible = np.setdiff1d(u, np.asarray(list(eps)))
         rng = np.random.default_rng(self.seed)
-        chosen = rng.choice(eligible, size=min(self.n, len(eligible)), replace=False)
-        order = np.argsort(self.ep_all, kind='stable')
-        ep_sorted = self.ep_all[order]
-        rows = []
-        for e in np.sort(chosen):  # one random grid frame of each chosen episode
-            lo, hi = np.searchsorted(ep_sorted, [e, e + 1])
-            rows.append(order[rng.integers(lo, hi)])
+        if len(eligible) >= self.n:  # NGC's rule: one random frame from each of n random episodes
+            chosen = rng.choice(eligible, size=self.n, replace=False)
+            order = np.argsort(self.ep_all, kind='stable')
+            ep_sorted = self.ep_all[order]
+            rows = []
+            for e in np.sort(chosen):
+                lo, hi = np.searchsorted(ep_sorted, [e, e + 1])
+                rows.append(order[rng.integers(lo, hi)])
+        else:  # fewer episodes than nodes: NGC gets as many nodes as possible, n random frames of the eligible episodes
+            pool = np.nonzero(np.isin(self.ep_all, eligible))[0]
+            rows = list(rng.choice(pool, size=min(self.n, len(pool)), replace=False))
         lat = self.emb_all[np.sort(rows)]
         nodes, gd, bridges = build_graph(lat, self.k, self.rule)
         self.ngc = NGCCost(nodes, gd, self.k, self.a).cuda()

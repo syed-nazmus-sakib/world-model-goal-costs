@@ -149,7 +149,7 @@ def run(cfg: DictConfig):
             objective = NGCObjective(cfg.ngc_nodes, n_nodes=cfg.get('ngc_n', 5000), neighbors=cfg.get('ngc_k', 15),
                                      anchors=cfg.get('ngc_anchors', 4), seed=cfg.get('ngc_seed', 0),
                                      target=cfg.get('ngc_target', 'goal'), span=cfg.get('paa_span', 6),
-                                     agg=cfg.get('metric_agg', 'last'))
+                                     agg=cfg.get('metric_agg', 'last'), frac=cfg.get('paa_frac', 1.0))
         elif cfg.get('metric_head', None):  # method C: learned task-aligned goal cost (scripts/plan/metric_cost.py)
             from metric_cost import MetricGoalCost
 
@@ -335,6 +335,42 @@ def run(cfg: DictConfig):
                     trace.setdefault(k, []).append(np.asarray(last, dtype=np.float32).copy())
 
         world.trace_fn = trace_fn
+
+    if cfg.get('kidnap_at', None):  # stress test: after kidnap_at env steps, every unsolved env is put back at its start
+        # state (the first callable of the config, e.g. set_state(state=proprio)); budget and goal are unchanged.  A
+        # planner that keeps an elapsed-step clock (AP) now underestimates the remaining distance; replanning from the
+        # current state does not.  The frame the planner sees is refreshed by the next environment step.
+        K = int(cfg.kidnap_at)
+        spec = OmegaConf.to_container(cfg.eval.callables, resolve=True)[0]
+        start_rows = [dataset.load_chunk(np.array([e]), np.array([s]), np.array([s + 1]))[0]
+                      for e, s in zip(eval_episodes, eval_start_idx)]
+
+        def _v(row, col):
+            v = row[col]
+            v = v.numpy() if hasattr(v, 'numpy') else np.asarray(v)
+            return np.asarray(v)[-1]
+
+        kst = {'n': 0, 'moved': 0, 'solved': None}
+        prev_fn = getattr(world, 'trace_fn', None)
+
+        def kidnap_fn(w):
+            if prev_fn is not None:
+                prev_fn(w)
+            kst['n'] += 1
+            term = np.asarray(w.terminateds, bool).ravel()
+            kst['solved'] = term if kst['solved'] is None else (kst['solved'] | term)  # success is sticky
+            if kst['n'] == K:
+                done = kst['solved']
+                for i in range(w.num_envs):
+                    if done[i]:
+                        continue
+                    args = {a: _v(start_rows[i], d['value']) for a, d in spec.get('args', {}).items()
+                            if d.get('value') in start_rows[i]}
+                    getattr(w.envs.envs[i].unwrapped, spec['method'])(**args)
+                    kst['moved'] += 1
+                print(f'[kidnap] step {K}: {kst["moved"]} unsolved envs put back at their start state', flush=True)
+
+        world.trace_fn = kidnap_fn
 
     start_time = time.time()
     with autocast_ctx:
