@@ -80,6 +80,8 @@ class SaveCkptCallback(Callback):
             config=self.cfg,
             filename=f'weights_epoch_{epoch}.pt',
         )
+        # whole module (our own training output): eval_wm.py loads it with +policy_object=<path>
+        torch.save(model, swm.data.utils.get_cache_dir(sub_folder='checkpoints') / self.run_name / 'model_object.pt')
 
 
 # ---------------------------------------------------------------------------
