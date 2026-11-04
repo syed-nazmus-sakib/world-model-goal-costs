@@ -35,9 +35,16 @@ if [ "$ENV" != pusht ] && [ ! -f "$OUT/FETCHED" ]; then
 fi
 MT=${MTAG:-}
 LIM="+wandb.enable=false trainer.max_epochs=${EPOCHS:-1} +trainer.limit_val_batches=20"
+one_pt() {  # GCBC saves one .pt per epoch and its loader needs exactly one: keep the last, move the others away
+  local K=$1
+  if [ "$(ls "$K"/*.pt 2>/dev/null | wc -l)" -gt 1 ]; then
+    mkdir -p "$K/older_epochs"; ls "$K"/*.pt | sort -V | head -n -1 | xargs -I{} mv {} "$K/older_epochs/"
+    log "checkpoint $K: kept $(ls "$K"/*.pt)"
+  fi
+}
 train() {  # method
   local m=$1 n=bl_${ENV}_$1$MT t0=$(date +%s)
-  [ -f "$OUT/train_$m.done" ] && return 0
+  [ -f "$OUT/train_$m.done" ] && { [ $m = gcbc ] && one_pt "$CK/$n"; return 0; }
   log "train $m start"
   case $m in
     gcbc)  $PY scripts/train/gcbc.py data=$DATA wm.proprio_dim=$PD output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
@@ -46,7 +53,7 @@ train() {  # method
     pldm)  $PY scripts/train/pldm.py data=$DATA output_model_name=$n trainer.max_epochs=${EPOCHS_WM:-1} +trainer.limit_train_batches=$STEPS_WM +trainer.limit_val_batches=20 ;;
   esac > "$OUT/train_$m.log" 2>&1
   local rc=$?; log "train $m rc=$rc $(( $(date +%s) - t0 ))s $(grep -aE '^[A-Za-z.]*(Error|Exception)' $OUT/train_$m.log | tail -1 | cut -c1-160)"
-  [ $rc = 0 ] && touch "$OUT/train_$m.done"; return $rc
+  [ $rc = 0 ] && { touch "$OUT/train_$m.done"; [ $m = gcbc ] && one_pt "$CK/$n"; }; return $rc
 }
 ev() {  # name(ending in _s0) offset extra...: one evaluation per seed in EVSEEDS (default 0)
   local base=${1%_s0} off=$2 name sd; shift 2
