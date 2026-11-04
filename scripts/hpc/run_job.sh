@@ -310,6 +310,23 @@ J13)  # planning time per decision (ms_per_decision in each summary line, CUDA-s
     log "timing (ms per decision, mean over decisions):"
     grep -a "summary" "$O/pmm/summary.txt" | awk '{n=$1; for(i=1;i<=NF;i++) if($i~/^ms_per_decision=/) print "  " n, $i}' | tee -a "$L"
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J13)"; exit 1 ;;
+J14)  # more offline goal-conditioned baselines (HILP, GCIQL; frozen DINOv2 features, stable-worldmodel), same pairs and budgets:
+      # PointMaze-Medium (d50-200), Two-Room (d25-75) and PointMaze-Large (d50-400, needs J1's data), seeds 0/42/1, stitched 0/42
+    S3="$(q 0 '0 42 1')"; S2="$(q 0 '0 42')"
+    RAMGB="$(free -g 2>/dev/null | awk '/^Mem:/ {print $7}')"; PARJ=1; [[ "${RAMGB:-0}" -ge 150 ]] || PARJ=0
+    log "J14: ${RAMGB:-?} GB free host RAM -> environments $([[ $PARJ == 1 ]] && echo 'in parallel' || echo 'one after another')"
+    bg() { if [[ $PARJ == 1 ]]; then "$@" & else "$@"; fi; }
+    bg bash -c "EVSEEDS='$S3' XSEEDS='$S2' XB='$(q 100 400)' OFFS='$(q 50 '50 100 150 200')' bash '$B' pmm 'hilp gciql' '$O/bl_pmm' >> '$O/laneA.log' 2>&1"
+    bg bash -c "EVSEEDS='$S3' XSEEDS='$S2' XB='$(q 50 200)' OFFS='$(q 25 '25 50 75')' bash '$B' tworoom 'hilp gciql' '$O/bl_tworoom' >> '$O/laneB.log' 2>&1"
+    bg bash -c "EVSEEDS='$S2' XSEEDS='$S2' XB='$(q 100 400)' OFFS='$(q 50 '50 100 200 400')' bash '$B' pml 'hilp gciql' '$O/bl_pml' >> '$O/laneC.log' 2>&1"
+    wait
+    ;;
+J15)  # DINO-WM (frozen DINOv2 patch features + learned predictor, scripts/train/prejepa.py) trained on PointMaze-Medium and
+      # Two-Room, planned with the same CEM and the patch-MSE goal cost; long range and stitched goals, seed 0 (planning is slow)
+    export EPOCHS_DWM="$(q 1 5)" STEPS_DWM="$(q 20 5000)"
+    ( EVSEEDS=0 XSEEDS=0 XB="$(q 100 400)" OFFS="$(q 50 '50 100 200')" bash "$B" pmm dwm "$O/dwm_pmm" ) >> "$O/laneA.log" 2>&1
+    ( EVSEEDS=0 XSEEDS=0 XB="$(q 50 200)" OFFS="$(q 25 '25 50 75')" bash "$B" tworoom dwm "$O/dwm_tworoom" ) >> "$O/laneB.log" 2>&1
+    ;;
+*) echo "unknown job $JOB (smoke | J1 ... J15)"; exit 1 ;;
 esac
 finish

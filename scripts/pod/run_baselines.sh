@@ -4,6 +4,9 @@
 #                         per training phase (GCIVL/HILP: value then policy), evaluated with eval_wm.py +ff=true
 #   pldm                : PLDM world model, STEPS_WM batches, planned with the same CEM as LeWM
 #   dinowm              : released DINO-WM PushT checkpoint (pusht only), N_DINO pairs at d50/d100 (planning is slow)
+#   gciql               : offline goal-conditioned IQL on frozen DINOv2 features (stable-worldmodel), like gcivl
+#   dwm                 : DINO-WM (frozen DINOv2 patches + predictor, scripts/train/prejepa.py) trained on this dataset for
+#                         EPOCHS_DWM epochs of STEPS_DWM batches, planned with the same CEM (released settings, patch-MSE cost)
 # gcbcg: graph waypoints + GCBC (needs GNODES, GWM); XB/XSEEDS: also evaluate on stitched goals (goals from other episodes) at those budgets and seeds
 # EVSEEDS: seeds of the standard evaluations (default 0); EPOCHS / EPOCHS_WM: training epochs (default 1, STEPS / STEPS_WM
 # batches each); MTAG: suffix of the trained model names (bl_<env>_<method><MTAG>), so longer trainings do not overwrite others
@@ -50,6 +53,9 @@ train() {  # method
     gcbc)  $PY scripts/train/gcbc.py data=$DATA wm.proprio_dim=$PD output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     gcivl) $PY scripts/train/gcivl.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     hilp)  $PY scripts/train/hilp.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
+    gciql) $PY scripts/train/gciql.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
+    dwm)   $PY scripts/train/prejepa.py dataset_name=$DSN output_model_name=$n trainer.max_epochs=${EPOCHS_DWM:-5} \
+               +trainer.limit_train_batches=${STEPS_DWM:-5000} +trainer.limit_val_batches=20 trainer.strategy=auto num_workers=8 ;;
     pldm)  $PY scripts/train/pldm.py data=$DATA output_model_name=$n trainer.max_epochs=${EPOCHS_WM:-1} +trainer.limit_train_batches=$STEPS_WM +trainer.limit_val_batches=20 ;;
   esac > "$OUT/train_$m.log" 2>&1
   local rc=$?; log "train $m rc=$rc $(( $(date +%s) - t0 ))s $(grep -aE '^[A-Za-z.]*(Error|Exception)' $OUT/train_$m.log | tail -1 | cut -c1-160)"
@@ -80,7 +86,12 @@ xev() {  # method policy-args...: stitched goals (+cross_goal) at budgets XB, se
 for m in $METHODS; do
   case $m in
     gcbc)       train gcbc  && { for d in $OFFS; do ev gcbc_d${d}_s0 $d policy=bl_${ENV}_gcbc$MT +ff=true; done; xev gcbc policy=bl_${ENV}_gcbc$MT +ff=true; } ;;
-    gcivl|hilp) train $m    && { A="policy=bl_${ENV}_${m}${MT}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}${MT}_policy/model_object.pt"
+    dwm)        train dwm   && { n=bl_${ENV}_dwm$MT; O=$(find "$CK" -path "*$n*" -name model_object.pt 2>/dev/null | sort | tail -1)
+                                 [ -n "$O" ] || { log "dwm: no model_object.pt for $n under $CK"; continue; }
+                                 OBJ=objective=goal_mse_pixels_proprio
+                                 for d in $OFFS; do ev dwm_d${d}_s0 $d policy=$n +policy_object=$O $OBJ; done
+                                 xev dwm policy=$n +policy_object=$O $OBJ; } ;;
+    gcivl|hilp|gciql) train $m && { A="policy=bl_${ENV}_${m}${MT}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}${MT}_policy/model_object.pt"
                                  for d in $OFFS; do ev ${m}_d${d}_s0 $d $A; done; xev $m $A; } ;;
     gcbcg)      # graph + GCBC: the GCBC policy is given graph waypoints (GNODES: LeWM nodes, GWM: that LeWM) as its goal
                 train gcbc  && { A="policy=bl_${ENV}_gcbc$MT +ff=true +graph_waypoints=true +graph_nodes=${GNODES:?set GNODES} +graph_wm=${GWM:?set GWM} +paa_span=${GSPAN:-6}"
