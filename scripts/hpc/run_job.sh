@@ -327,6 +327,24 @@ J15)  # DINO-WM (frozen DINOv2 patch features + learned predictor, scripts/train
     ( EVSEEDS=0 XSEEDS=0 XB="$(q 100 400)" OFFS="$(q 50 '50 100 200')" bash "$B" pmm dwm "$O/dwm_pmm" ) >> "$O/laneA.log" 2>&1
     ( EVSEEDS=0 XSEEDS=0 XB="$(q 50 200)" OFFS="$(q 25 '25 50 75')" bash "$B" tworoom dwm "$O/dwm_tworoom" ) >> "$O/laneB.log" 2>&1
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J15)"; exit 1 ;;
+J16)  # episode-switch cost lambda = 3 (neighbour edges cost 3, anchor = 6 recorded moves ahead) on the navigation tasks, to check
+      # that the Push-T fix does not hurt where the plain graph already works: PointMaze-M d100/200 + stitched, Two-Room d50/75 +
+      # stitched, PointMaze-L d200/400 + stitched (needs J1), seeds 0/42
+    S2="$(q 0 '0 42')"
+    OFFS=50 bash "$R" pmm 0 "$O/pmm" setup >> "$O/setup.log" 2>&1
+    OFFS=25 bash "$R" tworoom 0 "$O/tworoom" setup >> "$O/setup.log" 2>&1
+    ( TAG=_sw3 EVX="$EVX +paa_switch=3" OFFS="$(q 50 '100 200')" SPANS=6 bash "$R" pmm "$S2" "$O/pmm" anchor
+      TAG=_sw3 EVX="$EVX +paa_switch=3" XB="$(q 100 400)" XM=ga bash "$R" pmm "$S2" "$O/pmm" cross ) >> "$O/laneA.log" 2>&1 &
+    ( TAG=_sw3 EVX="$EVX +paa_switch=3" OFFS="$(q 25 '50 75')" SPANS=6 bash "$R" tworoom "$S2" "$O/tworoom" anchor
+      TAG=_sw3 EVX="$EVX +paa_switch=3" XB="$(q 50 200)" XM=ga bash "$R" tworoom "$S2" "$O/tworoom" cross ) >> "$O/laneB.log" 2>&1 &
+    if pml_model; then
+      mkdir -p "$O/pml"; echo pointmaze_large.h5 > "$O/pml/dataset_name"
+      OFFS=50 bash "$R" pml 0 "$O/pml" setup >> "$O/setup.log" 2>&1
+      ( TAG=_sw3 EVX="$EVX +paa_switch=3" OFFS="$(q 50 '200 400')" SPANS=6 bash "$R" pml "$S2" "$O/pml" anchor
+        TAG=_sw3 EVX="$EVX +paa_switch=3" XB="$(q 100 400)" XM=ga bash "$R" pml "$S2" "$O/pml" cross ) >> "$O/laneC.log" 2>&1 &
+    fi
+    wait
+    ;;
+*) echo "unknown job $JOB (smoke | J1 ... J16)"; exit 1 ;;
 esac
 finish
