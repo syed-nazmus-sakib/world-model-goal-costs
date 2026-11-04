@@ -29,7 +29,8 @@ from torch import nn
 
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
-                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None, switch=1.0):
+                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None, switch=1.0,
+                 handoff=False):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -43,6 +44,9 @@ class PAAGoalCost(nn.Module):
         # episode-switch cost: neighbour edges cost `switch` (temporal edges 1).  switch > 1 makes shortest paths follow
         # recorded trajectories for longer; the span K then counts temporal moves only (neighbour jumps are "same place")
         self.switch = float(switch)
+        # goal handoff: a candidate whose plan comes within one recorded block of the goal (squared distance < thr, the graph's
+        # own edge threshold) beats every candidate that does not; otherwise the anchor cost is unchanged
+        self.handoff = bool(handoff)
         # coverage ablation: drop every node whose agent position (state[:, :2]) lies in the box (x0, x1, y0, y1)
         self.drop_box = None if drop_box in (None, 'none', '') else [float(v) for v in
                                                                      (drop_box.split(',') if isinstance(drop_box, str) else drop_box)]
@@ -320,6 +324,14 @@ class PAAGoalCost(nn.Module):
             a = torch.stack([self.anchor(z0[b], g[b]) for b in range(g.shape[0])]).to(g.device)
         if self.agg == 'min':
             p = info_dict['predicted_emb'][:, :, H:].float()
-            return (p - a[:, None, None]).pow(2).sum(-1).min(-1).values
-        p = info_dict['predicted_emb'][:, :, -1].float()
-        return (p - a[:, None]).pow(2).sum(-1)
+            da = (p - a[:, None, None]).pow(2).sum(-1).min(-1).values
+            if not self.handoff:
+                return da
+            dg = (p - g[:, None, None]).pow(2).sum(-1).min(-1).values
+        else:
+            p = info_dict['predicted_emb'][:, :, -1].float()
+            da = (p - a[:, None]).pow(2).sum(-1)
+            if not self.handoff:
+                return da
+            dg = (p - g[:, None]).pow(2).sum(-1)
+        return torch.where(dg < self.thr, dg, da + self.thr)
