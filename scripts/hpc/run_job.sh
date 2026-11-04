@@ -321,6 +321,18 @@ J14)  # more offline goal-conditioned baselines (HILP, GCIQL; frozen DINOv2 feat
     bg bash -c "EVSEEDS='$S2' XSEEDS='$S2' XB='$(q 100 400)' OFFS='$(q 50 '50 100 200 400')' bash '$B' pml 'hilp gciql' '$O/bl_pml' >> '$O/laneC.log' 2>&1"
     wait
     ;;
+J17)  # Push-T baselines at long range: GCBC, GCIVL, GCIQL, HILP (frozen DINOv2 features) and PLDM, trained on the LeWM Push-T
+      # data, same pairs and budgets as the graph anchor (d50-150, budget 2d) and stitched goals (budget 300), seeds 0/42.
+      # Push-T training needs a lot of host RAM (three at once ran out of memory on a 52 GB Colab VM), so lanes run in
+      # parallel only with >= 150 GB free
+    S2="$(q 0 '0 42')"
+    RAMGB="$(free -g 2>/dev/null | awk '/^Mem:/ {print $7}')"; PARJ=1; [[ "${RAMGB:-0}" -ge 150 ]] || PARJ=0
+    log "J17: ${RAMGB:-?} GB free host RAM -> lanes $([[ $PARJ == 1 ]] && echo 'in parallel' || echo 'one after another')"
+    bg() { if [[ $PARJ == 1 ]]; then "$@" & else "$@"; fi; }
+    bg bash -c "EVSEEDS='$S2' XSEEDS='$S2' XB='$(q 50 300)' OFFS='$(q 25 '50 75 100 150')' bash '$B' pusht 'gcbc gcivl gciql' '$O/bl_pusht' >> '$O/laneA.log' 2>&1"
+    bg bash -c "EVSEEDS='$S2' XSEEDS='$S2' XB='$(q 50 300)' OFFS='$(q 25 '50 75 100 150')' bash '$B' pusht 'hilp pldm' '$O/bl_pusht' >> '$O/laneB.log' 2>&1"
+    wait
+    ;;
 J15)  # DINO-WM (frozen DINOv2 patch features + learned predictor, scripts/train/prejepa.py) trained on PointMaze-Medium and
       # Two-Room, planned with the same CEM and the patch-MSE goal cost; long range and stitched goals, seed 0 (planning is slow)
     # planning costs ~11-16 s per step on an L4 (patch tokens), so 20 pairs and only the long offsets + stitched goals
@@ -347,6 +359,6 @@ J16)  # episode-switch cost lambda = 3 (neighbour edges cost 3, anchor = 6 recor
     fi
     wait
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J16)"; exit 1 ;;
+*) echo "unknown job $JOB (smoke | J1 ... J17)"; exit 1 ;;
 esac
 finish

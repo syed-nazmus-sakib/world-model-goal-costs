@@ -41,7 +41,7 @@ elif [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]]; then IFS=',' read -r -a G <<< "$CUDA_
 else read -r -a G <<< "$(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | tr '\n' ' ')"; fi
 [[ ${#G[@]} -gt 0 ]] || G=(0)
 NL=${#G[@]}; [[ -n "${MAXPAR:-}" && "${MAXPAR}" -lt "$NL" ]] && NL="$MAXPAR"
-hours() { case $1 in J16) echo 5 ;; J15) echo 16 ;; J14) echo 12 ;; J12) echo 14 ;; J1) echo 10 ;; J9) echo 8 ;; J5) echo 7 ;; J10|J11) echo 6 ;; J4) echo 5 ;; J2|J3|J6|J7) echo 4 ;; J13) echo 1 ;; *) echo 3 ;; esac; }
+hours() { case $1 in J17) echo 16 ;; J16) echo 5 ;; J15) echo 16 ;; J14) echo 12 ;; J12) echo 14 ;; J1) echo 10 ;; J9) echo 8 ;; J5) echo 7 ;; J10|J11) echo 6 ;; J4) echo 5 ;; J2|J3|J6|J7) echo 4 ;; J13) echo 1 ;; *) echo 3 ;; esac; }
 declare -a LANE LOAD
 for ((i = 0; i < NL; i++)); do LANE[i]=""; LOAD[i]=0; done
 for j in $(for j in $JOBS; do echo "$(hours "$j") $j"; done | sort -rn | awk '{print $2}'); do  # longest job to the least loaded lane

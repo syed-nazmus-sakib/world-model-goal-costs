@@ -103,7 +103,7 @@ for m in $METHODS; do
       [ -f $D/model_object.pt ] || $PY $P/convert_lightning_ckpt.py ${DINO_CFG:-/content/dinowm/config.yaml} \
           ${DINO_CKPT:-/content/dinowm/dinowm_noprop_pusht_weights.ckpt} $D/model_object.pt > "$OUT/dinowm_convert.log" 2>&1 \
           || { log "dinowm convert FAILED: $(tail -1 $OUT/dinowm_convert.log)"; continue; }
-      for d in 50 100; do ev dinowm_d${d}_s0_n$N_DINO $d policy=dinowm_pusht +policy_object=$D/model_object.pt \
+      for d in ${DOFFS:-50 100}; do ev dinowm_d${d}_s0_n$N_DINO $d policy=dinowm_pusht +policy_object=$D/model_object.pt \
           objective=goal_mse_pixels eval.num_eval=$N_DINO; done ;;
   esac
 done
