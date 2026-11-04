@@ -29,7 +29,7 @@ from torch import nn
 
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
-                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None):
+                 thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None, switch=1.0):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -40,6 +40,9 @@ class PAAGoalCost(nn.Module):
         self.ap_offset, self.ap_step, self.ap_k = ap_offset, int(ap_step), int(ap_k)
         self.gap_cal = bool(gap_cal)  # gap: convert graph hops to recorded blocks before choosing the retrieval bank
         self.frac = float(frac)  # ablation: build the graph from this fraction of the training episodes (seeded)
+        # episode-switch cost: neighbour edges cost `switch` (temporal edges 1).  switch > 1 makes shortest paths follow
+        # recorded trajectories for longer; the span K then counts temporal moves only (neighbour jumps are "same place")
+        self.switch = float(switch)
         # coverage ablation: drop every node whose agent position (state[:, :2]) lies in the box (x0, x1, y0, y1)
         self.drop_box = None if drop_box in (None, 'none', '') else [float(v) for v in
                                                                      (drop_box.split(',') if isinstance(drop_box, str) else drop_box)]
@@ -105,8 +108,16 @@ class PAAGoalCost(nn.Module):
             rows += [r[ok], j.cpu().numpy()[ok]]
             cols += [j.cpu().numpy()[ok], r[ok]]
         r, c = np.concatenate(rows), np.concatenate(cols)
-        G = csr_matrix((np.ones(len(r), np.float32), (r, c)), shape=(n, n))
-        G.data[:] = 1.0
+        self.succ = -np.ones(n, np.int64); self.succ[ta] = tb  # temporal successor of each node (-1: none)
+        if self.switch == 1.0:
+            G = csr_matrix((np.ones(len(r), np.float32), (r, c)), shape=(n, n))
+            G.data[:] = 1.0
+        else:  # weighted: temporal 1, neighbour `switch`; a pair that is both keeps the temporal weight
+            w = np.full(len(r), self.switch, np.float32); w[:len(ta)] = 1.0
+            key = r.astype(np.int64) * n + c
+            o = np.lexsort((w, key)); first = np.r_[True, key[o][1:] != key[o][:-1]]
+            o = o[first]
+            G = csr_matrix((w[o], (r[o], c[o])), shape=(n, n))
         self.GT = G.T.tocsr()  # distances TO the goal = dijkstra from the goal on the transposed graph
         del dd
         torch.cuda.empty_cache()  # several evaluation processes share one GPU
@@ -155,6 +166,21 @@ class PAAGoalCost(nn.Module):
             path.append(n)
         return path
 
+    def _move_anchor(self, s, gn, pred):
+        """switch > 1: walk the shortest path and stop after `span` temporal moves; None if the goal comes first"""
+        u, moves = s, 0
+        for _ in range(self.max_hops * 8):
+            if u == gn:
+                return None
+            v = int(pred[u])
+            if v < 0:
+                return None
+            moves += int(self.succ[u] == v)
+            u = v
+            if moves >= self.span:
+                return u if u != gn else None
+        return u
+
     def anchor(self, z0, g):
         key = (hash(z0.cpu().numpy().tobytes()), hash(g.cpu().numpy().tobytes()))
         if key in self._anchor_cache:
@@ -162,7 +188,12 @@ class PAAGoalCost(nn.Module):
         gn, dist, pred = self._goal_tree(g)
         s = self._nearest(z0)
         out, a_node = g, -1
-        if np.isfinite(dist[s]) and dist[s] > self.span:
+        if self.switch != 1.0 and self.mode == 'fixed':
+            if np.isfinite(dist[s]):
+                u = self._move_anchor(s, gn, pred)
+                if u is not None:
+                    a_node, out = u, self.emb[u]
+        elif np.isfinite(dist[s]) and dist[s] > self.span:
             path = self._path(s, gn, pred, self.max_hops)
             if path:
                 if self.mode == 'fixed' or self.head is None:

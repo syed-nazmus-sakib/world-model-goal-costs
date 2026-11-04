@@ -140,6 +140,7 @@ def run(cfg: DictConfig):
                                     ap_step=cfg.plan_config.action_block * cfg.plan_config.receding_horizon,
                                     ap_k=cfg.get('ap_k', 8), gap_cal=cfg.get('gap_cal', False),
                                     knn=cfg.get('paa_knn', 10), thr_q=cfg.get('paa_thr_q', 0.5), frac=cfg.get('paa_frac', 1.0),
+                                    switch=cfg.get('paa_switch', 1.0),
                                     drop_box=([cfg.paa_drop_x0, cfg.paa_drop_x1, cfg.paa_drop_y0, cfg.paa_drop_y1]
                                               if cfg.get('paa_drop_x0', None) is not None else None))
         elif cfg.get('ngc_nodes', None):  # NGC baseline (arXiv 2610.25013, concurrent work): graph-distance cost
