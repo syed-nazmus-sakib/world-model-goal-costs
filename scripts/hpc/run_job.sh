@@ -323,9 +323,11 @@ J14)  # more offline goal-conditioned baselines (HILP, GCIQL; frozen DINOv2 feat
     ;;
 J15)  # DINO-WM (frozen DINOv2 patch features + learned predictor, scripts/train/prejepa.py) trained on PointMaze-Medium and
       # Two-Room, planned with the same CEM and the patch-MSE goal cost; long range and stitched goals, seed 0 (planning is slow)
-    export EPOCHS_DWM="$(q 1 5)" STEPS_DWM="$(q 20 5000)"
-    ( EVSEEDS=0 XSEEDS=0 XB="$(q 100 400)" OFFS="$(q 50 '50 100 200')" bash "$B" pmm dwm "$O/dwm_pmm" ) >> "$O/laneA.log" 2>&1
-    ( EVSEEDS=0 XSEEDS=0 XB="$(q 50 200)" OFFS="$(q 25 '25 50 75')" bash "$B" tworoom dwm "$O/dwm_tworoom" ) >> "$O/laneB.log" 2>&1
+    # planning costs ~11-16 s per step on an L4 (patch tokens), so 20 pairs and only the long offsets + stitched goals
+    export EPOCHS_DWM="$(q 1 5)" STEPS_DWM="$(q 20 5000)" EVX="eval.num_eval=$(q 2 20)"
+    ( EVSEEDS=0 XSEEDS=0 XB="$(q 100 400)" OFFS="$(q 50 '100 200')" bash "$B" pmm dwm "$O/dwm_pmm" ) >> "$O/laneA.log" 2>&1 &
+    ( EVSEEDS=0 XSEEDS=0 XB="$(q 50 200)" OFFS="$(q 25 '50 75')" bash "$B" tworoom dwm "$O/dwm_tworoom" ) >> "$O/laneB.log" 2>&1 &
+    wait
     ;;
 J16)  # episode-switch cost lambda = 3 (neighbour edges cost 3, anchor = 6 recorded moves ahead) on the navigation tasks, to check
       # that the Push-T fix does not hurt where the plain graph already works: PointMaze-M d100/200 + stitched, Two-Room d50/75 +
