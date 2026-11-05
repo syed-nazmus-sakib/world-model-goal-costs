@@ -333,6 +333,49 @@ J17)  # Push-T baselines at long range: GCBC, GCIVL, GCIQL, HILP (frozen DINOv2 
     bg bash -c "EVSEEDS='$S2' XSEEDS='$S2' XB='$(q 50 300)' OFFS='$(q 25 '50 75 100 150')' bash '$B' pusht 'hilp pldm' '$O/bl_pusht' >> '$O/laneB.log' 2>&1"
     wait
     ;;
+J18)  # (1) released DINO-WM Push-T checkpoint at long range (d50-150, 20 pairs, seed 0). Needs the two files
+      #     artifacts/dinowm/{config.yaml,dinowm_noprop_pusht_weights.ckpt} (sent separately; DINO_DIR overrides). CEM plans
+      #     DINO_BS episodes at once (default 10; 20 needs > 40 GB); each episode is still planned on its own.
+      # (2) graph anchors + gated goal handoff (handoff only when the goal is <= 12 graph hops away), 3 seeds, with the
+      #     LeWM baselines where earlier jobs have no third seed: Reacher, Two-Room, PointMaze-M, Push-T (also with lambda=3),
+      #     and OGBench-Cube (2 seeds, only with >= 150 GB free host RAM)
+    S3="$(q 0 '0 42 1')"; S2="$(q 0 '0 42')"; HO="+paa_handoff=true +paa_handoff_hops=12"
+    DD="${DINO_DIR:-$ROOT/artifacts/dinowm}"
+    if [[ -f "$DD/config.yaml" && -f "$DD/dinowm_noprop_pusht_weights.ckpt" ]]; then
+      DM="$STABLEWM_HOME/checkpoints/dinowm_pusht"; mkdir -p "$DM" "$O/dinowm_pusht"
+      [[ -f "$DM/model_object.pt" ]] || ( cd "$SW" && python "$P/convert_lightning_ckpt.py" "$DD/config.yaml" \
+          "$DD/dinowm_noprop_pusht_weights.ckpt" "$DM/model_object.pt" ) > "$O/dinowm_pusht/dinowm_convert.log" 2>&1 \
+          || log "J18: DINO-WM convert FAILED: $(tail -1 "$O/dinowm_pusht/dinowm_convert.log")"
+      for pair in "$(q 25 '150 50')" "$(q 25 '100 75')"; do
+        ( for d in $pair; do DOFFS=$d N_DINO="$(q 2 20)" DINO_CFG="$DD/config.yaml" DINO_CKPT="$DD/dinowm_noprop_pusht_weights.ckpt" \
+            EVX="$EVX solver.batch_size=${DINO_BS:-10}" bash "$B" pusht dinowm "$O/dinowm_pusht"; done ) >> "$O/laneD${pair// /_}.log" 2>&1 &
+      done
+    else
+      log "J18: no DINO-WM files in $DD (config.yaml, dinowm_noprop_pusht_weights.ckpt): DINO-WM part skipped"
+    fi
+    bash "$R" reacher 0 "$O/reacher" setup >> "$O/setup.log" 2>&1
+    OFFS=25 bash "$R" tworoom 0 "$O/tworoom" setup >> "$O/setup.log" 2>&1
+    OFFS=50 bash "$R" pmm 0 "$O/pmm" setup >> "$O/setup.log" 2>&1
+    OFFS=50 bash "$R" pusht 0 "$O/pusht" setup >> "$O/setup.log" 2>&1
+    ( TAG=_hg12 EVX="$EVX $HO" OFFS="$(q 25 '25 50 100 150')" SPANS=6 bash "$R" reacher "$S3" "$O/reacher" anchor
+      OFFS="$(q 25 '25 50 100 150')" bash "$R" reacher "$S3" "$O/reacher" base
+      OFFS="$(q 25 '25 50 100 150')" SPANS=6 bash "$R" reacher "$S3" "$O/reacher" anchor ) >> "$O/laneA.log" 2>&1 &
+    ( TAG=_hg12 EVX="$EVX $HO" OFFS="$(q 25 '50 75')" SPANS=6 bash "$R" tworoom "$S3" "$O/tworoom" anchor
+      TAG=_hg12 EVX="$EVX $HO" OFFS="$(q 50 '100 200')" SPANS=6 bash "$R" pmm "$S3" "$O/pmm" anchor ) >> "$O/laneB.log" 2>&1 &
+    ( TAG=_hg12 EVX="$EVX $HO" OFFS="$(q 50 '100 150')" SPANS=6 bash "$R" pusht "$S3" "$O/pusht" anchor
+      TAG=_sw3hg12 EVX="$EVX +paa_switch=3 $HO" OFFS="$(q 50 '100 150')" SPANS=6 bash "$R" pusht "$S3" "$O/pusht" anchor
+      TAG=_sw3 EVX="$EVX +paa_switch=3" OFFS="$(q 50 '100 150')" SPANS=6 bash "$R" pusht "$S3" "$O/pusht" anchor ) >> "$O/laneC.log" 2>&1 &
+    RAMGB="$(free -g 2>/dev/null | awk '/^Mem:/ {print $7}')"
+    if [[ "${RAMGB:-0}" -ge 150 ]]; then
+      ( bash "$R" cube 0 "$O/cube" setup
+        TAG=_hg12 EVX="$EVX $HO" OFFS="$(q 50 '50 100 150')" SPANS=6 bash "$R" cube "$S2" "$O/cube" anchor
+        OFFS="$(q 50 '50 100 150')" bash "$R" cube "$S2" "$O/cube" base
+        OFFS="$(q 50 '50 100 150')" SPANS=6 bash "$R" cube "$S2" "$O/cube" anchor ) >> "$O/laneE.log" 2>&1 &
+    else
+      log "J18: ${RAMGB:-?} GB free host RAM < 150: OGBench-Cube part skipped"
+    fi
+    wait
+    ;;
 J15)  # DINO-WM (frozen DINOv2 patch features + learned predictor, scripts/train/prejepa.py) trained on PointMaze-Medium and
       # Two-Room, planned with the same CEM and the patch-MSE goal cost; long range and stitched goals, seed 0 (planning is slow)
     # planning costs ~11-16 s per step on an L4 (patch tokens), so 20 pairs and only the long offsets + stitched goals
@@ -359,6 +402,6 @@ J16)  # episode-switch cost lambda = 3 (neighbour edges cost 3, anchor = 6 recor
     fi
     wait
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J17)"; exit 1 ;;
+*) echo "unknown job $JOB (smoke | J1 ... J18)"; exit 1 ;;
 esac
 finish
