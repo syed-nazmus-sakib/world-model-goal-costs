@@ -1,92 +1,97 @@
-# When the goal image says more than the task: failures of latent goal costs in visual world-model planning
+# Keep the Goal in Range: Graph Anchors for Long-Horizon Latent World-Model Planning
 
-Research code and results, October 2026. Status: **analysis complete, method not yet started.**
+Research code and results for a CVPR 2027 submission (deadline 2026-11-16).
 
-Visual world-model planners (DINO-WM, JEPA-WMs, LeWM) receive the goal as an **image** and score candidate
-action sequences by a distance between predicted and goal **latents**. This project asks where these planners
-actually fail, using exact simulator oracles to separate failures of the world model, the goal cost and the
-search.
+Latent world-model planners (LeWM, DINO-WM, PLDM) search for actions whose predicted embedding comes close to the
+embedding of a goal image. We measure where this latent distance is a usable planning cost and find that it is
+reliable only near the goal: on the graph of the model's own training data, it ranks one-step moves correctly next to
+the goal but at chance beyond about 50 steps. **Graph anchors** keep the model, the cost and the search unchanged.
+They link the encoded training frames by temporal successors and latent nearest neighbours, find the shortest path
+to the goal, and give the planner the node six hops along it as its target: a goal it can actually reach.
 
-**Start here:** [`docs/01_ASSESSMENT.md`](docs/01_ASSESSMENT.md), a two-page verdict on every failure case found.
+## Results at a glance
 
-## Main findings
+Success (%) at the longest goal distance in each environment, LeWM checkpoints, same pairs and budgets for every
+method (mean of two seeds unless noted).
 
-1. **The goal cost, not the world model, is the main bottleneck on manipulation.** With exact simulator
-   dynamics in place of the learned model, success barely changes (Push-T 64.6% → 64.6%), while scoring the
-   same futures by the true state reaches 90.6%. On Metaworld push it is 8% vs 83%.
-2. **Task-equivalence violation (main candidate for a method).** Two goal images that specify the same task
-   outcome but show the robot arm in a different pose should be interchangeable. They are not:
+| | Push-T d150 | Two-Room d75 | PointMaze-M d200 | PointMaze-L d400 | Reacher d150 |
+|---|---|---|---|---|---|
+| LeWM planner | 5 | 31 | 13 | 8 | 60 |
+| LeWM + min-over-plan | 9 | 62 | 12 | 26 | 74 |
+| Best offline GCRL baseline (GCBC) | – | **100** | 51 | 18 | – |
+| **Graph anchors** | **51**¹ | 93 | **85** | **87** | 67 |
+| **+ gated goal handoff** | – | 88 | 83 | – | **81** |
 
-   | | Metaworld push | Metaworld drawer-close |
-   |---|---|---|
-   | candidate rankings that flip (true criterion: 0%) | 43% | 36% |
-   | same best plan selected | 6% | 8% |
-   | closed-loop success, original goal → arm-moved goals | floored | 22/22 → 19/22, **16/22** (p = 0.031), 22/22 |
+¹ with episode-switch cost λ = 3. Graph anchors also reach goals taken from other episodes (PointMaze-M: 95 vs 39),
+work with graphs built from random-play data or 1% of the episodes, and need no training. They do not help on
+OGBench-Cube, where failures come from contact, not from distance. Full tables, seeds and baselines are in the paper.
 
-3. **Which parts of the goal matter depends on the task**: the pusher matters in Push-T, the arm is irrelevant
-   for drawer-close, and on a spring-loaded button the arm *must* stay. No fixed rule (e.g. "mask the robot")
-   is correct everywhere, which motivates a learned, task-aware goal representation.
-4. **Goal-appearance shift** (earlier LeWM study): re-rendering the goal with a different background colour
-   drops PushT success from 90% to 7%.
-5. Closed or negative directions, reported plainly: area-invariant (top-k) patch costs, controllability-geometry
-   terminal values, same-state branching data, post-hoc latent projections.
-
-## Folder layout
+## Repository layout
 
 ```
 .
-├── README.md                 this file
-├── docs/                     reports, read in numerical order (index: docs/README.md)
-├── results/                  small, curated result files behind every number in docs/ (results/README.md)
 ├── code/
-│   ├── jepa-wms/             fork of facebookresearch/jepa-wms + our evaluation suites under evals/
-│   ├── lewm_explorations/    earlier LeWM / stable-worldmodel experiments (ctrlgeo/, scripts/, ogbench_shift/)
-│   └── third_party/          stable-worldmodel snapshot used by lewm_explorations (with our additions)
-├── configs/                  planner/eval configs using JEPAWM_LOGS and JEPAWM_CKPT
-├── scripts/                  launch scripts for every experiment (scripts/README.md)
-├── env/                      conda environment files and env.sh
-├── artifacts/                large files, not for git: datasets, checkpoints, raw logs (artifacts/README.md)
-└── tests/                    maintenance regressions requiring no GPU
+│   ├── lewm_explorations/paa/      graph anchors: graph construction (paa_nodes.py), anchor cost (paa_cost.py),
+│   │                               baselines and helpers
+│   ├── third_party/stable-worldmodel/   planning stack (CEM, eval_wm.py, environments) with our additions
+│   └── jepa-wms/                   fork of facebookresearch/jepa-wms (earlier Meta-World diagnosis)
+├── scripts/
+│   ├── hpc/                        cluster jobs J1-J18 (run_job.sh, run_all.sh, run_1gpu.sh, env_setup.md)
+│   ├── pod/                        single-GPU runners: run_ga_env.sh (all methods per env), run_baselines.sh,
+│   │                               RunPod helpers
+│   └── ...                         launch scripts of the earlier diagnosis phase (scripts/README.md)
+├── configs/                        planner / eval configs (paths via JEPAWM_LOGS, JEPAWM_CKPT)
+├── docs/                           reports and decision logs, read in numerical order (docs/README.md)
+├── results/                        small curated result files of the diagnosis phase (results/README.md)
+├── env/                            conda environment files and env.sh
+├── tests/                          regression tests that need no GPU
+└── artifacts/                      large files, not in git: datasets, checkpoints, run outputs, HPC results
 ```
 
-## Reproducing
+Local only (git-ignored): `paper/` (LaTeX manuscript, `paper/v3` is current), `notes/` (meeting notes, write-ups,
+research notes, reviews), `others/` (third-party papers and reference repos, scratch files) and hand-off bundles
+in the root such as `dinowm_files.tgz`.
+
+## Running
+
+**One environment on one GPU** (data, checkpoint, graph and every method at the given distances):
 
 ```bash
-source env/env.sh                       # activates conda env `jepa-wms`, sets dataset/checkpoint/log paths
-cd code/jepa-wms
-python -m tests.test_fast_rollout_mw --tasks mw-push --trials 2      # exact simulator snapshot/restore test
-bash ../../scripts/run_drawer_variants.sh                            # e.g. the drawer-close equivalence runs
+bash scripts/pod/run_ga_env.sh tworoom "0 42" out/ga_tworoom          # LeWM, min-over-plan, graph anchors
+OFFS="100 150" TAG=_hg12 EVX="+paa_handoff=true +paa_handoff_hops=12" \
+  bash scripts/pod/run_ga_env.sh reacher 0 out/ga_reacher anchor      # with the gated goal handoff
 ```
 
-Recorded experiment environment: Linux, one RTX 5090 (32 GB), CUDA 12.8, torch 2.7.0+cu128, MuJoCo 3, Metaworld. To rebuild the
-environment: `bash env/setup_env_5090.sh` (exact package list in `env/requirements-5090.txt`). Each
-experiment's exact command and decision rule is in `docs/04_NEXT_STEPS.md` and `scripts/README.md`.
+**Cluster jobs** (environment setup in [`scripts/hpc/env_setup.md`](scripts/hpc/env_setup.md)):
 
-## Moving the folder
+```bash
+QUICK=1 bash scripts/hpc/run_job.sh J18                                 # plumbing test, a few minutes
+GPU=0 OUT_ROOT=out/hpc JOBS="J18" bash scripts/hpc/run_1gpu.sh            # full job; results in out/hpc/ALL_results.tgz
+```
 
-`env/env.sh` and the launch scripts find the checkout on their own. YAML configs use `${JEPAWM_LOGS}` and
-`${JEPAWM_CKPT}`, expanded by the config loader. Moving or cloning needs no path rewrite. Set `CONDA_ROOT`
-if Conda is installed outside the usual locations; override `JEPAWM_DSET`, `JEPAWM_CKPT` or `JEPAWM_LOGS`
-before activation to store artifacts elsewhere. See [setup instructions](docs/setup/MOVING.md).
+Each job is described at the top of its block in `scripts/hpc/run_job.sh`. Finished runs are skipped, so an
+interrupted job continues where it stopped.
 
-Before uploading, run the checks below. They require NumPy and PyYAML, without GPU or simulation packages:
+## Checks before pushing
 
 ```bash
 python3 scripts/check_repo.py
 python3 -m unittest discover -s tests -v
 ```
 
-GitHub preparation and push commands: [docs/setup/GITHUB.md](docs/setup/GITHUB.md).
+Never commit `artifacts/`, `paper/`, `notes/`, `others/` or `.env`. GitHub workflow: [`docs/setup/GITHUB.md`](docs/setup/GITHUB.md).
+
+## Earlier phase (October 2026)
+
+The project began as a diagnosis of latent goal costs on manipulation (Meta-World, Push-T): with exact simulator
+dynamics, success barely changes, while scoring the same futures by the true state succeeds far more often, so the
+goal cost, not the world model, is the bottleneck there. These results and the closed directions are documented in
+[`docs/01_ASSESSMENT.md`](docs/01_ASSESSMENT.md) to [`docs/10_METHOD_C_D_RESULTS.md`](docs/10_METHOD_C_D_RESULTS.md).
 
 ## Provenance
 
-- `code/jepa-wms`: upstream `facebookresearch/jepa-wms` at commit `13cf1d9c` (2026-04-11). Our work is purely
-  additive: `evals/{failure_attribution, pusht_failure_attribution, pusht_goal_decomp, mw_cycles,
-  mw_hidden_physics, mw_metric_conflict}/` and `tests/test_*fast_rollout*.py`. The upstream ignore rules are
-  adjusted so our attribution entry points are included in a clone.
-- `code/third_party/stable-worldmodel`: upstream `galilai-group/stable-worldmodel` at commit `8b2e8c68`, with
-  our additions under `scripts/data/`, `scripts/plan/` and `stable_worldmodel/envs/two_room/trap_env.py`.
-- Released checkpoints: JEPA-WM / DINO-WM (facebookresearch/jepa-wms), LeWM (`quentinll/lewm-pusht`).
-- Upstream sources are bundled as ordinary folders, with their licenses and revisions recorded in
-  [PROVENANCE.md](PROVENANCE.md). The original nested Git metadata is preserved locally under
-  `artifacts/local_git/` and excluded from the GitHub repository.
+- `code/third_party/stable-worldmodel`: upstream `galilai-group/stable-worldmodel` at commit `8b2e8c68`, with our
+  additions under `scripts/plan/`, `scripts/data/` and `stable_worldmodel/envs/two_room/trap_env.py`.
+- `code/jepa-wms`: upstream `facebookresearch/jepa-wms` at commit `13cf1d9c`; our additions are under `evals/`.
+- Checkpoints: LeWM (`quentinll/lewm-*`), PointMaze-Medium LeWM (`yjang43/lp2-pointmaze-medium`), released DINO-WM
+  Push-T. Licenses and revisions: [`PROVENANCE.md`](PROVENANCE.md).

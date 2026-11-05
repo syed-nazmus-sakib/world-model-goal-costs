@@ -19,13 +19,16 @@ def main():
     parser.add_argument("--check-assets", action="store_true", help="require local datasets and checkpoints")
     args = parser.parse_args()
     errors = []
-    python_files = [p for folder in ("code", "scripts", "tests") for p in (ROOT / folder).rglob("*.py")]
+    def meta(p):  # macOS AppleDouble files (._name) that external drives create next to every file
+        return p.name.startswith("._")
+
+    python_files = [p for folder in ("code", "scripts", "tests") for p in (ROOT / folder).rglob("*.py") if not meta(p)]
     for path in python_files:
         try:
             ast.parse(path.read_text(), filename=str(path))
         except (SyntaxError, UnicodeError) as error:
             errors.append(f"{path.relative_to(ROOT)}: {error}")
-    shell_files = [p for folder in ("scripts", "env", "code/lewm_explorations") for p in (ROOT / folder).rglob("*.sh")]
+    shell_files = [p for folder in ("scripts", "env", "code/lewm_explorations") for p in (ROOT / folder).rglob("*.sh") if not meta(p)]
     for path in shell_files:
         result = subprocess.run(["bash", "-n", str(path)], capture_output=True, text=True)
         if result.returncode:
@@ -53,7 +56,7 @@ def main():
             if not (Path(paths["JEPAWM_DSET"]) / name).is_dir():
                 errors.append(f"dataset missing: {name} under {paths['JEPAWM_DSET']}")
 
-    result_files = list((ROOT / "results").rglob("*.json")) + list((ROOT / "results").rglob("*.jsonl"))
+    result_files = [p for g in ("*.json", "*.jsonl") for p in (ROOT / "results").rglob(g) if not meta(p)]
     for path in result_files:
         try:
             text = path.read_text()

@@ -37,19 +37,13 @@ MUJOCO_LOG.TXT
 *.out
 *.log
 *.synctex.gz
-# scratch page renders
-/scratch_pdf_inspect/
-/scratch_writeup_inspect/
-# other people's papers kept locally for reading (not ours to redistribute)
-/algorithm.pdf
-/one-pass-visual-world-model.pdf
-# cached copies of third-party papers and web pages used by the research notes
-/research_notes/**/*_sources/
-/research_notes/**/sources_*/
-# local only, never pushed: figures, slides, reports, notes, paper drafts, audits
-/candidate_figs/
-/meeting/
-/reports/
-/research_notes/
-/writeup/
-/Sakib-novelty-audit.pdf
+# local only, never pushed:
+#   paper/   CVPR 2027 manuscript (LaTeX, v2 and v3)
+#   notes/   meeting notes, write-ups, research notes, reports, figure candidates, reviews
+#   others/  third-party papers and reference repos, scratch renders, old scripts
+#   *.tgz in the root: hand-off bundles (e.g. dinowm_files.tgz for the HPC)
+/paper/
+/notes/
+/others/
+/*.tgz
+/.harness/

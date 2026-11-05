@@ -8,7 +8,7 @@ closed, the decision rules, and the plan to the deadline. Evidence: docs/01-07 (
 **Working title:** Latent goal costs fail for a reason: diagnosing and fixing the planning objective of frozen
 world models.
 
-1. **Diagnosis (done; docs 01-07, `writeup/`).** The released latent goal cost measures image similarity, and the robot arm dominates it:
+1. **Diagnosis (done; docs 01-07, `notes/writeup/`).** The released latent goal cost measures image similarity, and the robot arm dominates it:
    - about 75% of the start-to-goal cost sits on robot patches on all 8 object tasks;
    - this holds for 5 encoders;
    - moving only the arm in the goal image costs 12 of 24 episodes with the real planner (McNemar p = 0.004).
@@ -61,7 +61,7 @@ and the same supervision as the competing paper.
 |---|---|---|
 | Oct 23-30 | finish the 9-task state head; TEMPO baseline; approach-phase test (direction 3) on drawer-open / button | about $2 of pod credit |
 | Oct 30-Nov 6 | seeds and paired statistics on the tasks that move; label-fraction ablation (direction 4) if budget allows | A100s if available |
-| Nov 6-16 | write: diagnosis sections exist in `writeup/main.tex`; add method, results, limits | – |
+| Nov 6-16 | write: diagnosis sections exist in `notes/writeup/main.tex` (manuscript: `paper/v3`); add method, results, limits | – |
 
 ## 5. Working rules
 
@@ -69,4 +69,4 @@ and the same supervision as the competing paper.
 - Prior art for the reach-then-change direction, checked 2026-10-23: subgoal methods (SAGE 2607.17973, "Mind the Gap" 2607.12547, LAGO 2606.20627, "The Planning Limits of Latent World Models" 2609.39235: expert subgoals 76% vs 23% on Metaworld), change masks (DDP-WM 2602.01780), robot masks (Know Thyself), contact gate in TD-JEPA (2607.25337). None derives reach-then-move shaping from the goal image for a frozen world model.
 - Pod runs end with `ALL_DONE`; `scripts/pod/backup_and_stop.sh` copies the results home and stops the pod.
 - State a decision rule before each run, and report a failed rule as a failure.
-- Never commit or push `artifacts/`, `reports/`, `research_notes/`, `writeup/`, `meeting/`, `candidate_figs/`, the PDFs or `.env`.
+- Never commit or push `artifacts/`, `paper/`, `notes/`, `others/`, the PDFs or `.env`.
