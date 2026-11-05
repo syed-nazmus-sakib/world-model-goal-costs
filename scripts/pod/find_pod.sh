@@ -1,7 +1,7 @@
 #!/bin/bash
 # Create a cheap pod, keep it only if CUDA initialises and the NVIDIA EGL driver is present; otherwise terminate it and
 # try again (up to 8 pods). After two bad pods on the same host IP, that GPU type is dropped from the list.
-# usage: PODDIR=<dir> [NAME=..] [KEYVAR=..] bash scripts/pod/find_pod.sh
+# usage: PODDIR=<dir> [NAME=..] [KEYVAR=..] [NEED_EGL=0 (no MuJoCo, e.g. Push-T)] [CLOUD=SECURE] [GPUS='"id",..'] [MINCPU=8] bash scripts/pod/find_pod.sh
 # Writes pod_id, pod_ssh.sh, pod_addr into $PODDIR on success and prints FOUND; prints GAVE_UP otherwise. Key from .env, never printed.
 cd /Volumes/ns_external/Shared/jepa-wms-project
 KEYVAR=${KEYVAR:-runpod_api}
@@ -9,18 +9,18 @@ NAME=${NAME:-jepa-wms-p}; PODDIR=${PODDIR:?set PODDIR to a folder for pod_id, po
 KEY=$(sed -n -E "s/^$KEYVAR[[:space:]]*=[[:space:]]*//p" .env | sed -E 's/^["'"'"']//; s/["'"'"']$//; s/[[:space:]]+$//' | tr -d '\n')
 [ -n "$KEY" ] || { echo "no key for $KEYVAR"; exit 1; }
 PUB=$(cat ~/.ssh/id_ed25519.pub)
-GPUS='"NVIDIA RTX A5000","NVIDIA RTX 4000 Ada Generation","NVIDIA GeForce RTX 3080 Ti","NVIDIA RTX A4500","NVIDIA GeForce RTX 4070 Ti","NVIDIA L4","NVIDIA RTX A6000","NVIDIA A40","NVIDIA GeForce RTX 4090","NVIDIA GeForce RTX 3090"'
+GPUS=${GPUS:-'"NVIDIA RTX A5000","NVIDIA RTX 4000 Ada Generation","NVIDIA GeForce RTX 3080 Ti","NVIDIA RTX A4500","NVIDIA GeForce RTX 4070 Ti","NVIDIA L4","NVIDIA RTX A6000","NVIDIA A40","NVIDIA GeForce RTX 4090","NVIDIA GeForce RTX 3090"'}
 LAST_BAD_IP=""; BAD_COUNT=0
 for try in $(seq 1 40); do
   cat > "$PODDIR/pod.json" <<EOT
 {"name":"$NAME","imageName":"runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
  "gpuTypeIds":[$GPUS],"gpuTypePriority":"availability",
- "gpuCount":1,"containerDiskInGb":80,"volumeInGb":0,"ports":["22/tcp"],"minVCPUPerGPU":12,"minRAMPerGPU":24,
- "cloudType":"COMMUNITY","supportPublicIp":true,"env":{"PUBLIC_KEY":"$PUB"}}
+ "gpuCount":1,"containerDiskInGb":80,"volumeInGb":0,"ports":["22/tcp"],"minVCPUPerGPU":${MINCPU:-12},"minRAMPerGPU":24,
+ "cloudType":"${CLOUD:-COMMUNITY}","supportPublicIp":true,"env":{"PUBLIC_KEY":"$PUB"}}
 EOT
   R=$(curl -s -m 60 -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" https://rest.runpod.io/v1/pods -d @"$PODDIR/pod.json")
   rm -f "$PODDIR/pod.json"
-  if ! echo "$R" | grep -q '"id"'; then echo "try $try: no instance"; sleep 60; continue; fi
+  if ! echo "$R" | grep -q '"id"'; then echo "try $try: no instance ($(echo "$R" | tr -d '\n' | cut -c1-200))"; sleep 60; continue; fi
   ID=$(echo "$R" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
   GPU=$(echo "$R" | python3 -c "import json,sys; print(json.load(sys.stdin).get('machine',{}).get('gpuTypeId'))")
   PRICE=$(echo "$R" | python3 -c "import json,sys; print(json.load(sys.stdin).get('costPerHr'))")
@@ -44,7 +44,7 @@ except Exception: print('', '')")
       [ -n "$CHK" ] && break; sleep 20
     done
     echo "  $IP:$PORT -> $(echo $CHK | tr '\n' ' ')"
-    echo "$CHK" | grep -q CUDA_OK && echo "$CHK" | grep -q EGL_OK && OK=1
+    echo "$CHK" | grep -q CUDA_OK && { [ "${NEED_EGL:-1}" = 0 ] || echo "$CHK" | grep -q EGL_OK; } && OK=1
   else
     echo "  no public SSH port"
   fi
