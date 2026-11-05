@@ -30,7 +30,7 @@ from torch import nn
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
                  thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None, switch=1.0,
-                 handoff=False):
+                 handoff=False, handoff_hops=0):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -47,6 +47,10 @@ class PAAGoalCost(nn.Module):
         # goal handoff: a candidate whose plan comes within one recorded block of the goal (squared distance < thr, the graph's
         # own edge threshold) beats every candidate that does not; otherwise the anchor cost is unchanged
         self.handoff = bool(handoff)
+        # gated handoff: only when the graph puts the goal at most `handoff_hops` hops from the current state (0 = no gate).
+        # A goal can be close in latent space but far along the graph (behind a wall): there the handoff must not fire
+        self.handoff_hops = float(handoff_hops)
+        self._ho = {'n': 0, 'open': 0, 'fired': 0}  # decisions, decisions with the gate open, decisions where a candidate took it
         # coverage ablation: drop every node whose agent position (state[:, :2]) lies in the box (x0, x1, y0, y1)
         self.drop_box = None if drop_box in (None, 'none', '') else [float(v) for v in
                                                                      (drop_box.split(',') if isinstance(drop_box, str) else drop_box)]
@@ -125,7 +129,7 @@ class PAAGoalCost(nn.Module):
         self.GT = G.T.tocsr()  # distances TO the goal = dijkstra from the goal on the transposed graph
         del dd
         torch.cuda.empty_cache()  # several evaluation processes share one GPU
-        self._goal_cache, self._anchor_cache, self.anchor_log, self._anchor_node = {}, {}, [], {}
+        self._goal_cache, self._anchor_cache, self.anchor_log, self._anchor_node, self._anchor_hops = {}, {}, [], {}, {}
         self.hop_scale = 1.0
         self._t['build_s'] += _time.perf_counter() - t_build
         if self.mode == 'gap' and self.gap_cal:
@@ -213,6 +217,7 @@ class PAAGoalCost(nn.Module):
                     k = int(score.argmax()) if bool((score > 0).any()) else 0
                     out = za[k]
         self._anchor_cache[key] = out
+        self._anchor_hops[key] = float(dist[s])  # graph distance (hops, or weighted with switch) to the goal
         self._anchor_node[key] = int(self.idx[a_node]) if a_node >= 0 else -1
         # figure log, indices into nodes.npz: (goal node, current node, anchor node or -1 = the goal itself)
         self.anchor_log.append((int(self.idx[gn]), int(self.idx[s]), int(self.idx[a_node]) if a_node >= 0 else -1))
@@ -222,7 +227,9 @@ class PAAGoalCost(nn.Module):
         """Graph build time (s, all set_exclude calls), mean shortest-path search per goal (ms), number of goals."""
         t = self._t
         return {'graph_build_s': t['build_s'], 'dijkstra_ms': 1e3 * t['dijkstra_s'] / max(1, t['dijkstra_n']),
-                'goals': float(t['dijkstra_n'])}
+                'goals': float(t['dijkstra_n']),
+                **({'handoff_open': self._ho['open'] / max(1, self._ho['n']), 'handoff_fired': self._ho['fired'] / max(1, self._ho['n'])}
+                   if self.handoff else {})}
 
     def anchor_node(self, z0, g):
         """Index (into the nodes file) of the anchor anchor() picks for (z0, g); -1 when it is the goal itself."""
@@ -334,4 +341,15 @@ class PAAGoalCost(nn.Module):
             if not self.handoff:
                 return da
             dg = (p - g[:, None]).pow(2).sum(-1)
-        return torch.where(dg < self.thr, dg, da + self.thr)
+        take = dg < self.thr
+        if self.handoff_hops > 0 and self.mode == 'fixed':
+            hops = torch.tensor([self._anchor_hops[(hash(z0[b].cpu().numpy().tobytes()), hash(g[b].cpu().numpy().tobytes()))]
+                                 for b in range(g.shape[0])], device=g.device)
+            gate = hops <= self.handoff_hops
+            take = take & gate.view(-1, *([1] * (take.dim() - 1)))
+            self._ho['open'] += int(gate.sum())
+        else:
+            self._ho['open'] += g.shape[0]
+        self._ho['n'] += g.shape[0]
+        self._ho['fired'] += int(take.flatten(1).any(1).sum())
+        return torch.where(take, dg, da + self.thr)
