@@ -8,6 +8,10 @@
 set -u
 DISTS=${DISTS:-"150 100 75 50"}; N_DINO=${N_DINO:-20}; WAIT_H=${WAIT_H:-2}; CAP_H=${CAP_H:-14}
 O=/root/out; mkdir -p $O; L=$O/chain.log; log() { echo "$(date -u +%F' '%T) $*" >> $L; }
+# RunPod puts RUNPOD_POD_ID / RUNPOD_API_KEY only in PID 1's environment, not in ssh shells.  Best effort: the pod key may
+# be refused; the laptop (rp_launch.sh) deletes the pod through the REST API as well.
+eval "$(tr '\0' '\n' < /proc/1/environ | grep -E '^RUNPOD_(POD_ID|API_KEY)=' | sed 's/^/export /')"
+runpodctl config --apiKey "${RUNPOD_API_KEY:-}" > /dev/null 2>&1
 selfremove() { log "removing pod ($1)"; runpodctl remove pod "${RUNPOD_POD_ID:?}" >> $L 2>&1 || runpodctl stop pod "$RUNPOD_POD_ID" >> $L 2>&1; }
 ( sleep $((CAP_H * 3600)); selfremove "cap ${CAP_H}h reached" ) &
 log "POD_CHAIN_START dinowm dists=[$DISTS] n=$N_DINO"
