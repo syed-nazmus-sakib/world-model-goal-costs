@@ -387,11 +387,11 @@ J19)  # fills the remaining cells of the main table:
     log "J19: ${RAMGB:-?} GB free host RAM -> lanes $([[ $PARJ == 1 ]] && echo 'in parallel' || echo 'one after another')"
     bg() { if [[ $PARJ == 1 ]]; then "$@" & else "$@"; fi; }
     bg bash -c "EVSEEDS='$S2' OFFS='$(q 25 '25 50 100 150')' bash '$B' reacher 'gcbc gcivl gciql hilp pldm' '$O/bl_reacher' >> '$O/laneA.log' 2>&1"
-    bg bash -c "EPOCHS_DWM='$(q 1 5)' STEPS_DWM='$(q 20 5000)' EVX='$EVX eval.num_eval=$(q 2 20)' EVSEEDS=0 OFFS='$(q 25 '100 150')' \
+    bg bash -c "EPOCHS_DWM='$(q 1 5)' STEPS_DWM='$(q 20 5000)' EVX='$EVX eval.num_eval=$(q 2 20) solver.batch_size=${DINO_BS:-10}' EVSEEDS=0 OFFS='$(q 25 '100 150')' \
         bash '$B' reacher dwm '$O/dwm_reacher' >> '$O/laneB.log' 2>&1"
     if pml_model; then
       bg bash -c "EVSEEDS='$S2' XSEEDS='$S2' XB='$(q 100 400)' OFFS='$(q 50 '50 100 200 400')' bash '$B' pml 'gcivl pldm' '$O/bl_pml' >> '$O/laneC.log' 2>&1"
-      bg bash -c "EPOCHS_DWM='$(q 1 5)' STEPS_DWM='$(q 20 5000)' EVX='$EVX eval.num_eval=$(q 2 20)' EVSEEDS=0 XSEEDS=0 XB='$(q 100 400)' \
+      bg bash -c "EPOCHS_DWM='$(q 1 5)' STEPS_DWM='$(q 20 5000)' EVX='$EVX eval.num_eval=$(q 2 20) solver.batch_size=${DINO_BS:-10}' EVSEEDS=0 XSEEDS=0 XB='$(q 100 400)' \
           OFFS='$(q 50 '200 400')' bash '$B' pml dwm '$O/dwm_pml' >> '$O/laneD.log' 2>&1"
       mkdir -p "$O/pml"; echo pointmaze_large.h5 > "$O/pml/dataset_name"
       OFFS=50 bash "$R" pml 0 "$O/pml" setup >> "$O/setup.log" 2>&1

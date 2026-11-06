@@ -54,7 +54,7 @@ train() {  # method
   case $m in
     gcbc)  $PY scripts/train/gcbc.py data=$DATA wm.proprio_dim=$PD output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     gcivl) $PY scripts/train/gcivl.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
-    hilp)  $PY scripts/train/hilp.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
+    hilp)  $PY scripts/train/hilp.py dataset_name=$DSN dinowm.proprio_dim=$PD ${NOPROP:++has_proprio=false} +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     gciql) $PY scripts/train/gciql.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     dwm)   $PY scripts/train/prejepa.py dataset_name=$DSN output_model_name=$n trainer.max_epochs=${EPOCHS_DWM:-5} ${NOPROP:+~wm.encoding.proprio} \
                +trainer.limit_train_batches=${STEPS_DWM:-5000} +trainer.limit_val_batches=20 trainer.strategy=auto num_workers=8 ;;
