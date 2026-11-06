@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Start several jobs at once, each with its own output folder, on whichever GPUs have free memory right now.
+# Runs J17 and J19 at once (or any jobs given in PAIRS), each with its own output folder, on whichever GPUs have free memory right now.
 #
-#   bash scripts/hpc/run_parallel.sh                 # default: J17 -> out/hpc4 and J19 -> out/hpc6
-#   PLAN_ONLY=1 bash scripts/hpc/run_parallel.sh     # only show which job would go to which GPU
-#   PAIRS="J17:out/hpc4 J19:out/hpc6" NEED_GB=40 bash scripts/hpc/run_parallel.sh
+#   bash scripts/hpc/run_j17_j19.sh                 # default: J17 -> out/hpc4 and J19 -> out/hpc6
+#   PLAN_ONLY=1 bash scripts/hpc/run_j17_j19.sh     # only show which job would go to which GPU
+#   PAIRS="J17:out/hpc4 J19:out/hpc6" NEED_GB=40 bash scripts/hpc/run_j17_j19.sh
 #
 # How it decides: it reads the FREE memory of every GPU (so a GPU already busy with another job, e.g. J18, counts only
 # with what is left on it) and gives each job the GPU with the most free memory, reserving NEED_GB (default 40) per job.
