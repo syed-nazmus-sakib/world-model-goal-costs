@@ -11,7 +11,7 @@ REPO=${JEPAWM_HOME:?}; PY=${SWM_PY:-python}; R=$REPO/scripts/pod/run_ga_env.sh
 P=$REPO/code/lewm_explorations/paa; SW=$REPO/code/third_party/stable-worldmodel
 CK=${CK:-${STABLEWM_HOME:-$HOME/.stable_worldmodel}/checkpoints}
 case $ENV in pmm) KEY=proprio ;; tworoom) KEY=pos_agent ;; *) echo "unknown env $ENV"; exit 1 ;; esac
-FR=${EP_FRAC:-$([ $ENV = pmm ] && echo 0.2 || echo 1.0)}   # PointMaze-M has 199k nodes, a fifth of its episodes is enough here
+FR=${EP_FRAC:-0.2}   # 180-200k nodes per environment: a fifth of the episodes is enough here
 MAXN=$([ "$Q" = 1 ] && echo 3000 || echo 0); NG=$([ "$Q" = 1 ] && echo 5 || echo 200)
 EV=$([ "$Q" = 1 ] && echo eval.num_eval=2 || echo "")
 OFFS=25 bash $R $ENV 0 $D/lewm setup
@@ -30,6 +30,7 @@ for m in pldm dwm; do
   [ -f $D/${m}_e.npz ] && L="$L $m=$D/${m}_e.npz"
 done
 $PY $P/exp_range.py --out $D/range --n_goals $NG $L
+[ -f $D/range.npz ] && cp $D/range.npz $D/range_npz.bin   # the Colab pull skips *.npz; this one holds the cost map
 cd $REPO
 EVX="$EV" OFFS=30 bash $R $ENV "0 42" $D/lewm base
 if [ -d $CK/bl_${ENV}_pldm ]; then

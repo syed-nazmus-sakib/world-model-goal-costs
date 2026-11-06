@@ -3,6 +3,7 @@ The reference graph uses true positions only: temporal edges + edges between nod
 five-step move (k=10 nearest in position).  For goal g and state v at true graph distance h, rho(h) is the share of pairs
 of v's neighbours whose latent order to g agrees with their true order (0.5 = chance).  Also the Spearman correlation of
 the latent cost with true graph distance over all nodes (global) and within 6 hops, and one cost map for the figure.
+Concentration: median squared latent distance per hop against 2 x total variance, the value for two unrelated samples.
 usage: python exp_range.py --out res.npz --n_goals 200 name1=nodes1.npz name2=nodes2.npz ...   (first file gives the states)"""
 import argparse, json
 import numpy as np
@@ -22,6 +23,7 @@ G = ref_graph(xy, ep, step); GT = G.T.tocsr()
 rng = np.random.default_rng(0); goals = rng.choice(n, args.n_goals, replace=False)
 H = list(range(1, 41)); agree = {k: {h: [0, 0] for h in H} for k in emb}; sp_all = {k: [] for k in emb}; sp_loc = {k: [] for k in emb}
 cost_map = None
+d2 = {k: {h: [] for h in H} for k in emb}
 for gi, g in enumerate(goals):
     dg = dijkstra(GT, directed=True, indices=int(g)); fin = np.isfinite(dg)
     if fin.sum() < 100:
@@ -31,6 +33,10 @@ for gi, g in enumerate(goals):
         cost_map = dict(goal=int(g), dg=dg.astype(np.float32), **{f'lat_{k}': v.astype(np.float32) for k, v in lat.items()})
     s = rng.choice(np.nonzero(fin)[0], min(4000, int(fin.sum())), replace=False)
     for k in emb:
+        for h in H:
+            m = dg[s] == h
+            if m.any():
+                d2[k][h].append(float(np.median(lat[k][s][m])))
         sp_all[k].append(spearmanr(dg[s], lat[k][s]).statistic)
         near = s[dg[s] <= 6]
         if len(near) > 20:
@@ -53,9 +59,11 @@ for gi, g in enumerate(goals):
         print(gi, flush=True)
 res = {k: dict(hops=H, rho=[agree[k][h][0] / agree[k][h][1] if agree[k][h][1] else None for h in H],
                pairs=[agree[k][h][1] for h in H], spearman_all=float(np.nanmean(sp_all[k])),
-               spearman_6hops=float(np.nanmean(sp_loc[k])) if sp_loc[k] else None) for k in emb}
+               spearman_6hops=float(np.nanmean(sp_loc[k])) if sp_loc[k] else None,
+               d2_hop=[float(np.median(d2[k][h])) if d2[k][h] else None for h in H],
+               two_var=float(2 * emb[k].var(0).sum()), dim=int(emb[k].shape[1])) for k in emb}
 print(json.dumps({k: dict(rho1=v['rho'][0], rho3=v['rho'][2], rho6=v['rho'][5], rho12=v['rho'][11], sp=v['spearman_all'],
-                          sp6=v['spearman_6hops']) for k, v in res.items()}), flush=True)
+                          sp6=v['spearman_6hops'], d2_h40=v['d2_hop'][-1], two_var=v['two_var']) for k, v in res.items()}), flush=True)
 json.dump(res, open(args.out + '.json', 'w'))
 if cost_map:
     s = rng.choice(n, min(20000, n), replace=False)
