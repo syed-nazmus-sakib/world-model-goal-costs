@@ -12,6 +12,7 @@
 # lane match: graph anchors under AP's planner (MSPANS); lane cross: stitched goals (XB budgets, XM methods); WM: other world model
 # lane fact: graph anchors with the RELEASED search (H=5, last-step cost): the missing cell of target x search
 # lane ngc: NGC baseline (NGCM="ngc gangc": + the hybrid, our anchor scored with NGC's graph distance); cross: XM="ngc ..."
+# HA: horizon of the min-over-plan and anchor runs (default 10)
 # TRACE=1: save a per-run trace (agent state, anchors) to $OUT/trace_<run>.npz for the failure analysis
 set -u
 ENV=$1; SEEDS=${2:-"0"}; OUT=${3:-/root/out/ga_$ENV}; LANE=${4:-all}; mkdir -p "$OUT"
@@ -110,8 +111,8 @@ fi
 for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   [ "$(ok_off $off)" = 1 ] || { log "skip d$off: fewer than 60 episodes longer than $off"; continue; }
   if [ "$LANE" = all ] || [ "$LANE" = base ]; then
-    ev released${TAG:-}_h5_d${off}_s$seed $seed $off
-    ev relmin${TAG:-}_h10_d${off}_s$seed $seed $off +metric_head=released +metric_agg=min plan_config.horizon=10
+    [ -n "${SK_REL:-}" ] || ev released${TAG:-}_h5_d${off}_s$seed $seed $off   # SK_REL: only the min-over-plan run
+    ev relmin${TAG:-}_h${HA:-10}_d${off}_s$seed $seed $off +metric_head=released +metric_agg=min plan_config.horizon=${HA:-10}
   fi
   if [ "$LANE" = ap ]; then  # Anchored Planning (arXiv 2609.30036) re-implemented: one-block CEM toward the retrieved successor
     ev apcem${TAG:-}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=ap +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1
@@ -151,7 +152,7 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
   fi
   if [ "$LANE" != base ]; then
     for sp in ${SPANS:-6 8}; do
-      ev ga${TAG:-}_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=fixed +paa_span=$sp +metric_agg=min plan_config.horizon=10
+      ev ga${TAG:-}_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=fixed +paa_span=$sp +metric_agg=min plan_config.horizon=${HA:-10}
     done
   fi
 done; done
