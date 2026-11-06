@@ -16,8 +16,9 @@ from stable_worldmodel.policy import BasePolicy
 
 
 class GraphWaypointPolicy(BasePolicy):
-    def __init__(self, inner, encoder, graph, dataset, transform, every=5, img_dtype=torch.float32):
+    def __init__(self, inner, encoder, graph, dataset, transform, every=5, img_dtype=torch.float32, hold=0):
         super().__init__()
+        self.hold, self._age = int(hold), None  # hold > 0: keep a waypoint until reached or `hold` steps old (exp-23)
         self.type = 'graph_waypoint'
         self.inner, self.wm, self.graph, self.dataset = inner, encoder, graph, dataset
         self.tf, self.every, self.img_dtype = transform, int(every), img_dtype
@@ -76,7 +77,16 @@ class GraphWaypointPolicy(BasePolicy):
                     if node >= 0:
                         zn = self.graph.emb_all[node].to(z0.device, torch.float32)
                         self.reach.append((b, float((z0[b] - zn).pow(2).sum()) / thr))
-            self._wp = [self.graph.anchor_node(z0[b], g[b]) for b in range(len(z0))]
+            if self.hold and self._wp is not None:
+                thr = float(getattr(self.graph, 'thr', 1.0))
+                for b, node in enumerate(self._wp):
+                    self._age[b] += self.every
+                    d = float((z0[b] - self.graph.emb_all[node].to(z0.device, torch.float32)).pow(2).sum()) / thr if node >= 0 else 0.0
+                    if node < 0 or d < 1.0 or self._age[b] >= self.hold:
+                        self._wp[b], self._age[b] = self.graph.anchor_node(z0[b], g[b]), 0
+            else:
+                self._wp = [self.graph.anchor_node(z0[b], g[b]) for b in range(len(z0))]
+                self._age = [0] * len(z0)
             self.log += [(self._t, b, n) for b, n in enumerate(self._wp)]
         self._t += 1
         info, copied = dict(info_dict), set()

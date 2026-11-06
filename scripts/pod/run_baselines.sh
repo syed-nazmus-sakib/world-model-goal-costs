@@ -7,6 +7,7 @@
 #   gciql               : offline goal-conditioned IQL on frozen DINOv2 features (stable-worldmodel), like gcivl
 #   dwm                 : DINO-WM (frozen DINOv2 patches + predictor, scripts/train/prejepa.py) trained on this dataset for
 #                         EPOCHS_DWM epochs of STEPS_DWM batches, planned with the same CEM (released settings, patch-MSE cost)
+# gcbch / gcivlh / hilph: held waypoints (exp-23); ttgs / gas: value-graph search (exp-24, exp-25)
 # gcbcg: graph waypoints + GCBC (needs GNODES, GWM); XB/XSEEDS: also evaluate on stitched goals (goals from other episodes) at those budgets and seeds
 # EVSEEDS: seeds of the standard evaluations (default 0); EPOCHS / EPOCHS_WM: training epochs (default 1, STEPS / STEPS_WM
 # batches each); MTAG: suffix of the trained model names (bl_<env>_<method><MTAG>), so longer trainings do not overwrite others
@@ -98,6 +99,15 @@ for m in $METHODS; do
     gcbcg)      # graph + GCBC: the GCBC policy is given graph waypoints (GNODES: LeWM nodes, GWM: that LeWM) as its goal
                 train gcbc  && { A="policy=bl_${ENV}_gcbc$MT +ff=true +graph_waypoints=true +graph_nodes=${GNODES:?set GNODES} +graph_wm=${GWM:?set GWM} +paa_span=${GSPAN:-6}"
                                  for d in $OFFS; do ev gcbcg${GTAG:-}_d${d}_s0 $d $A; done; xev gcbcg${GTAG:-} $A; } ;;
+    gcbch|gcivlh|hilph)  # exp-23: our latent graph, a nearer waypoint (GSPAN, default 2) held until reached or GHOLD steps old
+                i=${m%h}; [ $i = gcbc ] && A="policy=bl_${ENV}_gcbc$MT +ff=true" || A="policy=bl_${ENV}_${i}${MT}_policy +ff=true +policy_object=$CK/bl_${ENV}_${i}${MT}_policy/model_object.pt"
+                A="$A +graph_waypoints=true +graph_nodes=${GNODES:?set GNODES} +graph_wm=${GWM:?set GWM} +paa_span=${GSPAN:-2} +waypoint_hold=${GHOLD:-25}"
+                train $i && { for d in $OFFS; do ev ${m}${GTAG:-}_d${d}_s0 $d $A; done; xev ${m}${GTAG:-} $A; } ;;
+    ttgs|gas)   # exp-24 / exp-25: graph search on the value of the policy itself (GCIVL / HILP), no world model: value_graph.py
+                [ $m = ttgs ] && { i=gcivl; vm=value; } || { i=hilp; vm=hilp; }
+                A="policy=bl_${ENV}_${i}${MT}_policy +ff=true +policy_object=$CK/bl_${ENV}_${i}${MT}_policy/model_object.pt"
+                A="$A +value_graph=true +graph_nodes=${GNODES:?set GNODES} +vg_mode=$vm +vg_tau=${VGTAU:-4} +vg_nodes=${VGN:-2000}"
+                train $i && { for d in $OFFS; do ev ${m}${GTAG:-}_d${d}_s0 $d $A; done; xev ${m}${GTAG:-} $A; } ;;
     pldm)       train pldm  && { for d in $OFFS; do ev pldm_d${d}_s0 $d policy=bl_${ENV}_pldm$MT; done; xev pldm policy=bl_${ENV}_pldm$MT; } ;;
     dinowm)
       [ "$ENV" = pusht ] || { log "dinowm: pusht only"; continue; }

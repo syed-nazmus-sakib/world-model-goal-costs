@@ -30,7 +30,7 @@ from torch import nn
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
                  thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None, switch=1.0,
-                 handoff=False, handoff_hops=0):
+                 handoff=False, handoff_hops=0, pool=False):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -44,6 +44,7 @@ class PAAGoalCost(nn.Module):
         # episode-switch cost: neighbour edges cost `switch` (temporal edges 1).  switch > 1 makes shortest paths follow
         # recorded trajectories for longer; the span K then counts temporal moves only (neighbour jumps are "same place")
         self.switch = float(switch)
+        self.pool = bool(pool)  # exp-26, patch world models: nodes and predictions pooled to a 4x4 grid (exp_encode.py)
         # goal handoff: a candidate whose plan comes within one recorded block of the goal (squared distance < thr, the graph's
         # own edge threshold) beats every candidate that does not; otherwise the anchor cost is unchanged
         self.handoff = bool(handoff)
@@ -315,7 +316,17 @@ class PAAGoalCost(nn.Module):
         return torch.stack(out)
 
     # ----------------------------------------------------------------------------------------------------- cost
+    @staticmethod
+    def _pool4(x):  # (..., P, D) patches of a square grid -> (..., 16 D)
+        lead, (P, D) = x.shape[:-2], x.shape[-2:]
+        n = int(P ** 0.5)
+        x = x.reshape(-1, n, n, D).permute(0, 3, 1, 2).float()
+        return torch.nn.functional.adaptive_avg_pool2d(x, 4).flatten(1).reshape(*lead, -1)
+
     def forward(self, info_dict):
+        if self.pool:
+            info_dict = dict(info_dict, predicted_emb=self._pool4(info_dict['predicted_pixels_emb']),
+                             goal_emb=self._pool4(info_dict['pixels_goal_emb']))
         g = info_dict['goal_emb'][:, -1].float()  # (B, D)
         H = info_dict['pixels'].size(2)
         z0 = info_dict['predicted_emb'][:, 0, H - 1].float()  # current frame (last context step)

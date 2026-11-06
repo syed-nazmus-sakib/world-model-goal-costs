@@ -18,11 +18,22 @@ from torchvision.transforms import v2 as transforms
 import stable_worldmodel as swm
 
 
+def pix_shift(cfg):
+    """exp-27: test-time appearance change, a warm tint of strength +pix_shift on every observed and goal frame; the
+    graph keeps the latents of the unshifted training frames."""
+    s = float(cfg.get('pix_shift', 0))
+    if s <= 0:
+        return []
+    tint = torch.tensor([1.0, 1 - s / 2, 1 - s]).view(3, 1, 1)
+    return [transforms.Lambda(lambda x: x * tint.to(x.device, x.dtype))]
+
+
 def img_transform(cfg, dtype=torch.float32):
     transform = transforms.Compose(
         [
             transforms.ToImage(),
             transforms.ToDtype(dtype, scale=True),
+            *pix_shift(cfg),
             transforms.Normalize(**spt.data.dataset_stats.ImageNet),
             transforms.Resize(size=cfg.eval.img_size),
         ]
@@ -143,6 +154,7 @@ def run(cfg: DictConfig):
                                     switch=cfg.get('paa_switch', 1.0),
                                     handoff=cfg.get('paa_handoff', False),
                                     handoff_hops=cfg.get('paa_handoff_hops', 0),
+                                    pool=cfg.get('paa_pool', False),
                                     drop_box=([cfg.paa_drop_x0, cfg.paa_drop_x1, cfg.paa_drop_y0, cfg.paa_drop_y1]
                                               if cfg.get('paa_drop_x0', None) is not None else None))
         elif cfg.get('ngc_nodes', None):  # NGC baseline (arXiv 2610.25013, concurrent work): graph-distance cost
@@ -173,9 +185,18 @@ def run(cfg: DictConfig):
                 graph = PAAGoalCost(cfg.graph_nodes, mode='fixed', span=cfg.get('paa_span', 6),
                                     max_hops=cfg.get('paa_max_hops', 12), knn=cfg.get('paa_knn', 10))
                 policy = GraphWaypointPolicy(policy, enc, graph, dataset, transform['pixels'],
-                                             every=cfg.get('waypoint_every', 5), img_dtype=img_dtype)
+                                             every=cfg.get('waypoint_every', 5), img_dtype=img_dtype,
+                                             hold=cfg.get('waypoint_hold', 0))
                 print(f'[graph_waypoints] {cfg.graph_wm} graph, span {graph.span}, waypoint every '
                       f'{policy.every} steps', flush=True)
+            if cfg.get('value_graph', False):  # exp-24 / exp-25: graph and subgoals from the policy's value head, no world model
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'lewm_explorations' / 'paa'))
+                from value_graph import ValueGraph, ValueGraphPolicy
+
+                vg = ValueGraph(model, cfg.graph_nodes, dataset, policy._prepare_info, mode=cfg.get('vg_mode', 'value'),
+                                tau=cfg.get('vg_tau', 4.0), n_nodes=cfg.get('vg_nodes', 2000), cand=cfg.get('vg_cand', 50),
+                                gamma=cfg.get('vg_gamma', 0.99))
+                policy = ValueGraphPolicy(policy, vg, dataset, every=cfg.get('waypoint_every', 5), replan=cfg.get('vg_replan', 0.0))
 
     else:
         policy = swm.policy.RandomPolicy()
