@@ -11,7 +11,7 @@
 # EVSEEDS: seeds of the standard evaluations (default 0); EPOCHS / EPOCHS_WM: training epochs (default 1, STEPS / STEPS_WM
 # batches each); MTAG: suffix of the trained model names (bl_<env>_<method><MTAG>), so longer trainings do not overwrite others
 # GSPAN: waypoint span of gcbcg (default 6); GTAG: run-name suffix of gcbcg (e.g. _sp2)
-# usage: bash scripts/pod/run_baselines.sh <tworoom|pmm|pusht> "<methods>" [out=/root/out/bl_<env>]
+# usage: bash scripts/pod/run_baselines.sh <tworoom|pmm|pml|pusht|reacher> "<methods>" [out=/root/out/bl_<env>]
 set -u
 ENV=$1; METHODS=$2; OUT=${3:-/root/out/bl_$ENV}; mkdir -p "$OUT"
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
@@ -28,6 +28,8 @@ case $ENV in
   pmm)     DATA=pointmaze_medium; DSN=d4rl_pointmaze_medium_expert.h5;  PD=4; CFG=pointmaze_medium; OFFS=${OFFS-"50 100 150 200"} ;;
   pml)     DATA=pointmaze_large;  DSN=pointmaze_large.h5;               PD=4; CFG=pointmaze_large;  OFFS=${OFFS-"50 100 200 400"} ;;
   pusht)   DATA=pusht_lewm;       DSN=galilai-group/lewm-pusht;         PD=4; CFG=pusht;            OFFS=${OFFS-"50 75 100 150"} ;;
+  reacher) DATA=dmc;              DSN=reacher.h5;                       PD=4; CFG=reacher;          OFFS=${OFFS-"25 50 100 150"}
+           NOPROP=1 ;;  # the Reacher data have no proprio column: DINO-WM without its proprio encoding, pixel-only goal cost
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
 CK=${STABLEWM_HOME:-/root/.stable_worldmodel}/checkpoints
@@ -54,7 +56,7 @@ train() {  # method
     gcivl) $PY scripts/train/gcivl.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     hilp)  $PY scripts/train/hilp.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     gciql) $PY scripts/train/gciql.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
-    dwm)   $PY scripts/train/prejepa.py dataset_name=$DSN output_model_name=$n trainer.max_epochs=${EPOCHS_DWM:-5} \
+    dwm)   $PY scripts/train/prejepa.py dataset_name=$DSN output_model_name=$n trainer.max_epochs=${EPOCHS_DWM:-5} ${NOPROP:+~wm.encoding.proprio} \
                +trainer.limit_train_batches=${STEPS_DWM:-5000} +trainer.limit_val_batches=20 trainer.strategy=auto num_workers=8 ;;
     pldm)  $PY scripts/train/pldm.py data=$DATA output_model_name=$n trainer.max_epochs=${EPOCHS_WM:-1} +trainer.limit_train_batches=$STEPS_WM +trainer.limit_val_batches=20 ;;
   esac > "$OUT/train_$m.log" 2>&1
@@ -88,7 +90,7 @@ for m in $METHODS; do
     gcbc)       train gcbc  && { for d in $OFFS; do ev gcbc_d${d}_s0 $d policy=bl_${ENV}_gcbc$MT +ff=true; done; xev gcbc policy=bl_${ENV}_gcbc$MT +ff=true; } ;;
     dwm)        train dwm   && { n=bl_${ENV}_dwm$MT; O=$(find "$CK" -path "*$n*" -name model_object.pt 2>/dev/null | sort | tail -1)
                                  [ -n "$O" ] || { log "dwm: no model_object.pt for $n under $CK"; continue; }
-                                 OBJ=objective=goal_mse_pixels_proprio
+                                 OBJ=objective=goal_mse_pixels_proprio; [ -n "${NOPROP:-}" ] && OBJ=objective=goal_mse_pixels
                                  for d in $OFFS; do ev dwm_d${d}_s0 $d policy=$n +policy_object=$O $OBJ; done
                                  xev dwm policy=$n +policy_object=$O $OBJ; } ;;
     gcivl|hilp|gciql) train $m && { A="policy=bl_${ENV}_${m}${MT}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}${MT}_policy/model_object.pt"
