@@ -376,6 +376,30 @@ J18)  # (1) released DINO-WM Push-T checkpoint at long range (d50-150, 20 pairs,
     fi
     wait
     ;;
+J19)  # fills the remaining cells of the main table:
+      # (1) Reacher baselines: GCBC, GCIVL, GCIQL, HILP, PLDM (one epoch, as on the other environments) at d25-150, seeds 0/42,
+      #     and DINO-WM trained on the Reacher data (5 epochs, no proprio column there) at d100/150, 20 pairs, seed 0
+      # (2) PointMaze-Large (needs J1's data and model): GCIVL and PLDM at d50-400 + stitched (seeds 0/42), DINO-WM trained on
+      #     its data at d200/400 + stitched (20 pairs, seed 0), and graph anchors + gated goal handoff (G=12) at d400 + stitched
+      # Lanes run in parallel only with >= 200 GB free host RAM (PointMaze-Large training caches a lot), else one after another.
+    S2="$(q 0 '0 42')"; HO="+paa_handoff=true +paa_handoff_hops=12"
+    RAMGB="$(free -g 2>/dev/null | awk '/^Mem:/ {print $7}')"; PARJ=1; [[ "${RAMGB:-0}" -ge 200 ]] || PARJ=0
+    log "J19: ${RAMGB:-?} GB free host RAM -> lanes $([[ $PARJ == 1 ]] && echo 'in parallel' || echo 'one after another')"
+    bg() { if [[ $PARJ == 1 ]]; then "$@" & else "$@"; fi; }
+    bg bash -c "EVSEEDS='$S2' OFFS='$(q 25 '25 50 100 150')' bash '$B' reacher 'gcbc gcivl gciql hilp pldm' '$O/bl_reacher' >> '$O/laneA.log' 2>&1"
+    bg bash -c "EPOCHS_DWM='$(q 1 5)' STEPS_DWM='$(q 20 5000)' EVX='$EVX eval.num_eval=$(q 2 20)' EVSEEDS=0 OFFS='$(q 25 '100 150')' \
+        bash '$B' reacher dwm '$O/dwm_reacher' >> '$O/laneB.log' 2>&1"
+    if pml_model; then
+      bg bash -c "EVSEEDS='$S2' XSEEDS='$S2' XB='$(q 100 400)' OFFS='$(q 50 '50 100 200 400')' bash '$B' pml 'gcivl pldm' '$O/bl_pml' >> '$O/laneC.log' 2>&1"
+      bg bash -c "EPOCHS_DWM='$(q 1 5)' STEPS_DWM='$(q 20 5000)' EVX='$EVX eval.num_eval=$(q 2 20)' EVSEEDS=0 XSEEDS=0 XB='$(q 100 400)' \
+          OFFS='$(q 50 '200 400')' bash '$B' pml dwm '$O/dwm_pml' >> '$O/laneD.log' 2>&1"
+      mkdir -p "$O/pml"; echo pointmaze_large.h5 > "$O/pml/dataset_name"
+      OFFS=50 bash "$R" pml 0 "$O/pml" setup >> "$O/setup.log" 2>&1
+      ( TAG=_hg12 EVX="$EVX $HO" OFFS="$(q 50 400)" SPANS=6 bash "$R" pml "$S2" "$O/pml" anchor
+        TAG=_hg12 EVX="$EVX $HO" XB="$(q 100 400)" XM=ga bash "$R" pml "$S2" "$O/pml" cross ) >> "$O/laneE.log" 2>&1 &
+    fi
+    wait
+    ;;
 J15)  # DINO-WM (frozen DINOv2 patch features + learned predictor, scripts/train/prejepa.py) trained on PointMaze-Medium and
       # Two-Room, planned with the same CEM and the patch-MSE goal cost; long range and stitched goals, seed 0 (planning is slow)
     # planning costs ~11-16 s per step on an L4 (patch tokens), so 20 pairs and only the long offsets + stitched goals
@@ -402,6 +426,6 @@ J16)  # episode-switch cost lambda = 3 (neighbour edges cost 3, anchor = 6 recor
     fi
     wait
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J18)"; exit 1 ;;
+*) echo "unknown job $JOB (smoke | J1 ... J19)"; exit 1 ;;
 esac
 finish
