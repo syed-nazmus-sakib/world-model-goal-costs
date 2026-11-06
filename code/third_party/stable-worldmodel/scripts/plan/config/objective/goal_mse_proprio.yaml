@@ -1,0 +1,8 @@
+# Goal MSE on the proprio embedding alone (PreJEPA), for exp-29: how much of DINO-WM's result comes from the proprio term.
+_target_: stable_worldmodel.planning.WeightedSum
+terms:
+  - - 1.0
+    - _target_: stable_worldmodel.planning.GoalMSE
+      pred_key: predicted_proprio_emb
+      goal_key: proprio_goal_emb
+      reduction: mean

@@ -22,6 +22,7 @@
 #   bash scripts/hpc/run_job.sh exp-23         # graph methods without a world model (exp-23, 24, 25: held waypoints, TTGS-, GAS-style)
 #   bash scripts/hpc/run_job.sh exp-26         # DINO-WM with graph anchors
 #   bash scripts/hpc/run_job.sh exp-27         # appearance shift at test time
+#   bash scripts/hpc/run_job.sh exp-29         # DINO-WM on PointMaze-Large with pixel-only and proprio-only cost; Reacher DINO-WM
 #   QUICK=1 bash scripts/hpc/run_job.sh J3     # plumbing test: a few training steps, 2 episodes per evaluation
 #
 # Each job writes to $OUT_ROOT/<job>/ (default out/hpc/<job>/), ends with a PASS/FAIL line in <job>/job.log and packs
@@ -464,6 +465,9 @@ exp-26)  # DINO-WM + graph anchors on the same pooled latents: trains bl_<env>_d
 exp-27)  # appearance shift at test time: warm tint 0.1/0.2/0.4 on every frame, the graph stays on the original latents
     for e in pmm tworoom; do bash "$ROOT/scripts/exp/exp27_shift.sh" $e "$O/$e" >> "$O/lane_$e.log" 2>&1 & done; wait
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J19 | exp-20 ... exp-27)"; exit 1 ;;
+exp-29)  # why DINO-WM reaches 100% on PointMaze-Large: same model, pixel-only and proprio-only goal cost; finished J19's Reacher runs
+    bash "$ROOT/scripts/exp/exp29_dinowm_cost.sh" "$O" >> "$O/lane.log" 2>&1
+    ;;
+*) echo "unknown job $JOB (smoke | J1 ... J19 | exp-20 ... exp-29)"; exit 1 ;;
 esac
 finish

@@ -92,8 +92,9 @@ for m in $METHODS; do
     dwm)        train dwm   && { n=bl_${ENV}_dwm$MT; O=$(find "$CK" -path "*$n*" -name model_object.pt 2>/dev/null | sort | tail -1)
                                  [ -n "$O" ] || { log "dwm: no model_object.pt for $n under $CK"; continue; }
                                  OBJ=objective=goal_mse_pixels_proprio; [ -n "${NOPROP:-}" ] && OBJ=objective=goal_mse_pixels
-                                 for d in $OFFS; do ev dwm_d${d}_s0 $d policy=$n +policy_object=$O $OBJ; done
-                                 xev dwm policy=$n +policy_object=$O $OBJ; } ;;
+                                 OBJ=${DWM_OBJ:-$OBJ}   # exp-29: another goal cost on the same model; GTAG names the runs
+                                 for d in $OFFS; do ev dwm${GTAG:-}_d${d}_s0 $d policy=$n +policy_object=$O $OBJ; done
+                                 xev dwm${GTAG:-} policy=$n +policy_object=$O $OBJ; } ;;
     gcivl|hilp|gciql) train $m && { A="policy=bl_${ENV}_${m}${MT}_policy +ff=true +policy_object=$CK/bl_${ENV}_${m}${MT}_policy/model_object.pt"
                                  for d in $OFFS; do ev ${m}_d${d}_s0 $d $A; done; xev $m $A; } ;;
     gcbcg)      # graph + GCBC: the GCBC policy is given graph waypoints (GNODES: LeWM nodes, GWM: that LeWM) as its goal
