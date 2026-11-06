@@ -37,7 +37,7 @@ T0=$(date +%s); CAP=$((CAPH * 3600))
 if [ "${ATTACH:-0}" != 1 ]; then
   B=$OUT/code.tgz
   ( cd "$PROJ" && COPYFILE_DISABLE=1 tar czf "$B" --exclude='._*' --exclude='.git' --exclude='__pycache__' --exclude='outputs' \
-      code/third_party/stable-worldmodel code/lewm_explorations/paa scripts/pod scripts/hpc env/conda.sh env/paths.sh ) \
+      code/third_party/stable-worldmodel code/lewm_explorations/paa scripts/pod scripts/hpc scripts/exp env/conda.sh env/paths.sh ) \
       || { log "bundle failed"; exit 1; }
   colab new -s "$SESS" --gpu "${GPU:-L4}" ${HIGHMEM:+--high-mem} >> "$LOG" 2>&1 || { log "could not create the session"; exit 1; }
   for i in $(seq 1 30); do alive && break; sleep 10; done

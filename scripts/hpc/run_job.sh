@@ -16,6 +16,12 @@
 #   bash scripts/hpc/run_job.sh J11            # PointMaze-Large (needs J1's model): graph / AP memory from OGBench stitch data
 #   bash scripts/hpc/run_job.sh J12            # PointMaze-Medium: GCBC / GCIVL with 4x and PLDM with 5x the training budget
 #   bash scripts/hpc/run_job.sh J13            # planning time per decision: LeWM, min-over-plan, graph anchors, AP
+#   bash scripts/hpc/run_job.sh exp-20         # range of the goal cost across world models, local reach, exact-dynamics test
+#   bash scripts/hpc/run_job.sh exp-21         # anchor span K x horizon H
+#   bash scripts/hpc/run_job.sh exp-22         # horizon x samples with the direct goal cost
+#   bash scripts/hpc/run_job.sh exp-23         # graph methods without a world model (exp-23, 24, 25: held waypoints, TTGS-, GAS-style)
+#   bash scripts/hpc/run_job.sh exp-26         # DINO-WM with graph anchors
+#   bash scripts/hpc/run_job.sh exp-27         # appearance shift at test time
 #   QUICK=1 bash scripts/hpc/run_job.sh J3     # plumbing test: a few training steps, 2 episodes per evaluation
 #
 # Each job writes to $OUT_ROOT/<job>/ (default out/hpc/<job>/), ends with a PASS/FAIL line in <job>/job.log and packs
@@ -76,13 +82,13 @@ pml_model() {  # J10/J11: our PointMaze-Large LeWM is trained by J1; wait for it
 
 finish() {  # summary table, PASS/FAIL line, results archive
     local n f
-    n=$(cat "$O"/*/summary.txt 2>/dev/null | grep -c 'success_rate=' || true)
+    n=$(cat "$O"/*/summary.txt "$O"/*/*/summary.txt 2>/dev/null | grep -c 'success_rate=' || true)
     # failures since this start only (a resumed job keeps the lines of earlier, interrupted attempts)
-    f=$(cat "$O"/*/queue.log 2>/dev/null | awk -v t="$T0" 'substr($0, 1, 19) >= t' | grep -cE 'FAILED|ABORT|rc=[1-9]' || true)
+    f=$(cat "$O"/*/queue.log "$O"/*/*/queue.log 2>/dev/null | awk -v t="$T0" 'substr($0, 1, 19) >= t' | grep -cE 'FAILED|ABORT|rc=[1-9]' || true)
     log "results ($n runs):"
-    cat "$O"/*/summary.txt 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i ~ /^success_rate=/) print "  " $1, $i}' | tee -a "$L"
+    cat "$O"/*/summary.txt "$O"/*/*/summary.txt 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i ~ /^success_rate=/) print "  " $1, $i}' | tee -a "$L"
     if [[ "$n" -gt 0 && "$f" -eq 0 ]]; then log "JOB $JOB PASS ($n runs)"; else log "JOB $JOB FAIL ($n runs, $f failures; see */queue.log)"; fi
-    tar czf "$OUT_ROOT/${JOB}_results.tgz" -C "$OUT_ROOT" --exclude='nodes.npz' --exclude='*.mp4' "$JOB" \
+    tar czf "$OUT_ROOT/${JOB}_results.tgz" -C "$OUT_ROOT" --exclude='nodes.npz' --exclude='*_e.npz' --exclude='*.mp4' "$JOB" \
         && log "packed $OUT_ROOT/${JOB}_results.tgz  <- please send this file back"
 }
 
@@ -430,6 +436,34 @@ J16)  # episode-switch cost lambda = 3 (neighbour edges cost 3, anchor = 6 recor
     fi
     wait
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J19)"; exit 1 ;;
+exp-20)  # range of the goal cost across world models (true-position graph), cost maps, local reach, then exp-28 on the same nodes
+    for e in pmm tworoom; do
+      ( bash "$ROOT/scripts/exp/exp20_range.sh" $e "$O/$e"; bash "$ROOT/scripts/exp/exp28_exact.sh" "$O/$e" ) >> "$O/lane_$e.log" 2>&1 &
+    done; wait
+    ;;
+exp-21)  # does the best anchor span K follow the planning horizon H?  K 2-12 x H 5-15 at the longest distance, seeds 0/42
+    for e in pmm tworoom; do bash "$ROOT/scripts/exp/exp21_kxh.sh" $e "$O/$e" >> "$O/lane_$e.log" 2>&1 & done; wait
+    ;;
+exp-22)  # can more search fix the distant goal?  direct goal cost, H 10/20 x samples 300/1000, seeds 0/42
+    for e in pmm tworoom; do bash "$ROOT/scripts/exp/exp22_search.sh" $e "$O/$e" >> "$O/lane_$e.log" 2>&1 & done; wait
+    ;;
+exp-23)  # graph methods without a world model on our pairs: held waypoints, TTGS-style, GAS-style (exp-23, 24, 25), seeds 0/42/1
+    for e in pmm tworoom; do bash "$ROOT/scripts/exp/exp23_graph_policy.sh" $e "$O/$e" >> "$O/lane_$e.log" 2>&1 & done
+    if ls "$STABLEWM_HOME"/checkpoints/lewm_pml/*.pt > /dev/null 2>&1; then
+      keep_last "$STABLEWM_HOME/checkpoints/lewm_pml"; export PML_CKPT=lewm_pml
+      mkdir -p "$O/pml/graph"; echo pointmaze_large.h5 > "$O/pml/graph/dataset_name"
+      bash "$ROOT/scripts/exp/exp23_graph_policy.sh" pml "$O/pml" >> "$O/lane_pml.log" 2>&1 &
+    else
+      log "exp-23: no PointMaze-Large LeWM in $STABLEWM_HOME/checkpoints/lewm_pml: PointMaze-Large skipped, the other two still run"
+    fi
+    wait
+    ;;
+exp-26)  # DINO-WM + graph anchors on the same pooled latents: trains bl_<env>_dwm first if it is not on disk (slow planning)
+    for e in tworoom pmm; do bash "$ROOT/scripts/exp/exp26_dinowm.sh" $e "$O/$e" >> "$O/lane_$e.log" 2>&1 & done; wait
+    ;;
+exp-27)  # appearance shift at test time: warm tint 0.1/0.2/0.4 on every frame, the graph stays on the original latents
+    for e in pmm tworoom; do bash "$ROOT/scripts/exp/exp27_shift.sh" $e "$O/$e" >> "$O/lane_$e.log" 2>&1 & done; wait
+    ;;
+*) echo "unknown job $JOB (smoke | J1 ... J19 | exp-20 ... exp-27)"; exit 1 ;;
 esac
 finish
