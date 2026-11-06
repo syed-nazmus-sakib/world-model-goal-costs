@@ -28,12 +28,17 @@ class ValueGraph:
         E = []
         for i in range(0, len(pick), batch):
             E.append(self._embed_rows(dataset, prepare, pick[i:i + batch], ep, step).cpu())
-        self.emb = torch.cat(E)                                                      # (N, P, D) in the policy's own embedding
-        if mode == 'hilp':
-            self.phi = self._phi(self.emb)
-            keep = self._cover(self.phi, 0.5 * self.tau)
-            self.ep_all, self.step_all, self.emb, self.phi = self.ep_all[keep], self.step_all[keep], self.emb[keep], self.phi[keep]
-        self._build(int(cand))
+        self.emb, self.cand, self.G = torch.cat(E), int(cand), None                   # (N, P, D) in the policy's own embedding
+
+    def set_exclude(self, eps):
+        """Drop the evaluation pairs' episodes, as PAAGoalCost does, then build the graph: no plan can replay a test episode."""
+        keep = ~np.isin(self.ep_all, np.asarray(list(eps)))
+        self.ep_all, self.step_all, self.emb = self.ep_all[keep], self.step_all[keep], self.emb[keep]
+        if self.mode == 'hilp':
+            k = self._cover(self._phi(self.emb), 0.5 * self.tau)
+            if len(k) >= 50:   # below that phi has collapsed (untrained model): keep every node rather than a useless graph
+                self.ep_all, self.step_all, self.emb = self.ep_all[k], self.step_all[k], self.emb[k]
+        self._build(self.cand)
 
     def _embed_rows(self, dataset, prepare, idx, ep, step):
         rows = dataset.load_chunk(ep[idx], step[idx], step[idx] + 1)
@@ -135,6 +140,8 @@ class ValueGraphPolicy(GraphWaypointPolicy):
             n = len(zs)
             if self._paths is None:
                 self._paths, self._wp = [None] * n, [-1] * n
+            if self.vg_.G is None:          # +paa_noexclude: nothing asked for the exclusion, so nothing built the graph
+                self.vg_.set_exclude([])
             allnodes = np.arange(len(self.vg_.emb))
             for b in range(n):
                 dgo = float(self.vg_.dist(zs[b:b + 1], zg[b:b + 1]))
