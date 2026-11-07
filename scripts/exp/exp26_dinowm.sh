@@ -20,5 +20,11 @@ OFFS=25 bash $R $ENV 0 $D/lewm setup; DS=$(cat $D/lewm/dataset_name)
 mkdir -p $D/a; echo $DS > $D/a/dataset_name
 ( cd $SW; $PY $P/exp_encode.py --out $D/a/nodes.npz --model $O --dataset $DS --state_key $KEY $([ "$Q" = 1 ] && echo --max_nodes 3000) ) || exit 1
 touch $D/a/READY
-WM=$N TAG=_dwm SPANS=6 EVX="+policy_object=$O $OBJ +paa_pool=true $EV" OFFS="$OFF" OKNODES=$D/lewm/nodes.npz bash $R $ENV "$SD" $D/a anchor
+source $REPO/scripts/exp/gpu_wait.sh
+for pass in 1 2 3 4 5 6; do   # finished runs are skipped; a pass only repeats what ran out of memory on a shared GPU
+  wait_vram ${DINO_GB:-45}
+  WM=$N TAG=_dwm SPANS=6 EVX="+policy_object=$O $OBJ +paa_pool=true $EV" OFFS="$OFF" OKNODES=$D/lewm/nodes.npz bash $R $ENV "$SD" $D/a anchor
+  [ "$(grep -c 'success_rate=' $D/a/summary.txt 2>/dev/null)" -ge "$(( $(echo $OFF | wc -w) * $(echo $SD | wc -w) ))" ] && break
+  sleep 600
+done
 echo "exp26 $ENV done"
