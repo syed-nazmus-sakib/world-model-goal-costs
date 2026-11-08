@@ -320,8 +320,11 @@ class PAAGoalCost(nn.Module):
     def _pool4(x):  # (..., P, D) patches of a square grid -> (..., 16 D)
         lead, (P, D) = x.shape[:-2], x.shape[-2:]
         n = int(P ** 0.5)
-        x = x.reshape(-1, n, n, D).permute(0, 3, 1, 2).float()
-        return torch.nn.functional.adaptive_avg_pool2d(x, 4).flatten(1).reshape(*lead, -1)
+        x = x.reshape(-1, n, n, D)
+        # in chunks: a CEM batch of DINO patches (samples x steps x P x D) exceeds the int32 element limit of the CUDA kernel (exp-26)
+        step = max(1, (1 << 30) // (n * n * D))
+        out = [torch.nn.functional.adaptive_avg_pool2d(c.permute(0, 3, 1, 2).float(), 4).flatten(1) for c in x.split(step)]
+        return torch.cat(out).reshape(*lead, -1)
 
     def forward(self, info_dict):
         if self.pool:
