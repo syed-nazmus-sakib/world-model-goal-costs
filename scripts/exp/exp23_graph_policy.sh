@@ -19,8 +19,17 @@ if [ "$Q" = 1 ]; then
 else
   export EVSEEDS=${EVSEEDS:-"0 42 1"} XSEEDS=${XSEEDS:-"0 42"} VGN=${VGN:-3000}
   case $ENV in tworoom) export XB=200 ;; *) export XB=400 ;; esac
-  [ -z "$NV" ] || bash $B $ENV "$NV" $D
-  # the edge limit tau of TTGS and GAS is tuned per environment: pick by seed 0 at the middle distance, report the other seeds
-  [ -z "$V" ] || for t in ${VGTAUS:-2 4 8}; do GTAG=_t$t VGTAU=$t bash $B $ENV "$V" $D; done
+  # On a shared GPU a run can die when other jobs fill the memory.  Finished runs are skipped, so each pass repeats only
+  # what failed; a pass waits until the GPU has EXP23_GB free (default 10) and the loop stops after a pass with no failure.
+  source $REPO/scripts/exp/gpu_wait.sh
+  for pass in 1 2 3 4 5 6; do
+    n0=$(cat $D/queue.log 2>/dev/null | wc -l)
+    wait_vram ${EXP23_GB:-10}
+    [ -z "$NV" ] || bash $B $ENV "$NV" $D
+    # the edge limit tau of TTGS and GAS is tuned per environment: pick by seed 0 at the middle distance, report the other seeds
+    [ -z "$V" ] || for t in ${VGTAUS:-2 4 8}; do GTAG=_t$t VGTAU=$t bash $B $ENV "$V" $D; done
+    tail -n +$((n0 + 1)) $D/queue.log 2>/dev/null | grep -q FAILED || break
+    echo "exp23 $ENV: pass $pass had failures, repeating them in 10 min"; sleep 600
+  done
 fi
 echo "exp23 $ENV done"
