@@ -4,6 +4,7 @@
 #   bash scripts/hpc/run_exps.sh                       # exp-29, 21, 22, 23, 26, 27
 #   PLAN_ONLY=1 bash scripts/hpc/run_exps.sh           # only show which experiment would go to which GPU
 #   PAIRS="exp-23:out/exp23" bash scripts/hpc/run_exps.sh   # a subset
+#   GPU=0 PAIRS="exp-23:out/exp23" bash scripts/hpc/run_exps.sh   # only on GPU 0 (others reserved)
 #
 # Runs detached: the terminal can be closed. Run the same command again after a time limit or crash, finished runs are
 # skipped. Progress: tail -f out/exp23/run_all.log    Results: out/expNN/ALL_results.tgz, one file per experiment.

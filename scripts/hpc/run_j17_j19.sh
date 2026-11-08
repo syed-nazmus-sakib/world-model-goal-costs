@@ -24,7 +24,13 @@ echo "free GPU memory now:$(for g in $(printf '%s\n' "${!FREE[@]}" | sort -n); d
 echo "free host RAM now: $(free -g 2>/dev/null | awk '/^Mem:/ {print $7}') GB"
 
 plan=()
-for p in $PAIRS; do
+# GPU=<id>: put every job on that GPU and no other (on a cluster where some GPUs are reserved for others).  The DINO-WM
+# experiments wait for free memory on it themselves.  Without GPU, each job goes to the GPU with the most free memory.
+if [[ -n "${GPU:-}" ]]; then
+    [[ -n "${FREE[$GPU]:-}" ]] || { echo "GPU $GPU not found by nvidia-smi"; exit 1; }
+    for p in $PAIRS; do plan+=("${p%%:*} ${p#*:} $GPU"); done
+fi
+for p in $([[ -z "${GPU:-}" ]] && echo $PAIRS); do
     j="${p%%:*}"; o="${p#*:}"; best=""
     for g in "${!FREE[@]}"; do
         (( FREE[$g] >= NEED )) && { [[ -z "$best" ]] || (( FREE[$g] > FREE[$best] )); } && best=$g
