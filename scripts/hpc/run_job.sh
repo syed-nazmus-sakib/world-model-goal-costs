@@ -89,6 +89,8 @@ finish() {  # summary table, PASS/FAIL line, results archive
     log "results ($n runs):"
     cat "$O"/*/summary.txt "$O"/*/*/summary.txt 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i ~ /^success_rate=/) print "  " $1, $i}' | tee -a "$L"
     if [[ "$n" -gt 0 && "$f" -eq 0 ]]; then log "JOB $JOB PASS ($n runs)"; else log "JOB $JOB FAIL ($n runs, $f failures; see */queue.log)"; fi
+    [[ "$f" -gt 0 ]] && { log "failure reasons (count, run: reason):"; cat "$O"/*/queue.log "$O"/*/*/queue.log 2>/dev/null | awk -v t="$T0" 'substr($0, 1, 19) >= t' \
+        | grep -E 'FAILED|ABORT' | cut -c21- | sort | uniq -c | sort -rn | head -8 | tee -a "$L"; }
     tar czf "$OUT_ROOT/${JOB}_results.tgz" -C "$OUT_ROOT" --exclude='nodes.npz' --exclude='*_e.npz' --exclude='*.mp4' "$JOB" \
         && log "packed $OUT_ROOT/${JOB}_results.tgz  <- please send this file back"
 }

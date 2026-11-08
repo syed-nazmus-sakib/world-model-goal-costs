@@ -40,6 +40,8 @@ DS=${DS:-$(cat "$OUT/dataset_name" 2>/dev/null)}
 NODES=$OUT/nodes.npz
 log() { echo "$(date -u +%F' '%T) $*" | tee -a "$OUT/queue.log"; }
 abort() { log "$1"; touch "$OUT/ABORT"; exit 1; }
+# why <log>: the line that says why a run died (last Python error, CUDA out of memory, or kill), for queue.log and job.log
+why() { grep -aE 'OutOfMemoryError|Error:|Error\b|Killed|Traceback' "$1" | grep -v '^ *File ' | tail -1 | cut -c1-200; }
 cd "$SWM"
 if [ "$LANE" != anchor ]; then
   if [ -z "$DS" ]; then
@@ -81,8 +83,8 @@ ev() {  # name seed offset extra...
   log "$name start"
   $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS \
     eval.goal_offset_steps=$off eval.eval_budget=$((2 * off)) "$@" ${EVX:-} \
-    ${TRACE:+"+trace_npz=$OUT/trace_$name.npz" +trace_every=${TRACE_EVERY:-5}} ${VID:+"+video_dir=$OUT/vid_$name"} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
-  echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
+    ${TRACE:+"+trace_npz=$OUT/trace_$name.npz" +trace_every=${TRACE_EVERY:-5}} ${VID:+"+video_dir=$OUT/vid_$name"} > "$OUT/$name.log" 2>&1 || log "$name FAILED: $(why "$OUT/$name.log")"
+  grep -aq '\[summary\]' "$OUT/$name.log" && echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
   log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
 }
 if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fixed budgets XB; AP gets half the budget as its offset
@@ -102,8 +104,8 @@ if [ "$LANE" = cross ]; then  # E3 stitching test: goals from other episodes, fi
         gap)      A="+paa_nodes=$NODES +paa_mode=gap +paa_span=${GSPAN:-6} +metric_agg=last plan_config.horizon=1 plan_config.receding_horizon=1 ${GCAL:++gap_cal=true}" ;;
       esac
       $PY scripts/plan/eval_wm.py --config-name=$CFG policy=$M seed=$seed eval.dataset_name=$DS $X $A \
-        +pairs_npz=$OUT/pairs_$name.npz ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED"
-      echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
+        +pairs_npz=$OUT/pairs_$name.npz ${EVX:-} > "$OUT/$name.log" 2>&1 || log "$name FAILED: $(why "$OUT/$name.log")"
+      grep -aq '\[summary\]' "$OUT/$name.log" && echo "$name $(grep -a '\[summary\]' "$OUT/$name.log")" >> "$OUT/summary.txt"
       log "$name: $(grep -a '\[summary\]' "$OUT/$name.log" | grep -oE 'success_rate=[0-9.]+')"
     done
   done; done
