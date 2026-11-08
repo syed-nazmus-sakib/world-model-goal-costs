@@ -289,8 +289,32 @@ def run(cfg: DictConfig):
         policy.graph.set_exclude(np.unique(eval_episodes if goal_eps is None else np.concatenate([eval_episodes, goal_eps])))
     _dec_t = []  # wall time per policy decision (ms), CUDA-synchronised; printed in the summary line
     _get_action = policy.get_action
+    # Live progress, one line every PROGRESS_SEC seconds (default 60; 0 = off): step, pairs solved so far, time per step and
+    # an ETA.  The ETA assumes every step until the budget; the run ends earlier once all pairs are solved.
+    _prog = {'t0': time.perf_counter(), 'last': 0.0, 'n': 0, 'solved': None,
+             'every': float(os.environ.get('PROGRESS_SEC', '60')), 'budget': int(cfg.eval.eval_budget)}
+
+    def _fmt_t(sec):
+        sec = int(sec); return f'{sec // 3600}h{sec % 3600 // 60:02d}m' if sec >= 3600 else f'{sec // 60}m{sec % 60:02d}s'
+
+    def _progress():
+        _prog['n'] += 1
+        term = getattr(world, 'terminateds', None)
+        if term is not None:
+            _prog['solved'] = np.asarray(term, bool) | (_prog['solved'] if _prog['solved'] is not None else False)
+        now = time.perf_counter()
+        if _prog['every'] <= 0 or now - _prog['last'] < _prog['every']:
+            return
+        _prog['last'] = now
+        n, b, el = _prog['n'], _prog['budget'], now - _prog['t0']
+        solved = 0 if _prog['solved'] is None else int(np.sum(_prog['solved']))
+        per = el / n
+        mem = f' | GPU {torch.cuda.max_memory_allocated() / 2**30:.1f} GB peak' if torch.cuda.is_available() else ''
+        print(f'[progress] step {n}/{b} ({100 * n / b:.0f}%) | solved {solved}/{world.num_envs} | {per:.1f} s/step | '
+              f'elapsed {_fmt_t(el)} | ETA <= {_fmt_t(per * max(b - n, 0))}{mem}', flush=True)
 
     def _timed_get_action(*a, **k):
+        _progress()
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         t0 = time.perf_counter()
