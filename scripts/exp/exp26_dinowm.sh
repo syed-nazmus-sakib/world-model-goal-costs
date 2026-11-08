@@ -23,8 +23,11 @@ mkdir -p $D/a; echo $DS > $D/a/dataset_name
 ( cd $SW; $PY $P/exp_encode.py --out $D/a/nodes.npz --model $O --dataset $DS --state_key $KEY $([ "$Q" = 1 ] && echo --max_nodes 3000) ) || exit 1
 touch $D/a/READY
 source $REPO/scripts/exp/gpu_wait.sh
+# Each planning run claims its GPU memory as soon as it starts (eval_wm.py, RESERVE_GB), so other users of the shared GPU
+# cannot take it during the minutes the model and graph load.  24 GB covers batch 2 with room to spare (estimate).
+export RESERVE_GB=${RESERVE_GB:-24}
 for pass in 1 2 3 4 5 6 7 8 9 10; do   # finished runs are skipped; a pass only repeats what ran out of memory on a shared GPU
-  wait_vram ${DINO_GB:-18}
+  wait_vram ${DINO_GB:-26}
   WM=$N TAG=_dwm SPANS=6 EVX="+policy_object=$O $OBJ +paa_pool=true $EV" OFFS="$OFF" OKNODES=$D/lewm/nodes.npz bash $R $ENV "$SD" $D/a anchor
   [ "$(grep -c 'success_rate=' $D/a/summary.txt 2>/dev/null)" -ge "$(( $(echo $OFF | wc -w) * $(echo $SD | wc -w) ))" ] && break
   sleep 600

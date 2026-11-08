@@ -21,10 +21,17 @@ When the goal is within `span` hops (or no path exists) the anchor is the goal i
 Cost: squared latent distance to the anchor, min over the predicted steps (agg='min') or the last step.
 """
 import numpy as np
+import os
 import torch
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 from torch import nn
+
+
+def _release_cache():
+    """Hand freed GPU memory back to other processes, unless the run reserved its memory up front (RESERVE_GB)."""
+    if not os.environ.get('RESERVE_GB'):
+        torch.cuda.empty_cache()
 
 
 class PAAGoalCost(nn.Module):
@@ -129,7 +136,7 @@ class PAAGoalCost(nn.Module):
             G = csr_matrix((w[o], (r[o], c[o])), shape=(n, n))
         self.GT = G.T.tocsr()  # distances TO the goal = dijkstra from the goal on the transposed graph
         del dd
-        torch.cuda.empty_cache()  # several evaluation processes share one GPU
+        _release_cache()  # several evaluation processes share one GPU
         self._goal_cache, self._anchor_cache, self.anchor_log, self._anchor_node, self._anchor_hops = {}, {}, [], {}, {}
         self.hop_scale = 1.0
         self._t['build_s'] += _time.perf_counter() - t_build
@@ -242,7 +249,7 @@ class PAAGoalCost(nn.Module):
         if k not in self._ap_bank:
             if self.mode != 'gap':  # gap keeps its few banks (k <= span); AP keeps one per remaining horizon
                 self._ap_bank.clear()  # one remaining-horizon bank at a time (about 1 GB each)
-            torch.cuda.empty_cache()
+            _release_cache()
             o, ep, st = self._ap_order, self._ap_ep, self._ap_st
             pos = np.arange(len(o) - k)
             ok = (ep[pos + k] == ep[pos]) & (st[pos + k] - st[pos] == 5 * k) & (ep[pos + 1] == ep[pos]) & \
@@ -255,7 +262,7 @@ class PAAGoalCost(nn.Module):
             f = (f - mu) / sd
             self._ap_bank[k] = (f, f.pow(2).sum(-1), mu, sd, nxt, npos)
             del z, zg
-            torch.cuda.empty_cache()
+            _release_cache()
         return self._ap_bank[k]
 
     def _ap_anchor(self, z0, g):

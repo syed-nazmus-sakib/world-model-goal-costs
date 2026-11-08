@@ -78,6 +78,13 @@ def get_dataset(cfg, dataset_name):
 @hydra.main(version_base=None, config_path='./config', config_name='pusht')
 def run(cfg: DictConfig):
     """Run evaluation of dinowm vs random policy."""
+    # RESERVE_GB=<n>: claim n GB of GPU memory at start and keep it in PyTorch's cache (freed tensors stay reserved for
+    # this process), so other jobs on a shared GPU cannot take it while the model and graph load.  Fails at once if
+    # the memory is not there, instead of minutes later in the middle of planning.
+    if os.environ.get('RESERVE_GB') and torch.cuda.is_available():
+        gb = float(os.environ['RESERVE_GB'])
+        torch.empty(int(gb * 2**30), dtype=torch.uint8, device='cuda')  # freed at once, kept by the caching allocator
+        print(f'[reserve] {gb:.0f} GB reserved: {torch.cuda.memory_reserved() / 2**30:.1f} GB held', flush=True)
     assert (
         cfg.plan_config.horizon * cfg.plan_config.action_block
         <= cfg.eval.eval_budget
