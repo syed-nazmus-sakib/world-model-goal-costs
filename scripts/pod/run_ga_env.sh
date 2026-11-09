@@ -33,6 +33,7 @@ case $ENV in
   reacher) CFG=reacher; M=quentinll/lewm-reacher;  KEY=none ;;
   pmm)     CFG=pointmaze_medium; M=yjang43/lp2-pointmaze-medium; KEY=proprio; DSN=d4rl_pointmaze_medium_expert.h5 ;;
   pml)     CFG=pointmaze_large;  M=${PML_CKPT:?set PML_CKPT to the trained LeWM}; KEY=state; DSN=pointmaze_large.h5 ;;
+  antl)    CFG=antmaze_large;    M=${ANTL_CKPT:?set ANTL_CKPT to the trained LeWM}; KEY=state; DSN=antmaze_large.h5 ;;  # exp-30
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
 M=${WM:-$M}  # WM: another world model (e.g. bl_tworoom_pldm, our own PLDM checkpoint) planned with the same anchors

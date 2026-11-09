@@ -123,6 +123,7 @@ def run(cfg: DictConfig):
 
     # -- run evaluation
     policy = cfg.get('policy', 'random')
+    objective = None   # stays None for policy=random (no planner): the checks after the rollout must not fail on it
 
     if policy != 'random':
         if cfg.get('policy_object', None):  # a module saved with torch.save by our own training runs
