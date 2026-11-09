@@ -1,0 +1,13 @@
+# OGBench AntMaze-Large from pixels at 224 px (antmaze-large-navigate-v0, 1,000 episodes x 1,001 steps, re-rendered by
+# code/lewm_explorations/paa/antmaze_data.py). Our own LeWM is trained on it (exp-30).
+dataset:
+  num_steps: ${eval:'${wm.num_preds} + ${wm.history_size}'}
+  frameskip: 5
+  name: antmaze_large.h5
+  keys_to_load:
+    - pixels
+    - action
+    - proprio
+  keys_to_cache:
+    - action
+    - proprio

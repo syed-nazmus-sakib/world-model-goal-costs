@@ -52,6 +52,11 @@ register(
 )
 
 register(
+    id='swm/AntMaze-v0',
+    entry_point='stable_worldmodel.envs.ogbench.antmaze_env:AntMazeEnv',
+)
+
+register(
     id='swm/OGBScene-v0',
     entry_point='stable_worldmodel.envs.ogbench.scene_env:SceneEnv',
 )
