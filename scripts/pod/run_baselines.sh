@@ -12,7 +12,9 @@
 # EVSEEDS: seeds of the standard evaluations (default 0); EPOCHS / EPOCHS_WM: training epochs (default 1, STEPS / STEPS_WM
 # batches each); MTAG: suffix of the trained model names (bl_<env>_<method><MTAG>), so longer trainings do not overwrite others
 # GSPAN: waypoint span of gcbcg (default 6); GTAG: run-name suffix of gcbcg (e.g. _sp2)
-# usage: bash scripts/pod/run_baselines.sh <tworoom|pmm|pml|pusht|reacher> "<methods>" [out=/root/out/bl_<env>]
+# TRAIN_WRAP=1: trainings print [train] / [epoch] progress lines with the time left (train_progress.py)
+# antl: OGBench AntMaze-Large (exp-30); its data come from scripts/exp/exp30_antmaze_data.sh, nothing is fetched here
+# usage: bash scripts/pod/run_baselines.sh <tworoom|pmm|pml|pusht|reacher|antl> "<methods>" [out=/root/out/bl_<env>]
 set -u
 ENV=$1; METHODS=$2; OUT=${3:-/root/out/bl_$ENV}; mkdir -p "$OUT"
 R=${JEPAWM_HOME:-/root/jepa-wms-project}
@@ -31,6 +33,8 @@ case $ENV in
   pusht)   DATA=pusht_lewm;       DSN=galilai-group/lewm-pusht;         PD=4; CFG=pusht;            OFFS=${OFFS-"50 75 100 150"} ;;
   reacher) DATA=dmc;              DSN=reacher.h5;                       PD=4; CFG=reacher;          OFFS=${OFFS-"25 50 100 150"}
            NOPROP=1 ;;  # the Reacher data have no proprio column: DINO-WM without its proprio encoding, pixel-only goal cost
+  antl)    DATA=antmaze_large;    DSN=antmaze_large.h5;                 PD=29; CFG=antmaze_large;   OFFS=${OFFS-"50 100 200 400"}
+           AD=8 ;;      # 8 joint torques; the policy configs default to 2 action dimensions (every other environment here)
   *) echo "unknown env $ENV"; exit 1 ;;
 esac
 CK=${STABLEWM_HOME:-/root/.stable_worldmodel}/checkpoints
@@ -38,7 +42,7 @@ log() { echo "$(date -u +%F' '%T) $*" | tee -a "$OUT/queue.log"; }
 # why <log>: the line that says why a run died (last Python error, CUDA out of memory, or kill)
 why() { grep -aE 'OutOfMemoryError|Error:|Error\b|Killed|Traceback' "$1" | grep -v '^ *File ' | tail -1 | cut -c1-200; }
 cd "$SWM"
-if [ "$ENV" != pusht ] && [ ! -f "$OUT/FETCHED" ]; then
+if [ "$ENV" != pusht ] && [ "$ENV" != antl ] && [ ! -f "$OUT/FETCHED" ]; then
   $PY $P/fetch_lewm_data.py $ENV > "$OUT/fetch.log" 2>&1 && touch "$OUT/FETCHED" || { log "fetch FAILED"; exit 1; }
 fi
 MT=${MTAG:-}
@@ -52,13 +56,14 @@ one_pt() {  # GCBC saves one .pt per epoch and its loader needs exactly one: kee
 }
 train() {  # method
   local m=$1 n=bl_${ENV}_$1$MT t0=$(date +%s)
+  local PY="$PY"; [ "${TRAIN_WRAP:-0}" = 1 ] && PY="$PY $P/train_progress.py $n"   # same script, plus progress lines
   [ -f "$OUT/train_$m.done" ] && { [ $m = gcbc ] && one_pt "$CK/$n"; return 0; }
   log "train $m start"
   case $m in
-    gcbc)  $PY scripts/train/gcbc.py data=$DATA wm.proprio_dim=$PD output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
-    gcivl) $PY scripts/train/gcivl.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
-    hilp)  $PY scripts/train/hilp.py dataset_name=$DSN dinowm.proprio_dim=$PD ${NOPROP:++has_proprio=false} +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
-    gciql) $PY scripts/train/gciql.py dataset_name=$DSN dinowm.proprio_dim=$PD +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
+    gcbc)  $PY scripts/train/gcbc.py data=$DATA wm.proprio_dim=$PD ${AD:+wm.action_dim=$AD} output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
+    gcivl) $PY scripts/train/gcivl.py dataset_name=$DSN dinowm.proprio_dim=$PD ${AD:+dinowm.action_dim=$AD} +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
+    hilp)  $PY scripts/train/hilp.py dataset_name=$DSN dinowm.proprio_dim=$PD ${AD:+dinowm.action_dim=$AD} ${NOPROP:++has_proprio=false} +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
+    gciql) $PY scripts/train/gciql.py dataset_name=$DSN dinowm.proprio_dim=$PD ${AD:+dinowm.action_dim=$AD} +subdir=bl output_model_name=$n $LIM +trainer.limit_train_batches=$STEPS ;;
     dwm)   $PY scripts/train/prejepa.py dataset_name=$DSN output_model_name=$n trainer.max_epochs=${EPOCHS_DWM:-5} ${NOPROP:+~wm.encoding.proprio} \
                +trainer.limit_train_batches=${STEPS_DWM:-5000} +trainer.limit_val_batches=20 trainer.strategy=auto num_workers=8 ;;
     pldm)  $PY scripts/train/pldm.py data=$DATA output_model_name=$n trainer.max_epochs=${EPOCHS_WM:-1} +trainer.limit_train_batches=$STEPS_WM +trainer.limit_val_batches=20 ;;
