@@ -24,6 +24,7 @@
 #   bash scripts/hpc/run_job.sh exp-27         # appearance shift at test time
 #   bash scripts/hpc/run_job.sh exp-29         # DINO-WM on PointMaze-Large with pixel-only and proprio-only cost; Reacher DINO-WM
 #   bash scripts/hpc/run_job.sh exp-30         # AntMaze-Large (legged robot): data by scripts/exp/exp30_antmaze_data.sh first
+#   bash scripts/hpc/run_job.sh exp-31         # PointMaze-Large on the official OGBench goals (needs the model of J1)
 #   QUICK=1 bash scripts/hpc/run_job.sh J3     # plumbing test: a few training steps, 2 episodes per evaluation
 #
 # Each job writes to $OUT_ROOT/<job>/ (default out/hpc/<job>/), ends with a PASS/FAIL line in <job>/job.log and packs
@@ -475,6 +476,10 @@ exp-30)  # a legged robot at long range: OGBench AntMaze-Large from pixels; LeWM
     bash "$ROOT/scripts/exp/exp30_antmaze.sh" "$O" >> "$O/lane.log" 2>&1
     grep -a 'KILL TEST\|exp30 FAILED' "$O/queue.log" 2>/dev/null | cut -c21- | while read -r l; do log "$l"; done
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J19 | exp-20 ... exp-30)"; exit 1 ;;
+exp-31)  # PointMaze-Large on the official OGBench evaluation goals (5 tasks x 50 episodes, 1,000 steps); no training, needs J1's model
+    bash "$ROOT/scripts/exp/exp31_ogb_goals.sh" "$O/ogb" >> "$O/lane.log" 2>&1
+    [[ -f "$O/ogb/table.txt" ]] && { log "official goals, success (%) per task and mean:"; tee -a "$L" < "$O/ogb/table.txt"; }
+    ;;
+*) echo "unknown job $JOB (smoke | J1 ... J19 | exp-20 ... exp-31)"; exit 1 ;;
 esac
 finish

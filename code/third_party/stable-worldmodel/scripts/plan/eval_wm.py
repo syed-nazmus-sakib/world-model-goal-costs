@@ -102,10 +102,12 @@ def run(cfg: DictConfig):
     }
 
     dataset = get_dataset(cfg, cfg.eval.dataset_name)
-    stats_dataset = dataset  # get_dataset(cfg, cfg.dataset.stats)
+    # stats_dataset=<name>: action / state normalisation from another dataset.  Needed when the evaluation file holds start
+    # and goal frames only (official OGBench goals, ogb_tasks_data.py): the model was trained with the training data's statistics.
+    stats_dataset = get_dataset(cfg, cfg.stats_dataset) if cfg.get('stats_dataset', None) else dataset
     col_name = episode_col(dataset)
     ep_indices, _ = np.unique(
-        stats_dataset.get_col_data(col_name), return_index=True
+        dataset.get_col_data(col_name), return_index=True
     )
 
     process = {}
