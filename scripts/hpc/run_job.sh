@@ -41,7 +41,10 @@ if [[ "${GWM_NOCONDA:-0}" != 1 ]]; then
     source "$ROOT/env/conda.sh"
     CONDA_BASE="$(project_conda_root)" || exit 1
     source "$CONDA_BASE/etc/profile.d/conda.sh"
-    conda activate "${GWM_ENV:-gwm}" || { echo "conda env ${GWM_ENV:-gwm} missing: run scripts/hpc/env_setup.sh"; exit 1; }
+    EPY="$(bash "$ROOT/scripts/hpc/env_setup.sh" python)" || { echo "conda env ${GWM_ENV:-gwm} missing: run scripts/hpc/env_setup.sh"; exit 1; }
+    conda activate "${GWM_ENV:-gwm}" || echo "conda activate ${GWM_ENV:-gwm} returned an error; using $EPY by its path"
+    # if the activation did not take effect, put the environment first on PATH by hand
+    [[ "$(command -v python)" == "$EPY" ]] || export PATH="$(dirname "$EPY"):$PATH" CONDA_PREFIX="$(dirname "$(dirname "$EPY")")"
 fi
 command -v python > /dev/null || python() { python3 "$@"; }
 

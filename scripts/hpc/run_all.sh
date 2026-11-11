@@ -60,11 +60,14 @@ fi
 source "$ROOT/env/conda.sh"
 CONDA_BASE="$(project_conda_root)" || { log "Conda not found: set CONDA_ROOT"; pack; exit 1; }
 source "$CONDA_BASE/etc/profile.d/conda.sh"
-if conda run -n "${GWM_ENV:-gwm}" python -c "import stable_worldmodel, ogbench, gymnasium_robotics" >/dev/null 2>&1; then
+log "conda $(conda --version 2>&1 | awk '{print $NF}') at $CONDA_BASE; active in the calling shell: ${CONDA_DEFAULT_ENV:-none}"
+EPY="$(bash "$H/env_setup.sh" python 2>> "$L")" || EPY=""
+if [[ -n "$EPY" ]] && PYTHONPATH="$ROOT/code/third_party/stable-worldmodel" "$EPY" -c "import torch, stable_worldmodel, ogbench, gymnasium_robotics" >> "$L" 2>&1; then
     log "environment ${GWM_ENV:-gwm} exists; checking it"
     bash "$H/env_setup.sh" check >> "$L" 2>&1 || { log "environment check FAILED (see run_all.log)"; pack; exit 1; }
 else
-    log "creating environment ${GWM_ENV:-gwm} (about 5-10 min)"
+    if [[ -n "$EPY" ]]; then log "environment ${GWM_ENV:-gwm} is incomplete: installing its packages (about 5-10 min)"
+    else log "creating environment ${GWM_ENV:-gwm} (about 5-10 min)"; fi
     bash "$H/env_setup.sh" >> "$L" 2>&1 || { log "environment setup FAILED (see run_all.log)"; pack; exit 1; }
 fi
 log "environment OK"

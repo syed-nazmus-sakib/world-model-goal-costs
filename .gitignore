@@ -47,3 +47,6 @@ MUJOCO_LOG.TXT
 /others/
 /*.tgz
 /.harness/
+
+# package lists written by scripts/hpc/env_setup.sh on each machine
+scripts/hpc/frozen_*.txt*
