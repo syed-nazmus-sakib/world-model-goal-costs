@@ -2,7 +2,8 @@
 # exp-30: a legged robot at long range.  OGBench AntMaze-Large from pixels (quadruped, 8 joint torques, goals up to 400 steps away).
 #   1  train LeWM on the rendered data (10 epochs x 3,000 batches, as on PointMaze-Large)
 #   2  kill test: LeWM at 25 and 50 steps (released planner, min-over-plan, graph anchors; random actions as the reference),
-#      seed 0.  If the planner cannot reach goals 25 steps away (best of the two LeWM planners below KILL, default 30%), anchors
+#      seed 0.  If the planner cannot reach goals 25 steps away (best of the two LeWM planners below KILL, default 30%, or less than
+#      KILL_GAP, default 15, points above random actions), anchors
 #      cannot help either and the experiment stops here.  FORCE=1 continues anyway.
 #   3  LeWM, LeWM + min-over-plan, graph anchors at 100/200/400 steps and on stitched goals (budget 400), seeds 0/42
 #   4  baselines trained on the same data, same pairs: GCBC, GCIVL, GCIQL, HILP, PLDM; DINO-WM with its own goal cost (pixels +
@@ -49,9 +50,10 @@ for d in $(q 25 '25 50'); do rnd $d; done
 rate() { grep -a "^$1 " $D/ant/summary.txt 2>/dev/null | grep -oE 'success_rate=[0-9.]+' | tail -1 | cut -d= -f2; }
 a=$(rate released_h5_d25_s0); b=$(rate relmin_h10_d25_s0); g=$(rate ga_sp6_d25_s0); r0=$(rate random_d25_s0)
 best=$(awk -v a="${a:-0}" -v b="${b:-0}" 'BEGIN {print (a > b) ? a : b}')
-log "KILL TEST at 25 steps: LeWM ${a:-?}%, LeWM + min-over-plan ${b:-?}%, graph anchors ${g:-?}%, random actions ${r0:-?}% (needed: a LeWM planner at ${KILL:-30}% or more)"
-if [ "$Q" != 1 ] && [ "${FORCE:-0}" != 1 ] && awk -v x="$best" -v k="${KILL:-30}" 'BEGIN {exit !(x < k)}'; then
-  log "KILL TEST NOT PASSED: the planner cannot reach goals 25 steps away, so the long-range runs are skipped (FORCE=1 runs them anyway)"
+log "KILL TEST at 25 steps: LeWM ${a:-?}%, LeWM + min-over-plan ${b:-?}%, graph anchors ${g:-?}%, random actions ${r0:-?}% (needed: a LeWM planner at ${KILL:-30}% or more and at least ${KILL_GAP:-15} points above random actions)"
+# both conditions: on 2026-11-10 the planners reached 24-32% and random actions 32%, which passed the old rule (30% alone)
+if [ "$Q" != 1 ] && [ "${FORCE:-0}" != 1 ] && awk -v x="$best" -v k="${KILL:-30}" -v r="${r0:-0}" -v gp="${KILL_GAP:-15}" 'BEGIN {exit !(x < k || x < r + gp)}'; then
+  log "KILL TEST NOT PASSED: the planner does not reach goals 25 steps away better than random actions, so the long-range runs are skipped (FORCE=1 runs them anyway)"
   touch $D/KILLED; echo "exp30 done (stopped at the kill test)"; exit 0
 fi
 rm -f $D/KILLED; log "KILL TEST PASSED"
