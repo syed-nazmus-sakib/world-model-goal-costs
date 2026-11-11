@@ -13,6 +13,8 @@
 #   JOBS="J1 J2"     subset of jobs (default: J1 J2 J3 J4 J5; follow-ups: JOBS="J1 J9 J10 J11 J12 J13", J6-J8 ran on Colab)
 #   PLAN_ONLY=1      print which GPU runs which job, then exit
 #   QUICK=1          plumbing test: a few training steps, 2 episodes per evaluation (written to out/hpc_quick/)
+#   RERUN=1          enter jobs that already ended with PASS again (a job skips its finished runs itself); for a job that is
+#                    started again with more methods or seeds
 #   plus the options of env_setup.sh and run_job.sh (GWM_ENV, STABLEWM_HOME, CONDA_ROOT, ...)
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -84,7 +86,7 @@ log "smoke test PASS"
 for ((i = 0; i < NL; i++)); do
     (
         for j in ${LANE[i]}; do
-            if [[ "$(status "$j")" == *PASS* ]]; then log "$j already PASS, skipped"; continue; fi
+            if [[ "${RERUN:-0}" != 1 && "$(status "$j")" == *PASS* ]]; then log "$j already PASS, skipped"; continue; fi
             log "$j start on GPU ${G[i]}"
             CUDA_VISIBLE_DEVICES="${G[i]}" bash "$H/run_job.sh" "$j" > "$OUT_ROOT/$j.out" 2>&1
             log "$j: $(status "$j")"

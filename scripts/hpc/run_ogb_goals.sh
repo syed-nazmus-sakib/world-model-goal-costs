@@ -7,6 +7,11 @@
 #   cat out/exp31/exp-31/ogb/table.txt          # the result so far: success per task and the mean, per method
 #
 # Run the same command again after a time limit or crash: finished runs are skipped.
+# In parts (each continues the same table; start the next when the one before has ended):
+#   OGB_SEEDS=0 OGB_METHODS="ga random" OGB_BASELINES=none bash scripts/hpc/run_ogb_goals.sh   # graph anchors, random actions
+#   OGB_SEEDS=0 OGB_BASELINES=none bash scripts/hpc/run_ogb_goals.sh                           # + LeWM, LeWM with min-over-plan
+#   OGB_SEEDS=0 bash scripts/hpc/run_ogb_goals.sh                                              # + the policies and PLDM
+#   bash scripts/hpc/run_ogb_goals.sh                                                          # + seeds 1 and 2
 # Result to send back: out/exp31/ALL_results.tgz.     QUICK=1 bash scripts/hpc/run_ogb_goals.sh = a short plumbing test.
 set -uo pipefail
 H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$H/../.." && pwd)"; cd "$ROOT"
@@ -14,7 +19,8 @@ SH="${STABLEWM_HOME:-$HOME/.stable_worldmodel}"
 [[ -f "$SH/datasets/pointmaze_large.h5" ]] || { echo "No $SH/datasets/pointmaze_large.h5 (the PointMaze-Large data of job J1)."; exit 1; }
 ls "$SH"/checkpoints/lewm_pml/*.pt > /dev/null 2>&1 || { echo "No model in $SH/checkpoints/lewm_pml (trained by job J1)."; exit 1; }
 OUT="${OUT:-out/exp31}"
-GPU=0 PAIRS="exp-31:$OUT" NEED_GB="${NEED_GB:-12}" bash "$H/run_j17_j19.sh" || exit 1
+# RERUN=1: the job may be started again with more methods or seeds after an earlier part has ended; finished runs are skipped
+RERUN=1 GPU=0 PAIRS="exp-31:$OUT" NEED_GB="${NEED_GB:-12}" bash "$H/run_j17_j19.sh" || exit 1
 echo
 echo "Live progress:  bash scripts/hpc/progress.sh $OUT"
 echo "Result so far:  cat $OUT/exp-31/ogb/table.txt"
