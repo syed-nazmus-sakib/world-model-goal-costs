@@ -15,6 +15,9 @@ Anchor choice per replan and per env:
   mode='apk'   : AP with the successors of the top `ap_k` keys as targets; cost = distance to the nearest of them
   mode='apc'   : AP that commits to the retrieved record: while the current latent stays within one median block step
                  of the record's next frame, the target advances along that record instead of being re-retrieved
+  mode='metro' : Metro-WM-style sub-goals (arXiv 2609.31868) re-implemented on the same nodes for a matched comparison
+                 (metro_graph.py): bridges to the `knn` nearest frames of other episodes within a calibrated radius, route
+                 costs in frames, sub-goal = the farthest route vertex within `budget` frames
   mode='paa'   : the hop maximising P_attain(z_t, z_anchor, hops) * (graph progress), P from a learned ensemble
                  (paa_head.py) minus `pess` times its std; hops with P < tau are skipped
 When the goal is within `span` hops (or no path exists) the anchor is the goal itself.
@@ -37,7 +40,7 @@ def _release_cache():
 class PAAGoalCost(nn.Module):
     def __init__(self, nodes, mode='fixed', span=4, max_hops=12, head=None, tau=0.5, pess=1.0, knn=10, agg='min',
                  thr_q=0.5, ap_offset=None, ap_step=5, ap_k=8, gap_cal=False, frac=1.0, drop_box=None, switch=1.0,
-                 handoff=False, handoff_hops=0, pool=False):
+                 handoff=False, handoff_hops=0, pool=False, budget=8.0, alpha=0.25):
         super().__init__()
         d = np.load(nodes)
         self.emb_all = torch.from_numpy(d['emb'].astype(np.float32))
@@ -45,6 +48,7 @@ class PAAGoalCost(nn.Module):
         self.mode, self.span, self.max_hops, self.tau, self.pess, self.knn, self.agg = mode, int(span), int(max_hops), \
             float(tau), float(pess), int(knn), agg
         self.thr_q = float(thr_q)
+        self.budget, self.alpha = float(budget), float(alpha)  # mode='metro': waypoint budget (frames), quantile of Lambda
         self.ap_offset, self.ap_step, self.ap_k = ap_offset, int(ap_step), int(ap_k)
         self.gap_cal = bool(gap_cal)  # gap: convert graph hops to recorded blocks before choosing the retrieval bank
         self.frac = float(frac)  # ablation: build the graph from this fraction of the training episodes (seeded)
@@ -109,6 +113,18 @@ class PAAGoalCost(nn.Module):
             print(f'[paa] ap memory: {n} nodes ({len(eps)} episodes excluded)', flush=True)
             if self.mode not in ('apg', 'gap'):  # no graph
                 return
+        if self.mode == 'metro':
+            from metro_graph import MetroGraph
+            self.metro = MetroGraph(self.emb, ep, step, k=self.knn, alpha=self.alpha, budget=self.budget)
+            self.thr = self.metro.eps ** 2
+            self._goal_cache, self._anchor_cache, self.anchor_log, self._anchor_node, self._anchor_hops = {}, {}, [], {}, {}
+            self.hop_scale = 1.0
+            _release_cache()
+            self._t['build_s'] += _time.perf_counter() - t_build
+            print(f'[paa] metro graph: {n} nodes ({len(eps)} episodes excluded), {self.metro.n_temporal} temporal + '
+                  f'{self.metro.n_bridge} bridge edges (k={self.knn}), budget {self.budget:g} frames, radius {self.metro.eps:.3f}, '
+                  f'Lambda {dict(zip(self.metro.frm.astype(int).tolist(), np.round(self.metro.lat, 3).tolist()))}', flush=True)
+            return
         a, b = order[:-1], order[1:]
         nxt = (ep[a] == ep[b]) & (step[b] - step[a] == 5)
         ta, tb = a[nxt], b[nxt]
@@ -201,6 +217,20 @@ class PAAGoalCost(nn.Module):
         key = (hash(z0.cpu().numpy().tobytes()), hash(g.cpu().numpy().tobytes()))
         if key in self._anchor_cache:
             return self._anchor_cache[key]
+        if self.mode == 'metro':
+            import time as _time
+            if key[1] not in self._goal_cache:
+                t0 = _time.perf_counter()
+                self._goal_cache[key[1]] = self.metro.goal_tree(g)
+                self._t['dijkstra_s'] += _time.perf_counter() - t0
+                self._t['dijkstra_n'] += 1
+            tree = self._goal_cache[key[1]]
+            node, u0, j0 = self.metro.subgoal(z0, tree)
+            out = g if node is None else self.emb[node]
+            self._anchor_cache[key], self._anchor_hops[key] = out, j0  # j0: route cost to the goal in frames
+            self._anchor_node[key] = int(self.idx[node]) if node is not None else -1
+            self.anchor_log.append((int(self.idx[tree[2]]), int(self.idx[u0]), self._anchor_node[key]))
+            return out
         gn, dist, pred = self._goal_tree(g)
         s = self._nearest(z0)
         out, a_node = g, -1

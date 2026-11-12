@@ -165,6 +165,7 @@ def run(cfg: DictConfig):
                                     handoff=cfg.get('paa_handoff', False),
                                     handoff_hops=cfg.get('paa_handoff_hops', 0),
                                     pool=cfg.get('paa_pool', False),
+                                    budget=cfg.get('paa_budget', 8.0), alpha=cfg.get('paa_alpha', 0.25),
                                     drop_box=([cfg.paa_drop_x0, cfg.paa_drop_x1, cfg.paa_drop_y0, cfg.paa_drop_y1]
                                               if cfg.get('paa_drop_x0', None) is not None else None))
         elif cfg.get('ngc_nodes', None):  # NGC baseline (arXiv 2610.25013, concurrent work): graph-distance cost
@@ -474,7 +475,7 @@ def run(cfg: DictConfig):
         f'[summary] env={cfg.world.env_name} seed={cfg.seed} goal_offset={cfg.eval.goal_offset_steps} '
         f'budget={cfg.eval.eval_budget} horizon={cfg.plan_config.horizon} '
         f'metric={Path(str(cfg.get("metric_head", "none"))).stem} agg={cfg.get("metric_agg", "last")} '
-        f'paa={cfg.get("paa_mode", "none") if cfg.get("paa_nodes", None) else "none"}:{cfg.get("paa_span", "-")}:{Path(str(cfg.get("paa_head", "none"))).stem} '
+        f'paa={cfg.get("paa_mode", "none") if cfg.get("paa_nodes", None) else "none"}:{cfg.get("paa_budget", "-") if cfg.get("paa_mode", "") == "metro" else cfg.get("paa_span", "-")}:{Path(str(cfg.get("paa_head", "none"))).stem} '
         f'success_rate={metrics["success_rate"]:.1f} n={cfg.eval.num_eval} '
         f'ms_per_decision={float(ms.mean()) if len(ms) else float("nan"):.1f} decisions={len(_dec_t)} eps={eps_bits}'
     )
