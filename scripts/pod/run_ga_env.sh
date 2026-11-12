@@ -13,6 +13,7 @@
 # lane fact: graph anchors with the RELEASED search (H=5, last-step cost): the missing cell of target x search
 # lane ngc: NGC baseline (NGCM="ngc gangc": + the hybrid, our anchor scored with NGC's graph distance); cross: XM="ngc ..."
 # HA: horizon of the min-over-plan and anchor runs (default 10)
+# lane metro: Metro-WM-style sub-goals (arXiv 2609.31868) re-implemented on the same nodes; MCFG="h:H ..." (see the lane)
 # TRACE=1: save a per-run trace (agent state, anchors) to $OUT/trace_<run>.npz for the failure analysis
 # TRACE_EVERY: trace stride in steps (default 5); VID=1: keep each run's rollout videos in $OUT/vid_<run>; SK_MIN=1: skip the min-over-plan run
 set -u
@@ -144,6 +145,17 @@ for seed in $SEEDS; do for off in ${OFFS:-50 100 150}; do
     for sp in ${GSPANS:-6}; do
       ev gap${GCAL:+c}_sp${sp}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=gap +paa_span=$sp +metric_agg=last \
          plan_config.horizon=1 plan_config.receding_horizon=1 ${GCAL:++gap_cal=true}
+    done
+    continue
+  fi
+  if [ "$LANE" = metro ]; then  # Metro-WM-style sub-goals (arXiv 2609.31868), our re-implementation on the same nodes (metro_graph.py)
+    # MCFG: "h:H ..." = plan length in action blocks (all executed before the next plan, last-step cost) : waypoint budget in frames.
+    # h = ours: the Metro graph and sub-goal rule with our search (horizon HA, minimum over the plan, default replanning)
+    for c in ${MCFG:-1:10}; do
+      h=${c%%:*}; b=${c##*:}
+      if [ "$h" = ours ]; then S="+metric_agg=min plan_config.horizon=${HA:-10}"
+      else S="+metric_agg=last plan_config.horizon=$h plan_config.receding_horizon=$h"; fi
+      ev metro${TAG:-}_h${h}_b${b}_d${off}_s$seed $seed $off +paa_nodes=$NODES +paa_mode=metro +paa_knn=4 +paa_budget=$b $S
     done
     continue
   fi

@@ -26,6 +26,7 @@
 #   bash scripts/hpc/run_job.sh exp-30         # AntMaze-Large (legged robot): data by scripts/exp/exp30_antmaze_data.sh first
 #   bash scripts/hpc/run_job.sh exp-31         # PointMaze-Large on the official OGBench goals (needs the model of J1)
 #   bash scripts/hpc/run_job.sh exp-32         # DINO-WM with an image-only goal cost on PointMaze-Large; anchors on DINO-WM (needs J19's DINO-WM)
+#   bash scripts/hpc/run_job.sh exp-33         # Metro-WM-style sub-goals (re-implemented) on our tasks, next to graph anchors
 #   QUICK=1 bash scripts/hpc/run_job.sh J3     # plumbing test: a few training steps, 2 episodes per evaluation
 #
 # Each job writes to $OUT_ROOT/<job>/ (default out/hpc/<job>/), ends with a PASS/FAIL line in <job>/job.log and packs
@@ -488,6 +489,24 @@ exp-32)  # DINO-WM with an image-only goal cost on PointMaze-Large, anchors on D
     bash "$ROOT/scripts/exp/exp32_dinowm_fair.sh" "$O" >> "$O/lane.log" 2>&1
     grep -a " A \| A2 \| B \| C \|exp32 FAILED" "$O/queue.log" 2>/dev/null | cut -c21- | while read -r l; do log "$l"; done
     ;;
-*) echo "unknown job $JOB (smoke | J1 ... J19 | exp-20 ... exp-32)"; exit 1 ;;
+exp-33)  # Metro-WM-style sub-goals (arXiv 2609.31868, our re-implementation) on our tasks: (h, H) sweep, the best setting on three
+         # seeds, and the Metro graph with our search; one lane per environment, no training
+    E33="${METRO_ENVS:-$(q 'tworoom pmm' 'pmm tworoom pml pusht')}"
+    for e in $E33; do
+      if [[ $e == pml ]]; then
+        ls "$STABLEWM_HOME"/checkpoints/lewm_pml/*.pt > /dev/null 2>&1 \
+          || { log "exp-33: no PointMaze-Large LeWM in $STABLEWM_HOME/checkpoints/lewm_pml (trained by J1): PointMaze-Large skipped"; continue; }
+        keep_last "$STABLEWM_HOME/checkpoints/lewm_pml"; export PML_CKPT=lewm_pml
+        mkdir -p "$O/pml"; echo pointmaze_large.h5 > "$O/pml/dataset_name"
+      fi
+      # data, model and graph nodes one environment at a time (encoding several datasets at once needs much host memory)
+      OFFS=25 bash "$R" $e 0 "$O/$e" setup >> "$O/setup.log" 2>&1 || log "exp-33: setup of $e failed (see $O/$e/queue.log)"
+      bash "$ROOT/scripts/exp/exp33_metro.sh" $e "$O/$e" >> "$O/lane_$e.log" 2>&1 &
+    done; wait
+    for e in $E33; do
+      grep -a " S sweep\| M \| X \|exp33 .*FAILED" "$O/$e/queue.log" 2>/dev/null | cut -c21- | while read -r l; do log "$e: $l"; done
+    done
+    ;;
+*) echo "unknown job $JOB (smoke | J1 ... J19 | exp-20 ... exp-33)"; exit 1 ;;
 esac
 finish
